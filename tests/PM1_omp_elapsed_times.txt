@@ -1,0 +1,144 @@
+int m = 200;
+int n = 50;
+Mat A = Mat::Random(m, n);
+
+num_threads = 2;
+
+// Elapsed times for the first 10 iterations of the power method
+// x0: result obtained with Eigen matrix vector multiplication
+// x1: result obtained with mat_vet_multiply
+// x3: result obtained with mat_vet_multiply_omp
+
+Elapsed mm eigen: 6 [ms]
+Elapsed mm mat_vet_multiply: 94 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 2.81071e-16
+Elapsed mm mat_vet_multiply_omp: 78 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 5 [ms]
+Elapsed mm mat_vet_multiply: 75 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 2.41545e-16
+Elapsed mm mat_vet_multiply_omp: 78 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 12 [ms]
+Elapsed mm mat_vet_multiply: 84 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 2.93573e-16
+Elapsed mm mat_vet_multiply_omp: 58 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 5 [ms]
+Elapsed mm mat_vet_multiply: 87 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 3.06856e-16
+Elapsed mm mat_vet_multiply_omp: 77 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 5 [ms]
+Elapsed mm mat_vet_multiply: 75 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 1.09635e-15
+Elapsed mm mat_vet_multiply_omp: 33 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 4 [ms]
+Elapsed mm mat_vet_multiply: 79 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 3.38645e-16
+Elapsed mm mat_vet_multiply_omp: 83 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 6 [ms]
+Elapsed mm mat_vet_multiply: 102 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 4.33945e-16
+Elapsed mm mat_vet_multiply_omp: 48 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 7 [ms]
+Elapsed mm mat_vet_multiply: 123 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 3.29333e-16
+Elapsed mm mat_vet_multiply_omp: 71 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 5 [ms]
+Elapsed mm mat_vet_multiply: 71 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 3.12787e-16
+Elapsed mm mat_vet_multiply_omp: 39 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 3 [ms]
+Elapsed mm mat_vet_multiply: 79 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 3.36772e-16
+Elapsed mm mat_vet_multiply_omp: 36 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+----------------------------------------------------------------
+
+int m = 1000;
+int n = 500;
+Mat A = Mat::Random(m, n);
+
+num_threads = 2;
+
+// Elapsed times for the first 10 iterations of the power method
+// x0: result obtained with Eigen matrix vector multiplication
+// x1: result obtained with mat_vet_multiply
+// x3: result obtained with mat_vet_multiply_omp
+
+Elapsed mm eigen: 317 [ms]
+Elapsed mm mat_vet_multiply: 6554 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 8.60325e-16
+Elapsed mm mat_vet_multiply_omp: 4722 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 357 [ms]
+Elapsed mm mat_vet_multiply: 6139 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 8.82389e-16
+Elapsed mm mat_vet_multiply_omp: 3738 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 335 [ms]
+Elapsed mm mat_vet_multiply: 6086 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 8.25854e-16
+Elapsed mm mat_vet_multiply_omp: 5036 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 355 [ms]
+Elapsed mm mat_vet_multiply: 6646 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 2.05549e-15
+Elapsed mm mat_vet_multiply_omp: 3969 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 333 [ms]
+Elapsed mm mat_vet_multiply: 6919 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 4.93353e-15
+Elapsed mm mat_vet_multiply_omp: 4822 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 487 [ms]
+Elapsed mm mat_vet_multiply: 8100 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 8.97595e-16
+Elapsed mm mat_vet_multiply_omp: 4806 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 364 [ms]
+Elapsed mm mat_vet_multiply: 8456 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 1.18148e-15
+Elapsed mm mat_vet_multiply_omp: 4428 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 469 [ms]
+Elapsed mm mat_vet_multiply: 13012 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 9.37504e-16
+Elapsed mm mat_vet_multiply_omp: 4640 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 369 [ms]
+Elapsed mm mat_vet_multiply: 8032 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 8.82654e-16
+Elapsed mm mat_vet_multiply_omp: 4931 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
+Elapsed mm eigen: 462 [ms]
+Elapsed mm mat_vet_multiply: 8902 [ms]
+Are x1 and x0 equal? ||x1-x0|| = 9.36094e-16
+Elapsed mm mat_vet_multiply_omp: 5163 [ms]
+Are x3 and x0 equal? ||x3-x0|| = 0
+
