@@ -7,8 +7,8 @@
 #include <chrono>
 #include <iostream>
 #include <filesystem> // C++17 or later
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
+#include "Eigen/Dense"
+#include "Eigen/Sparse"
 #include <unsupported/Eigen/SparseExtra>
 
 // The main function for running the tests

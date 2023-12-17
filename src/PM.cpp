@@ -1,5 +1,7 @@
 #include "../include/powerMethod/PM.hpp"
-
+//@note you shoud write some comments to help readers understand what the function does
+// You could use Doxygen to have comemnts that are automatically parsed and generate
+// documentation for your code. See: https://www.doxygen.nl/manual/docblocks.html
 void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v) {
     // Generate a random initial guess x0
     Vec x0 = Vec::Zero(A.cols()); // To multiply B with x0
@@ -14,6 +16,9 @@ void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v) {
     x0.normalize();
 
     // Define the number of iterations
+    //@note Algorithm iperparameters (epsilon, delta, lambda) are better put
+    //      in an aggregate passed to the function. So it is easier for the user
+    //      to change them and the function is more general. Avoid having iperparameters hardcoded..
     double epsilon = 1.e-10;
     double delta = 0.05;
     double lambda = 0.1;

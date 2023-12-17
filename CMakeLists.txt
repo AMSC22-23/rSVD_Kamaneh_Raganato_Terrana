@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -Wall -Wextra")
 
 # Set the path to Eigen headers
-set(EIGEN_INCLUDE_DIR "/path/to/eigen")
+set(EIGEN_INCLUDE_DIR "/usr/local/include/eigen3")
 
 # Source files
 file(GLOB_RECURSE SRC_FILES "src/*.cpp")
