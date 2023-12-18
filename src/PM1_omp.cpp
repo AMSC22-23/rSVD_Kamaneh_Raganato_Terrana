@@ -98,7 +98,7 @@ void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v) {
     for (int i=1; i<=s; i++) {
         // x0 = B*x0; // B = A^T*A
         Vec x4 = x3; // Auxiliary variable
-        mat_vet_multiply_omp(B, x4, x3, 2);
+        mat_vet_multiply_omp(B, x4, x3, 4);
         x3.normalize();
     }
     const auto t5 = high_resolution_clock::now();
