@@ -5,7 +5,7 @@ from scipy.linalg import qr
 from sklearn.utils.extmath import randomized_svd
 
 input_directory = "../data/input/"
-output_directory = "../data/output/rSVD/py"
+output_directory = "../data/output/SVD/py"
 
 # Create output directory if it doesn't exist
 os.makedirs(output_directory, exist_ok=True)
@@ -36,23 +36,6 @@ def save_matrix_market(matrix, output_path):
                 value = matrix[i, j]
                 file.write(f"{i+1} {j+1} {value:.18e}\n")
 
-def randomized_SVD(A, k):
-  G=np.random.randn(A.shape[1], k)
-
-  Y=np.matmul(A,G)
-  Q,_=np.linalg.qr(Y)
-
-  B=np.matmul(Q.T,A)
-
-  Uh,s,VT= np.linalg.svd(B,full_matrices=False)
-#   print(Uh.shape)
-
-  U=np.matmul(Q,Uh)
-#   print(U.shape)
-#   print(s.shape)
-#   print(VT.shape)
-
-  return U,s,VT 
     
 
 def process_matrix(matrix_path):
@@ -60,20 +43,19 @@ def process_matrix(matrix_path):
     sparse_matrix = mmread(matrix_path)
     dense_matrix = sparse_matrix.toarray()
 
-    # rank
-    k = 35
-
     # Perform SVD
-    U, S, V = randomized_SVD(dense_matrix, k)
-
-    # Save Q matrix in Matrix Market format
+    U, S, VT = np.linalg.svd(dense_matrix)
+    
     matrix_name = os.path.splitext(os.path.basename(matrix_path))[0]
-    # S_output_path = os.path.join(output_directory, f"{matrix_name}_S.mtx")
-    # save_vector_market(S, S_output_path)
 
-    # Save R matrix in Matrix Market format
+    
     U_output_path = os.path.join(output_directory, f"{matrix_name}_U.mtx")
     save_matrix_market(U, U_output_path)
+    S_output_path = os.path.join(output_directory, f"{matrix_name}_S.mtx")
+    save_matrix_market(np.diag(S), S_output_path)
+    V_output_path = os.path.join(output_directory, f"{matrix_name}_V.mtx")
+    save_matrix_market(VT, V_output_path)
+
 
 def main():
     # Get a list of all .mtx files in the input directory
@@ -85,11 +67,11 @@ def main():
 
     for mtx_file in mtx_files:
         mtx_path = os.path.join(input_directory, mtx_file)
-        print(f"Processing {mtx_path}...")
+        # print(f"Processing {mtx_path}...")
 
         try:
             process_matrix(mtx_path)
-            print("rSVD completed and results saved.")
+            # print("rSVD completed and results saved.")
         except Exception as e:
             print(f"Error processing {mtx_path}: {e}")
 

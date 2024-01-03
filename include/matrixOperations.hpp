@@ -1,9 +1,6 @@
-#ifndef PM_H
-#define PM_H
+#ifndef matrixOperations_H
+#define matrixOperations_H
 
-#include <iostream>
-#include <fstream>
-#include <random>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <unsupported/Eigen/SparseExtra>
@@ -13,8 +10,7 @@ using namespace Eigen;
 
 using Mat = MatrixXd;
 using Vec = VectorXd;
-using SpMat = SparseMatrix<double>;
 
-void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v);
+Mat manualMatrixMultiply(const Mat &matrix1, const Mat &matrix2);
 
 #endif

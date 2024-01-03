@@ -7,13 +7,11 @@
 
 
 using Mat = Eigen::MatrixXd;
-using Vet = Eigen::VectorXd;
+using Vec = Eigen::VectorXd;
 
-using Mat=Eigen::MatrixXd;
-using Vet=Eigen::VectorXd;
 
 void intermediate_step(Mat &A,Mat &Q,Mat &Omega,int &l,int &q);
-void rSVD(Mat& A, Mat&U, Vet& S, Mat& V);
+void rSVD(Mat& A, Mat&U, Vec& S, Mat& V, int l);
 
 
 #endif
