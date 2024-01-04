@@ -1,4 +1,4 @@
-#include "../include/QRdecomposition/QR.hpp"
+#include "QR.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -65,12 +65,19 @@ int main(int /*argc*/, char** argv) {
 
         // Record the end time
         auto end = std::chrono::high_resolution_clock::now();
+
+        Mat A_2(m, n);
+        A_2 = Q * R;
+        Mat diff = A - A_2;
+        double norm_of_difference = (A - A_2).norm();
+
         // Calculate the duration
         std::chrono::duration<double> duration = end - start;
         // Print the duration in seconds
         std::cout << "Dataset: " << fileName << "\n";
         std::cout << "Size: " << A.rows() << ", " << A.cols() << "\n";
         std::cout << "Execution time: " << duration.count() << " seconds" << "\n";
+        std::cout << "norm of diff : " << norm_of_difference << "\n";
         std::cout << "-------------------------\n" << std::endl;;
 
         size_t lastDotPos = fileName.find_last_of('.');

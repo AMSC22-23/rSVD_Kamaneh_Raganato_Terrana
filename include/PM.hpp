@@ -17,8 +17,6 @@ using SpMat = SparseMatrix<double>;
 
 void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v);
 
-// void SVD(Mat &A, Vec &sigma, Mat &U, Mat &V);
-
 #endif
 
 

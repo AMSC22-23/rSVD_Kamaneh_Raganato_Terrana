@@ -10,9 +10,13 @@ def read_matrix_file(file_path):
 
     return dimensions, matrix_data
 
-def compare_matrices(matrix1_path, matrix2_path, results):
+def compare_matrices(matrix1_path, matrix2_path):
     matrix1_dimensions, matrix1_data = read_matrix_file(matrix1_path)
     matrix2_dimensions, matrix2_data = read_matrix_file(matrix2_path)
+
+    # print(matrix1_path)
+    # print(matrix1_path)
+    # print(matrix1_dimensions)
 
     if matrix1_dimensions != matrix2_dimensions:
         print(f"Dimension mismatch between {matrix1_path} and {matrix2_path}.")
@@ -30,8 +34,10 @@ def compare_matrices(matrix1_path, matrix2_path, results):
 
     if differences:
         variance = sum(differences) / len(differences)
-        dimension = cell2[2]
-        results.append((dimension, variance))
+
+    dimension = matrix1_dimensions[0]
+    return dimension, variance
+    
 
 def main():
     directory1 = "../data/output/rSVD/my/"
@@ -46,9 +52,23 @@ def main():
         matrix1_path = os.path.join(directory1, file1)
         matrix2_path = os.path.join(directory2, file2)
 
-        compare_matrices(matrix1_path, matrix2_path, results)
+        dimension, variance = compare_matrices(matrix1_path, matrix2_path)
+        results.append((dimension, variance))
+    
+    sorted_results = sorted(results, key=lambda x: x[0])
+    dimensions, variances = zip(*sorted_results)
 
-    print(results[0])
+    for item in sorted_results:
+        print (item)
+
+    # Plotting
+    plt.plot(dimensions, variances, color='b')
+    plt.title('Comparison of Results')
+    plt.xlabel('Dimension')
+    plt.ylabel('Norm')
+    # plt.grid(True)
+    plt.savefig('variance_plot.png')
+    plt.show()
 
 if __name__ == "__main__":
     main()
