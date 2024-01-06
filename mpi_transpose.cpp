@@ -37,15 +37,15 @@ int main(int argc, char** argv) {
 
     Mat local_A_byrows = A.block(offset, 0, local_rows, A.cols());
 
-    // Mat local_AT_byrows = Mat::Zero(A.cols(), local_rows);
+    Mat local_AT_byrows = Mat::Zero(A.cols(), local_rows);
     // Since to use MPI_Gatherv this matrix has to be flattened, it is better to use a vector from the beginning
-    Vec local_AT_byrows_flatten = Vec::Zero(A.cols() * local_rows);
+    // Vec local_AT_byrows_flatten = Vec::Zero(A.cols() * local_rows);
 
     // Check if the matrix A in divided correctly
     // For a 5*5 matrix, the first processor takes 3 rows, the second takes 2 rows
-    cout << "Size of local_A_byrows:          " << local_A_byrows.rows() << "x" << local_A_byrows.cols() << endl;
-    cout << "Size of local_AT_byrows_flatten: " << local_AT_byrows_flatten.size() << endl;
-    // cout << "Size of local_AT_byrows: " << local_AT_byrows.rows() << "x" << local_AT_byrows.cols() << endl;
+    cout << "Size of local_A_byrows:  " << local_A_byrows.rows() << "x" << local_A_byrows.cols() << endl;
+    // cout << "Size of local_AT_byrows_flatten: " << local_AT_byrows_flatten.size() << endl;
+    cout << "Size of local_AT_byrows: " << local_AT_byrows.rows() << "x" << local_AT_byrows.cols() << endl;
     // Size of local_A_byrows:  2x5
     // Size of local_A_byrows:  3x5
     // Size of local_AT_byrows: 5x3
@@ -63,7 +63,8 @@ int main(int argc, char** argv) {
     // Transpose the local matrix local_A_byrows
     for (size_t i = 0; i < local_rows; ++i) {
         for (size_t j = 0; j < A.cols(); ++j) {
-            local_AT_byrows_flatten[i*A.cols()+j] = local_A_byrows(i, j);
+            // local_AT_byrows_flatten[i*A.cols()+j] = local_A_byrows(i, j);
+            local_AT_byrows(j, i) = local_A_byrows(i, j);
         }
     }
 
@@ -79,19 +80,21 @@ int main(int argc, char** argv) {
     cout << "recvcounts: " << recvcounts[0] << " " << recvcounts[1] << endl;
     cout << "displacements: " << displacements[0] << " " << displacements[1] << endl;
 
-    Vec gathered_data = Vec::Zero(A.rows()*A.cols()); // This vector needs to store all the elements of the matrix A^T
+    // Vec gathered_data = Vec::Zero(A.rows()*A.cols()); // This vector needs to store all the elements of the matrix A^T
 
-    MPI_Gatherv(local_AT_byrows_flatten.data(), local_AT_byrows_flatten.size(), MPI_DOUBLE, gathered_data.data(), recvcounts.data(),
+    // MPI_Gatherv(local_AT_byrows_flatten.data(), local_AT_byrows_flatten.size(), MPI_DOUBLE, gathered_data.data(), recvcounts.data(),
+    //             displacements.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Gatherv(local_AT_byrows.data(), local_rows*A.cols(), MPI_DOUBLE, AT_byrows.data(), recvcounts.data(),
                 displacements.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     if (rank == 0) {
 
         // Fill AT_byrows with the gathered data
-        for (size_t i = 0; i < AT_byrows.rows(); ++i) {
-            for (size_t j = 0; j < AT_byrows.cols(); ++j) {
-                AT_byrows(i, j) = gathered_data[j*A.cols()+i];
-            }
-        }
+        // for (size_t i = 0; i < AT_byrows.rows(); ++i) {
+        //     for (size_t j = 0; j < AT_byrows.cols(); ++j) {
+        //         AT_byrows(i, j) = gathered_data[j*A.cols()+i];
+        //     }
+        // }
 
         // Display the matrix A and its transpose
         std::cout << "Matrix A:\n" << A << endl << endl;
