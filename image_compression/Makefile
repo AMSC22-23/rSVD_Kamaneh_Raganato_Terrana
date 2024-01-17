@@ -1,7 +1,9 @@
 CXX := mpic++
-CXXFLAGS := -Wall -Wextra -Iinclude -I ${mkEigenInc}
+CXXFLAGS := -Wall -Wextra -Iinclude -I $(mkEigenInc) -Ilib 
+MK_EIGEN_INC := $(mkEigenInc)  # Assuming mkEigenInc is a variable you need
 
 SRC_DIR := src
+MAIN_DIR := main
 TESTS_DIR := tests
 OBJ_DIR := obj
 BIN_DIR := bin
@@ -39,12 +41,18 @@ $(BIN_DIR)/%: $(TESTS_DIR)/%.cpp $(OBJ_FILES)
 # Target to build and run tests without profiling
 test: $(TEST_BINS) create_directories
 	@echo "Running tests..."
-	@$(foreach test, $(TEST_BINS), mpirun -np 4 ./$(test);)
+	@$(foreach test, $(TEST_BINS), mpirun --allow-run-as-root -np 4 ./$(test);)
 
 # Target to build and run tests with profiling
 profile: CXXFLAGS += -pg
 profile: test
 	@gprof $(BIN_DIR)/rSVD_test2 > profile_output.txt
+
+# Rule to build the main executable
+main: $(OBJ_FILES)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $(MAIN_DIR)/main.cpp $(filter %.o,$^) -o $(BIN_DIR)/main
+	mpirun --allow-run-as-root -np 4 $(BIN_DIR)/main
 
 # Clean up generated files and remove files inside /data/output/
 clean:
