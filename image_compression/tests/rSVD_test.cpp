@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
     std::filesystem::path root = exeDir.parent_path();
 
     // Input and output directories
-    std::filesystem::path inputDir = root / "data" / "input";
+    std::filesystem::path inputDir = root / "data" / "input" / "mat";
     std::filesystem::path outputDir = root / "data" / "output" / "rSVD" / "my";
 
     // Create output directory if it doesn't exist
