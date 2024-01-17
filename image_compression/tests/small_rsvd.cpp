@@ -15,9 +15,21 @@ using namespace std;
 // The main function for running the tests
 
 int main(int argc, char** argv) {
-    std::cout << "small test rSVD" << std::endl;
+
     MPI_Init(&argc, &argv);
-    Eigen::MatrixXd A(10, 10);
+    int num_procs, rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank == 0) std::cout << "small test rSVD" << std::endl;
+    int m = 6;
+    int n = 6;
+
+    Eigen::MatrixXd A(m, n);
+    Eigen::MatrixXd X(m, n);
+    Eigen::MatrixXd D(m, n);
+
+
     // A << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
     //     11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
     //     21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
@@ -33,36 +45,51 @@ int main(int argc, char** argv) {
     //     4, 5, 6,
     //     7, 8, 9;
 
-    // A.setRandom();
+    A.setRandom();
+
+    for (int i=0; i<m; i++){
+        for (int j=0; j<n; j++){
+            D(i, j) = (j*n + i) * 0.01;
+        }
+    }
+
+    X = A - D;
+
+    if (rank == 0) cout << A << endl;
 
     Mat A_copy = A;
-    int m = A.rows();
-    int n = A.cols();
-    int k = 5; // numerical rank (we need an algorithm to find it) or target rank
+    Mat D_copy = D;
+
+    int k = 2; // numerical rank (we need an algorithm to find it) or target rank
     int p = 0; // oversampling parameter, usually it is set to 5 or 10
     int l = k + p;
+
+    // if (rank == 0) cout << "A : " << A << endl;
 
     Mat U = Mat::Zero(m, l);
     Vec S = Vec::Zero(l);
     Mat V = Mat::Zero(l, n);
 
-    rSVD(A, U, S, V, l);
+    rSVD(D, U, S, V, l);
     // cout << "U: \n" << U << endl;
     // cout << "S: \n" << S << endl;
     // cout << "V: \n" << V << endl;
 
     Mat diagonalMatrix = S.asDiagonal();
-    Mat A_2(m, n);
+    Mat D_2(m, n);
     Mat mid(m, l);
     mid = U * diagonalMatrix;
-    A_2 = mid * V.transpose();
+    D_2 = mid * V.transpose();
+    Mat A_2 = X + D_2;
 
-    // cout << "A~: " << A_2 << endl;
-
-    Mat diff = A_copy - A_2;
+    if (rank == 0) cout << "A~: " << A_2 << endl;
+    Mat diff = D_copy - D_2;
     double norm_of_difference = (diff).norm();
 
-    cout << "norm : " << norm_of_difference << endl;
+    if (rank == 0) {
+        cout << "norm ||D~ - D|| = " << norm_of_difference << endl;
+        cout << "norm ||A~ - A|| = " << (A_2 - A).norm() << endl;
+    }
     MPI_Finalize();
     return 0;
 }

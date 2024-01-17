@@ -55,7 +55,7 @@ void intermediate_step(Mat &A, Mat &Q, Mat &Omega, int &l, int &q){
     int q=2;
     Mat Q = Mat::Zero(m, l);
     intermediate_step(A, Q, Omega, l, q);
-    // cout << "Q: " << Q << endl;
+    
     // Stage B
     // (4) Form the (k + p) × n matrix B = Q*A
     Mat B = Q.transpose() * A;
