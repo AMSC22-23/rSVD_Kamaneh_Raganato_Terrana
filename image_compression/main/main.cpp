@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
     int m = imageMatrix.rows(); 
     int n = imageMatrix.cols();
     int k = 5; // numerical rank (we need an algorithm to find it) or target rank
-    int p = 10; // oversampling parameter, usually it is set to 5 or 10
+    int p = 5; // oversampling parameter, usually it is set to 5 or 10
     int l = k + p;
     Mat imageMatrix_copy = imageMatrix;
     Mat U = Mat::Zero(m, l);
@@ -68,9 +68,19 @@ int main(int argc, char** argv) {
     double norm_of_difference = (diff).norm();
     std::chrono::duration<double> duration = end - start;
 
+    size_t originalSize = sizeof(double) * imageMatrix.rows() * imageMatrix.cols();
+    size_t compressedSize = sizeof(double) * (U.size() + S.size() + V.size());
+
+    double compressionRatio = static_cast<double>(originalSize) / compressedSize;
+
+
     if (rank == 0){
         // std::cout << "\nDataset: " << fileName << "\n";
         // std::cout << "Size: " << A.rows() << ", " << A.cols() << "\n";
+        std::cout << "Original size: " << originalSize << " bytes" << std::endl;
+        std::cout << "Compressed size: " << compressedSize << " bytes" << std::endl;
+        std::cout << "Compression ratio: " << compressionRatio << std::endl;
+
         std::cout << "Number of Processors: " << num_procs << "\n";
         std::cout << "Execution time: " << duration.count() << " seconds" << "\n";
         std::cout << "norm of diff : " << norm_of_difference << "\n";
