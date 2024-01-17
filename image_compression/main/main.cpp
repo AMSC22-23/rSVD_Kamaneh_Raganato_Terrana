@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     if (rank == 0) std::cout << "main running" << std::endl;
     
     // const char* filename = "data/input/img/download.png";
-    const char* filename = "data/input/img/Mona_Lisa-256x256(2).png";
+    const char* filename = "data/input/img/download.png";
     const char* outputFilename = "data/output/output_image.png";
     // Load image using stb_image
     int width, height, channels;
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
     int m = imageMatrix.rows(); 
     int n = imageMatrix.cols();
     int k = 5; // numerical rank (we need an algorithm to find it) or target rank
-    int p = 20; // oversampling parameter, usually it is set to 5 or 10
+    int p = 10; // oversampling parameter, usually it is set to 5 or 10
     int l = k + p;
     Mat imageMatrix_copy = imageMatrix;
     Mat U = Mat::Zero(m, l);
