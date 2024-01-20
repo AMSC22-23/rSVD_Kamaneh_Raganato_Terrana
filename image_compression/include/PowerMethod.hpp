@@ -5,6 +5,7 @@
 #include <fstream>
 #include <random>
 #include <mpi.h>
+#include <omp.h>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <unsupported/Eigen/SparseExtra>

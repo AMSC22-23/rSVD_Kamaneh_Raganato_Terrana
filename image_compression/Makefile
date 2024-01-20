@@ -1,5 +1,5 @@
 CXX := mpic++
-CXXFLAGS := -w -Iinclude -I $(mkEigenInc) -Ilib 
+CXXFLAGS := -w -o3 -fopenmp -Iinclude -I $(mkEigenInc) -Ilib 
 MK_EIGEN_INC := $(mkEigenInc)  # Assuming mkEigenInc is a variable you need
 
 SRC_DIR := src

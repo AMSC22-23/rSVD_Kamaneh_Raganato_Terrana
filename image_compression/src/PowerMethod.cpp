@@ -19,7 +19,7 @@ void powerMethod(Eigen::MatrixXd& A, Eigen::MatrixXd& B, double& sigma, Eigen::V
     random_device rd;
     mt19937 gen(rd());
     normal_distribution<double> distribution(0.0, 1.0);
-
+    
     for (size_t i = 0; i < x0.size(); i++) {
         x0(i) = distribution(gen);
     }
