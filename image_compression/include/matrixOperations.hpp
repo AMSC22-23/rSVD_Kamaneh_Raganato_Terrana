@@ -5,12 +5,6 @@
 #include <Eigen/Sparse>
 #include <unsupported/Eigen/SparseExtra>
 
-using namespace std;
-using namespace Eigen;
-
-using Mat = MatrixXd;
-using Vec = VectorXd;
-
-Mat manualMatrixMultiply(const Mat &matrix1, const Mat &matrix2);
+Eigen::MatrixXd manualMatrixMultiply(const Eigen::MatrixXd& matrix1, const Eigen::MatrixXd& matrix2);
 
 #endif

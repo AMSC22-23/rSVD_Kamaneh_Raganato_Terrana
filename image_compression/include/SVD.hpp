@@ -1,8 +1,11 @@
 #ifndef SVD_H
 #define SVD_H
 
-#include "PM.hpp"
+#include "PowerMethod.hpp" 
 
-void SVD(Mat &A, Vec &sigma, Mat &U, Mat &V, const int dim);
+/**
+
+ */
+void singularValueDecomposition(Eigen::MatrixXd& A, Eigen::VectorXd& sigma, Eigen::MatrixXd& U, Eigen::MatrixXd& V, const int dim);
 
 #endif

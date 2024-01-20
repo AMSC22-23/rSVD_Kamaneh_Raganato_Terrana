@@ -7,8 +7,11 @@
 #include <unsupported/Eigen/SparseExtra>
 #include <mpi.h>
 
-using namespace Eigen;
 using namespace std;
+using namespace Eigen;
+
+using Mat = MatrixXd;
+using Vec = VectorXd;
 
 void givens_rotation(double a, double b, Matrix2d& G) 
 {
@@ -64,7 +67,6 @@ void qr_decomposition_reduced(const Mat &A, Mat &Q, Mat &R)
                 
                 // Q_temp.leftCols(m).middleCols(i - 1, 2) = manualMatrixMultiply(Q_temp.leftCols(m).middleCols(i - 1, 2), G.transpose());
                 Q_temp.leftCols(m).middleCols(i - 1, 2) = Q_temp.leftCols(m).middleCols(i - 1, 2) * G.transpose();
-                // MPI_Barrier(MPI_COMM_WORLD);
 
             }
         }

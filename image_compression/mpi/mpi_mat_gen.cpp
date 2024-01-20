@@ -40,9 +40,9 @@ int main() {
     // Compute displacements and recvcounts arrays
     for (int i = 0; i < num_procs; ++i) {
         recvcounts[i] = (i < rows_remainder) ? (rows_per_proc + 1)*k : rows_per_proc*k;
-        displacements[i] = (i < rows_remainder) ? (k * (i * (rows_per_proc + 1))) : (k * (rows_remainder * (rows_per_proc + 1)) + (i - rows_remainder) * k * rows_per_proc);
-        
-}
+        displacements[i] = (i < rows_remainder) ? (k * (i * (rows_per_proc + 1))) : (k * (rows_remainder * (rows_per_proc + 1)) + (i - rows_remainder) * k * rows_per_proc);    
+    }
+    
     // Gather local results using MPI_Gatherv
     MPI_Gatherv(local_Omega.data(), k*local_rows, MPI_DOUBLE, Omega.data(), recvcounts.data(), displacements.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
     

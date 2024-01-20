@@ -1,6 +1,11 @@
 #include "SVD.hpp"
 
-void SVD(Mat &A, Vec &sigma, Mat &U, Mat &V, const int dim) {
+void singularValueDecomposition(Eigen::MatrixXd& A, Eigen::VectorXd& sigma, Eigen::MatrixXd& U, Eigen::MatrixXd& V, const int dim) {
+    using namespace std;
+    using namespace Eigen;
+
+    using Mat = MatrixXd;
+    using Vec = VectorXd;
 
     Mat VT = Mat::Zero(dim, A.cols()); // VT is the transpose of V
 
@@ -12,7 +17,7 @@ void SVD(Mat &A, Vec &sigma, Mat &U, Mat &V, const int dim) {
     Vec v = Vec::Zero(A.cols());
     
     for (int i=0; i<dim; i++) {
-        PM(A, B, sigma(i), u, v);
+        powerMethod(A, B, sigma(i), u, v);
         A -= sigma(i)*u*v.transpose();
         B = A.transpose()*A;
         U.col(i) = u;

@@ -1,10 +1,20 @@
-#include "rSVD.hpp"
 #include "SVD.hpp"
+#include "rSVD.hpp"
 #include "QR.hpp"
 #include <mpi.h>
+#include <omp.h>
 
-void intermediate_step(Mat &A, Mat &Q, Mat &Omega, int &l, int &q){
+void intermediate_step(Eigen::MatrixXd& A, Eigen::MatrixXd& Q, Eigen::MatrixXd& Omega, int &l, int &q){
+    using namespace std;
+    using namespace Eigen;
+
+    using Mat = MatrixXd;
+    using Vec = VectorXd;
     
+    int num_procs, rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
     Mat Y0 = A * Omega; // Y0 = A * Omega = (m*n) * (n*l) = (m*l)
     Mat Q0(A.rows(), l); // Q0 = (m*l)
     Mat R0(l, l); // R0 = (l*l)
@@ -28,31 +38,54 @@ void intermediate_step(Mat &A, Mat &Q, Mat &Omega, int &l, int &q){
 }
 
 
- void rSVD(Mat& A, Mat& U, Vec& S, Mat& V, int l) {
+ void rSVD(Eigen::MatrixXd& A, Eigen::MatrixXd& U, Eigen::VectorXd& S, Eigen::MatrixXd& V, int l) {
+    using namespace std;
+    using namespace Eigen;
+
+    using Mat = MatrixXd;
+    using Vec = VectorXd;
+
+    int rank, num_procs;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+
     // Stage A
     // (1) Form an n × (k + p) Gaussian random matrix Omega
     int m = A.rows();
     int n = A.cols();
 
-    // int k = 10; // numerical rank (we need an algorithm to find it) or target rank
-    // int p = 5; // oversampling parameter, usually it is set to 5 or 10
-    // int l = k + p;
-
     Mat Omega = Mat::Zero(n, l);
+
+    int rows_per_proc = Omega.rows() / num_procs;
+    int rows_remainder = Omega.rows() % num_procs;
+    int local_rows = (rank < rows_remainder) ? rows_per_proc + 1 : rows_per_proc;
+    int offset = rank * rows_per_proc + std::min(rank, rows_remainder);
 
     // Create a random number generator for a normal distribution
     std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937 gen(rd() + rank);
     std::normal_distribution<double> dist(0.0, 1.0);
 
     // Fill the corresponding rows of Omega with random numbers using this thread's seed
-    for (int i = 0; i < n; ++i) {
+    Eigen::MatrixXd local_Omega = Omega.block(offset, 0, local_rows, Omega.cols());
+    for (int i = 0; i < local_Omega.rows(); ++i) {
         for (int j = 0; j < l; ++j) {
-            Omega(i, j) = dist(gen);
+            local_Omega(i, j) = dist(gen);
         }
     }
 
-    int q=2;
+    std::vector<int> recvcounts(num_procs);
+    std::vector<int> displacements(num_procs);
+
+    // Compute displacements and recvcounts arrays
+    for (int i = 0; i < num_procs; ++i) {
+        recvcounts[i] = (i < rows_remainder) ? (rows_per_proc + 1)*l : rows_per_proc*l;
+        displacements[i] = (i < rows_remainder) ? (l * (i * (rows_per_proc + 1))) : (l * (rows_remainder * (rows_per_proc + 1)) + (i - rows_remainder) * l * rows_per_proc);    
+    }
+
+    MPI_Gatherv(local_Omega.data(), l*local_rows, MPI_DOUBLE, Omega.data(), recvcounts.data(), displacements.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    int q=1;
     Mat Q = Mat::Zero(m, l);
     intermediate_step(A, Q, Omega, l, q);
     
@@ -61,9 +94,9 @@ void intermediate_step(Mat &A, Mat &Q, Mat &Omega, int &l, int &q){
     Mat B = Q.transpose() * A;
 
     // (5) Form the SVD of the small matrix B
-    int min= B.rows() < B.cols() ? B.rows() : B.cols();
-    Mat Utilde = Mat::Zero(B.rows(), min);
-    SVD(B, S, Utilde, V, min);
+    int min_dim= B.rows() < B.cols() ? B.rows() : B.cols();
+    Mat Utilde = Mat::Zero(B.rows(), min_dim);
+    singularValueDecomposition(B, S, Utilde, V, min_dim);
 
     // (6) Form U = Q*U_hat
     U = Q * Utilde;

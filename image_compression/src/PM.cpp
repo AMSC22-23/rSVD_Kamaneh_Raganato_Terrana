@@ -1,7 +1,11 @@
-#include "PM.hpp"
-#include <mpi.h>
+#include "PowerMethod.hpp"
 
-void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v) {
+void powerMethod(Eigen::MatrixXd& A, Eigen::MatrixXd& B, double& sigma, Eigen::VectorXd& u, Eigen::VectorXd& v){
+    using namespace std;
+    using namespace Eigen;
+
+    using Mat = MatrixXd;
+    using Vec = VectorXd;
 
     // Get the total number of processors and the rank of the current processor
     int num_procs, rank;
@@ -16,15 +20,15 @@ void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v) {
     mt19937 gen(rd());
     normal_distribution<double> distribution(0.0, 1.0);
 
-    for (int i = 0; i < x0.size(); i++) {
+    for (size_t i = 0; i < x0.size(); i++) {
         x0(i) = distribution(gen);
     }
     x0.normalize();
 
     // Define the number of iterations
-    double epsilon = 1.e-10;
-    double delta = 0.05;
-    double lambda = 0.1;
+    const double epsilon = 1.e-10;
+    const double delta = 0.05;
+    const double lambda = 0.1;
     int s = ceil(log(4 * log(2 * A.cols() / delta) / (epsilon * delta)) / (2 * lambda));
 
     // Divide rows of A among processors
@@ -37,13 +41,13 @@ void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v) {
     // Compute local portion of the result vector c manually
     Eigen::VectorXd local_res(end_row - start_row);
 
-    for (int outer_index = 1; outer_index <= s; outer_index++) {
+    for (size_t outer_index = 1; outer_index <= s; outer_index++) {
 
         // x0 = B*x0; 
         // converting the above multiplication to manual with MPI
-        for (int i = 0; i < local_res.size(); ++i) {
+        for (size_t i = 0; i < local_res.size(); ++i) {
             local_res(i) = 0.0;
-            for (int j = 0; j < B.cols(); ++j) {
+            for (size_t j = 0; j < B.cols(); ++j) {
                 local_res(i) += local_B(i, j) * x0(j);
             }
         }
