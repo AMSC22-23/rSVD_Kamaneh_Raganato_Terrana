@@ -60,7 +60,35 @@ Poisson2D::setup()
     // they are collocated, their "global indices", ...).
     dof_handler.distribute_dofs(*fe);
 
-    std::cout << "  Number of DoFs = " << dof_handler.n_dofs() << std::endl;
+    std::cout << "  Number of DoFs          = " << dof_handler.n_dofs() << std::endl;
+
+    // MODIFIED FROM HERE
+    // Count the number of boundary DoFs.
+    dof_handler.n_boundary_dofs();
+    std::cout << "  Number of boundary Dofs = " << dof_handler.n_boundary_dofs() << std::endl;
+
+    // Count the number of internal DoFs that will be Nh.
+    unsigned int n_internal_dofs = dof_handler.n_dofs() - dof_handler.n_boundary_dofs();
+    std::cout << "  Number of internal Dofs = " << n_internal_dofs << std::endl;
+
+    // Try to extract the boundary DoFs.
+    // https://www.dealii.org/current/doxygen/deal.II/namespaceDoFTools.html#a06b3c33925c1a1f15de20deda20b4d21
+    const ComponentMask component_mask = ComponentMask();
+    const std::set<types::boundary_id> boundary_ids = {0, 1, 2, 3}; // #include <set>
+    const IndexSet boundary_dofs = DoFTools::extract_boundary_dofs(dof_handler, component_mask, boundary_ids);
+    std::vector<types::global_dof_index> boundary_dofs_idx;
+
+    for (auto it = boundary_dofs.begin(); it != boundary_dofs.end(); it++)
+      boundary_dofs_idx.push_back(*it);
+
+    std::cout << "  Check boundary_dofs_idx.size()    = " << boundary_dofs_idx.size() << std::endl;
+    for (const auto& dof : boundary_dofs_idx)
+      std::cout << "    " << dof << std::endl;
+    std::cout << std::endl;
+
+    boundary_dofs_idx_int.assign(boundary_dofs_idx.begin(), boundary_dofs_idx.end());
+    std::cout << "  Check boundary_dofs_idx_int.size() = " << boundary_dofs_idx_int.size() << std::endl;
+    // TO HERE
   }
 
   std::cout << "-----------------------------------------------" << std::endl;
@@ -282,6 +310,7 @@ Poisson2D::assemble()
     MatrixTools::apply_boundary_values(
       boundary_values, system_matrix, solution, system_rhs, true);
   }
+
 }
 
 void
@@ -332,7 +361,10 @@ Poisson2D::solve()
   std::cout << "  " << solver_control.last_step() << " GMRES iterations"
             << std::endl;
 
+
   snapshot_array.assign(solution.begin(), solution.end());
+  std::cout << "  Check solution.size()       = " << solution.size() << std::endl;
+  std::cout << "  Check snapshot_array.size() = " << snapshot_array.size() << std::endl;
 }
 
 void

@@ -31,6 +31,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <set>
 
 using namespace dealii;
 
@@ -127,7 +128,7 @@ public:
     value(const Point<dim> &/*p*/,
           const unsigned int /*component*/ = 0) const override
     {
-      return 10.0;
+      return 0.0;
     }
   };
 
@@ -199,9 +200,11 @@ public:
 
   // Constructor.
   Poisson2D(const std::string &mesh_file_name_, const unsigned int &r_,
+            std::vector<unsigned int> &boundary_dofs_idx_int_,
             std::vector<double> &snapshot_array_, const double &prm_diffusion_coefficient_)
     : mesh_file_name(mesh_file_name_)
     , r(r_)
+    , boundary_dofs_idx_int(boundary_dofs_idx_int_)
     , snapshot_array(snapshot_array_)
     , diffusion_coefficient(prm_diffusion_coefficient_)
   {}
@@ -232,6 +235,9 @@ protected:
 
   // Polynomial degree.
   const unsigned int r;
+
+  // Boundary DOFs indices.
+  std::vector<unsigned int> boundary_dofs_idx_int;
 
   // Snapshot array.
   std::vector<double> &snapshot_array;
