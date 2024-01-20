@@ -83,10 +83,24 @@ CMakeFiles/ParametricDiffusion_snapshot.dir/src/ParametricDiffusion_snapshot.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/ParametricDiffusion_snapshot.dir/src/ParametricDiffusion_snapshot.cpp.s"
 	/u/sw/toolchains/gcc-glibc/11.2.0/base/bin/mpicxx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/jellyfish/shared-folder/rSVD_POD/ParametricDiffusion/src/ParametricDiffusion_snapshot.cpp -o CMakeFiles/ParametricDiffusion_snapshot.dir/src/ParametricDiffusion_snapshot.cpp.s
 
+CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.o: CMakeFiles/ParametricDiffusion_snapshot.dir/flags.make
+CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.o: ../src/POD.cpp
+CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.o: CMakeFiles/ParametricDiffusion_snapshot.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jellyfish/shared-folder/rSVD_POD/ParametricDiffusion/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.o"
+	/u/sw/toolchains/gcc-glibc/11.2.0/base/bin/mpicxx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.o -MF CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.o.d -o CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.o -c /home/jellyfish/shared-folder/rSVD_POD/ParametricDiffusion/src/POD.cpp
+
+CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.i"
+	/u/sw/toolchains/gcc-glibc/11.2.0/base/bin/mpicxx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/jellyfish/shared-folder/rSVD_POD/ParametricDiffusion/src/POD.cpp > CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.i
+
+CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.s"
+	/u/sw/toolchains/gcc-glibc/11.2.0/base/bin/mpicxx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/jellyfish/shared-folder/rSVD_POD/ParametricDiffusion/src/POD.cpp -o CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.s
+
 CMakeFiles/ParametricDiffusion_snapshot.dir/src/Poisson2D_snapshot.cpp.o: CMakeFiles/ParametricDiffusion_snapshot.dir/flags.make
 CMakeFiles/ParametricDiffusion_snapshot.dir/src/Poisson2D_snapshot.cpp.o: ../src/Poisson2D_snapshot.cpp
 CMakeFiles/ParametricDiffusion_snapshot.dir/src/Poisson2D_snapshot.cpp.o: CMakeFiles/ParametricDiffusion_snapshot.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jellyfish/shared-folder/rSVD_POD/ParametricDiffusion/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/ParametricDiffusion_snapshot.dir/src/Poisson2D_snapshot.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/jellyfish/shared-folder/rSVD_POD/ParametricDiffusion/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/ParametricDiffusion_snapshot.dir/src/Poisson2D_snapshot.cpp.o"
 	/u/sw/toolchains/gcc-glibc/11.2.0/base/bin/mpicxx $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/ParametricDiffusion_snapshot.dir/src/Poisson2D_snapshot.cpp.o -MF CMakeFiles/ParametricDiffusion_snapshot.dir/src/Poisson2D_snapshot.cpp.o.d -o CMakeFiles/ParametricDiffusion_snapshot.dir/src/Poisson2D_snapshot.cpp.o -c /home/jellyfish/shared-folder/rSVD_POD/ParametricDiffusion/src/Poisson2D_snapshot.cpp
 
 CMakeFiles/ParametricDiffusion_snapshot.dir/src/Poisson2D_snapshot.cpp.i: cmake_force
@@ -100,12 +114,14 @@ CMakeFiles/ParametricDiffusion_snapshot.dir/src/Poisson2D_snapshot.cpp.s: cmake_
 # Object files for target ParametricDiffusion_snapshot
 ParametricDiffusion_snapshot_OBJECTS = \
 "CMakeFiles/ParametricDiffusion_snapshot.dir/src/ParametricDiffusion_snapshot.cpp.o" \
+"CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.o" \
 "CMakeFiles/ParametricDiffusion_snapshot.dir/src/Poisson2D_snapshot.cpp.o"
 
 # External object files for target ParametricDiffusion_snapshot
 ParametricDiffusion_snapshot_EXTERNAL_OBJECTS =
 
 ParametricDiffusion_snapshot: CMakeFiles/ParametricDiffusion_snapshot.dir/src/ParametricDiffusion_snapshot.cpp.o
+ParametricDiffusion_snapshot: CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.o
 ParametricDiffusion_snapshot: CMakeFiles/ParametricDiffusion_snapshot.dir/src/Poisson2D_snapshot.cpp.o
 ParametricDiffusion_snapshot: CMakeFiles/ParametricDiffusion_snapshot.dir/build.make
 ParametricDiffusion_snapshot: /u/sw/toolchains/gcc-glibc/11.2.0/pkgs/dealii/9.3.1/lib/libdeal_II.so.9.3.1
@@ -235,7 +251,7 @@ ParametricDiffusion_snapshot: /u/sw/toolchains/gcc-glibc/11.2.0/base/lib/libmpi_
 ParametricDiffusion_snapshot: /u/sw/toolchains/gcc-glibc/11.2.0/base/lib/libmpi_mpifh.so
 ParametricDiffusion_snapshot: /u/sw/toolchains/gcc-glibc/11.2.0/base/lib/libmpi.so
 ParametricDiffusion_snapshot: CMakeFiles/ParametricDiffusion_snapshot.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/jellyfish/shared-folder/rSVD_POD/ParametricDiffusion/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable ParametricDiffusion_snapshot"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/jellyfish/shared-folder/rSVD_POD/ParametricDiffusion/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX executable ParametricDiffusion_snapshot"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/ParametricDiffusion_snapshot.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

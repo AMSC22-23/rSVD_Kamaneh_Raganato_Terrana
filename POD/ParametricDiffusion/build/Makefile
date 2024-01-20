@@ -129,42 +129,29 @@ ParametricDiffusion_snapshot/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ParametricDiffusion_snapshot.dir/build.make CMakeFiles/ParametricDiffusion_snapshot.dir/build
 .PHONY : ParametricDiffusion_snapshot/fast
 
-#=============================================================================
-# Target rules for targets named ParametricDiffusion
-
-# Build rule for target.
-ParametricDiffusion: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ParametricDiffusion
-.PHONY : ParametricDiffusion
-
-# fast build rule for target.
-ParametricDiffusion/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ParametricDiffusion.dir/build.make CMakeFiles/ParametricDiffusion.dir/build
-.PHONY : ParametricDiffusion/fast
-
-src/ParametricDiffusion.o: src/ParametricDiffusion.cpp.o
-.PHONY : src/ParametricDiffusion.o
+src/POD.o: src/POD.cpp.o
+.PHONY : src/POD.o
 
 # target to build an object file
-src/ParametricDiffusion.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ParametricDiffusion.dir/build.make CMakeFiles/ParametricDiffusion.dir/src/ParametricDiffusion.cpp.o
-.PHONY : src/ParametricDiffusion.cpp.o
+src/POD.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ParametricDiffusion_snapshot.dir/build.make CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.o
+.PHONY : src/POD.cpp.o
 
-src/ParametricDiffusion.i: src/ParametricDiffusion.cpp.i
-.PHONY : src/ParametricDiffusion.i
+src/POD.i: src/POD.cpp.i
+.PHONY : src/POD.i
 
 # target to preprocess a source file
-src/ParametricDiffusion.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ParametricDiffusion.dir/build.make CMakeFiles/ParametricDiffusion.dir/src/ParametricDiffusion.cpp.i
-.PHONY : src/ParametricDiffusion.cpp.i
+src/POD.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ParametricDiffusion_snapshot.dir/build.make CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.i
+.PHONY : src/POD.cpp.i
 
-src/ParametricDiffusion.s: src/ParametricDiffusion.cpp.s
-.PHONY : src/ParametricDiffusion.s
+src/POD.s: src/POD.cpp.s
+.PHONY : src/POD.s
 
 # target to generate assembly for a file
-src/ParametricDiffusion.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ParametricDiffusion.dir/build.make CMakeFiles/ParametricDiffusion.dir/src/ParametricDiffusion.cpp.s
-.PHONY : src/ParametricDiffusion.cpp.s
+src/POD.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/ParametricDiffusion_snapshot.dir/build.make CMakeFiles/ParametricDiffusion_snapshot.dir/src/POD.cpp.s
+.PHONY : src/POD.cpp.s
 
 src/ParametricDiffusion_snapshot.o: src/ParametricDiffusion_snapshot.cpp.o
 .PHONY : src/ParametricDiffusion_snapshot.o
@@ -189,30 +176,6 @@ src/ParametricDiffusion_snapshot.s: src/ParametricDiffusion_snapshot.cpp.s
 src/ParametricDiffusion_snapshot.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ParametricDiffusion_snapshot.dir/build.make CMakeFiles/ParametricDiffusion_snapshot.dir/src/ParametricDiffusion_snapshot.cpp.s
 .PHONY : src/ParametricDiffusion_snapshot.cpp.s
-
-src/Poisson2D.o: src/Poisson2D.cpp.o
-.PHONY : src/Poisson2D.o
-
-# target to build an object file
-src/Poisson2D.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ParametricDiffusion.dir/build.make CMakeFiles/ParametricDiffusion.dir/src/Poisson2D.cpp.o
-.PHONY : src/Poisson2D.cpp.o
-
-src/Poisson2D.i: src/Poisson2D.cpp.i
-.PHONY : src/Poisson2D.i
-
-# target to preprocess a source file
-src/Poisson2D.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ParametricDiffusion.dir/build.make CMakeFiles/ParametricDiffusion.dir/src/Poisson2D.cpp.i
-.PHONY : src/Poisson2D.cpp.i
-
-src/Poisson2D.s: src/Poisson2D.cpp.s
-.PHONY : src/Poisson2D.s
-
-# target to generate assembly for a file
-src/Poisson2D.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/ParametricDiffusion.dir/build.make CMakeFiles/ParametricDiffusion.dir/src/Poisson2D.cpp.s
-.PHONY : src/Poisson2D.cpp.s
 
 src/Poisson2D_snapshot.o: src/Poisson2D_snapshot.cpp.o
 .PHONY : src/Poisson2D_snapshot.o
@@ -246,17 +209,13 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... ParametricDiffusion"
 	@echo "... ParametricDiffusion_snapshot"
-	@echo "... src/ParametricDiffusion.o"
-	@echo "... src/ParametricDiffusion.i"
-	@echo "... src/ParametricDiffusion.s"
+	@echo "... src/POD.o"
+	@echo "... src/POD.i"
+	@echo "... src/POD.s"
 	@echo "... src/ParametricDiffusion_snapshot.o"
 	@echo "... src/ParametricDiffusion_snapshot.i"
 	@echo "... src/ParametricDiffusion_snapshot.s"
-	@echo "... src/Poisson2D.o"
-	@echo "... src/Poisson2D.i"
-	@echo "... src/Poisson2D.s"
 	@echo "... src/Poisson2D_snapshot.o"
 	@echo "... src/Poisson2D_snapshot.i"
 	@echo "... src/Poisson2D_snapshot.s"
