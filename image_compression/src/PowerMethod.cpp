@@ -40,11 +40,13 @@ void powerMethod(Eigen::MatrixXd& A, Eigen::MatrixXd& B, double& sigma, Eigen::V
 
     // Compute local portion of the result vector c manually
     Eigen::VectorXd local_res(end_row - start_row);
-
+    
     for (size_t outer_index = 1; outer_index <= s; outer_index++) {
 
         // x0 = B*x0; 
         // converting the above multiplication to manual with MPI
+        
+        
         for (size_t i = 0; i < local_res.size(); ++i) {
             local_res(i) = 0.0;
             for (size_t j = 0; j < B.cols(); ++j) {
