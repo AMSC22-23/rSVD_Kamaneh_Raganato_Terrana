@@ -41,7 +41,7 @@ $(BIN_DIR)/%: $(TESTS_DIR)/%.cpp $(OBJ_FILES)
 # Target to build and run tests without profiling
 test: $(TEST_BINS) create_directories
 	@echo "Running tests..."
-	@$(foreach test, $(TEST_BINS), mpirun --allow-run-as-root -np 4 ./$(test);)
+	@$(foreach test, $(TEST_BINS), mpirun -np 4 ./$(test);)
 
 # Target to build and run tests with profiling
 profile: CXXFLAGS += -pg
@@ -52,7 +52,7 @@ profile: test
 main: $(OBJ_FILES)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $(INCLUDES) $(MAIN_DIR)/main.cpp $(filter %.o,$^) -o $(BIN_DIR)/main
-	mpirun --allow-run-as-root -np 4 $(BIN_DIR)/main
+	mpirun -np 4 $(BIN_DIR)/main
 
 # Clean up generated files and remove files inside /data/output/
 clean:
