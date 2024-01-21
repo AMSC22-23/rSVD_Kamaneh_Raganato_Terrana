@@ -27,6 +27,7 @@
 # Generated files
 bin/
 obj/
+build/*
 
 # IDE-specific files
 .vscode/
