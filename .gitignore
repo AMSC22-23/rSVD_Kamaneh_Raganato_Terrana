@@ -27,14 +27,13 @@
 # Generated files
 bin/
 obj/
-build/*
+build/
 
 # IDE-specific files
 .vscode/
 .idea/
 
 # Dependency directories
-lib/
 vendor/
 
 # User-specific files
