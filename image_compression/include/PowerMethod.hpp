@@ -14,6 +14,6 @@
 
  */
 
-void powerMethod(Eigen::MatrixXd& A, Eigen::MatrixXd& B, double& sigma, Eigen::VectorXd& u, Eigen::VectorXd& v);
+void powerMethod_mpi(Eigen::MatrixXd& A, Eigen::MatrixXd& B, double& sigma, Eigen::VectorXd& u, Eigen::VectorXd& v);
 
 #endif

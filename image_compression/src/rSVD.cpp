@@ -4,7 +4,7 @@
 #include <mpi.h>
 #include <omp.h>
 
-void intermediate_step(Eigen::MatrixXd& A, Eigen::MatrixXd& Q, Eigen::MatrixXd& Omega, int &l, int &q){
+void intermediate_step_mpi(Eigen::MatrixXd& A, Eigen::MatrixXd& Q, Eigen::MatrixXd& Omega, int &l, int &q){
     using namespace std;
     using namespace Eigen;
 
@@ -38,7 +38,7 @@ void intermediate_step(Eigen::MatrixXd& A, Eigen::MatrixXd& Q, Eigen::MatrixXd& 
 }
 
 
- void rSVD(Eigen::MatrixXd& A, Eigen::MatrixXd& U, Eigen::VectorXd& S, Eigen::MatrixXd& V, int l) {
+ void rSVD_mpi(Eigen::MatrixXd& A, Eigen::MatrixXd& U, Eigen::VectorXd& S, Eigen::MatrixXd& V, int l) {
     using namespace std;
     using namespace Eigen;
 
@@ -87,7 +87,7 @@ void intermediate_step(Eigen::MatrixXd& A, Eigen::MatrixXd& Q, Eigen::MatrixXd& 
 
     int q=1;
     Mat Q = Mat::Zero(m, l);
-    intermediate_step(A, Q, Omega, l, q);
+    intermediate_step_mpi(A, Q, Omega, l, q);
     
     // Stage B
     // (4) Form the (k + p) × n matrix B = Q*A
@@ -96,7 +96,7 @@ void intermediate_step(Eigen::MatrixXd& A, Eigen::MatrixXd& Q, Eigen::MatrixXd& 
     // (5) Form the SVD of the small matrix B
     int min_dim= B.rows() < B.cols() ? B.rows() : B.cols();
     Mat Utilde = Mat::Zero(B.rows(), min_dim);
-    singularValueDecomposition(B, S, Utilde, V, min_dim);
+    singularValueDecomposition_mpi(B, S, Utilde, V, min_dim);
 
     // (6) Form U = Q*U_hat
     U = Q * Utilde;

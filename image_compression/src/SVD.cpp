@@ -1,6 +1,6 @@
 #include "SVD.hpp"
 
-void singularValueDecomposition(Eigen::MatrixXd& A, Eigen::VectorXd& sigma, Eigen::MatrixXd& U, Eigen::MatrixXd& V, const int dim) {
+void singularValueDecomposition_mpi(Eigen::MatrixXd& A, Eigen::VectorXd& sigma, Eigen::MatrixXd& U, Eigen::MatrixXd& V, const int dim) {
     using namespace std;
     using namespace Eigen;
 
@@ -17,7 +17,7 @@ void singularValueDecomposition(Eigen::MatrixXd& A, Eigen::VectorXd& sigma, Eige
     Vec v = Vec::Zero(A.cols());
     
     for (int i=0; i<dim; i++) {
-        powerMethod(A, B, sigma(i), u, v);
+        powerMethod_mpi(A, B, sigma(i), u, v);
         A -= sigma(i)*u*v.transpose();
         B = A.transpose()*A;
         U.col(i) = u;

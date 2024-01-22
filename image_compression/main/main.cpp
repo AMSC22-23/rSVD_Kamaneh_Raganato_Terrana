@@ -1,9 +1,13 @@
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #include <iostream>
 #include <mpi.h>
 #include <chrono>
 #include <Eigen/Dense>
 #include "rSVD.hpp"
+#include "stb_image.h"
+#include "stb_image_write.h"
 
 
 int main(int argc, char** argv) {
@@ -15,8 +19,8 @@ int main(int argc, char** argv) {
 
     if (rank == 0) std::cout << "main running" << std::endl;
 
-    // const char* filename = "data/input/img/download.png";
-    const char* filename = "data/input/img/Mona_Lisa-256x256(2).png";
+    const char* filename = "data/input/img/download.png";
+    // const char* filename = "data/input/img/Mona_Lisa-256x256(2).png";
     const char* outputFilename = "data/output/output_image.png";
 
     // Load image using stb_image
@@ -55,7 +59,7 @@ int main(int argc, char** argv) {
     Eigen::MatrixXd U = Eigen::MatrixXd::Zero(m, l);
     Eigen::VectorXd S = Eigen::VectorXd::Zero(l);
     Eigen::MatrixXd V = Eigen::MatrixXd::Zero(l, n);
-    rSVD(imageMatrix, U, S, V, l);
+    rSVD_mpi(imageMatrix, U, S, V, l);
 
     // Record the end time
     auto end = std::chrono::high_resolution_clock::now();
