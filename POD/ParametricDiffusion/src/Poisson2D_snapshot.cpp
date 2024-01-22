@@ -361,7 +361,7 @@ Poisson2D::solve()
   std::cout << "  " << solver_control.last_step() << " GMRES iterations"
             << std::endl;
 
-
+  // MODIFIED HERE
   snapshot_array.assign(solution.begin(), solution.end());
   std::cout << "  Check solution.size()       = " << solution.size() << std::endl;
   std::cout << "  Check snapshot_array.size() = " << snapshot_array.size() << std::endl;

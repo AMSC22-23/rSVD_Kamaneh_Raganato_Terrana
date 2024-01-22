@@ -128,7 +128,7 @@ public:
     value(const Point<dim> &/*p*/,
           const unsigned int /*component*/ = 0) const override
     {
-      return 0.0;
+      return 1.0;
     }
   };
 
@@ -229,18 +229,18 @@ public:
   double
   compute_error(const VectorTools::NormType &norm_type) const;
 
+  // Boundary DOFs indices.
+  std::vector<unsigned int> boundary_dofs_idx_int;
+
+  // Snapshot array.
+  std::vector<double> snapshot_array;
+
 protected:
   // Path to the mesh file.
   const std::string mesh_file_name;
 
   // Polynomial degree.
   const unsigned int r;
-
-  // Boundary DOFs indices.
-  std::vector<unsigned int> boundary_dofs_idx_int;
-
-  // Snapshot array.
-  std::vector<double> &snapshot_array;
 
   // const double prm_diffusion_coefficient;
 
