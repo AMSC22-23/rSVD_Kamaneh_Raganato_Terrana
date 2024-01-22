@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
     Eigen::MatrixXd U = Eigen::MatrixXd::Zero(m, l);
     Eigen::VectorXd S = Eigen::VectorXd::Zero(l);
     Eigen::MatrixXd V = Eigen::MatrixXd::Zero(l, n);
-    rSVD_mpi(imageMatrix, U, S, V, l);
+    rSVD(imageMatrix, U, S, V, l);
 
     // Record the end time
     auto end = std::chrono::high_resolution_clock::now();

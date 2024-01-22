@@ -1,5 +1,47 @@
 #include "PowerMethod.hpp"
 
+void powerMethod(Eigen::MatrixXd& A, Eigen::MatrixXd& B, double& sigma, Eigen::VectorXd& u, Eigen::VectorXd& v){
+    using namespace std;
+    using namespace Eigen;
+
+    using Mat = MatrixXd;
+    using Vec = VectorXd;
+
+    // Generate a random initial guess x0
+    Vec x0 = Vec::Zero(A.cols()); // To multiply B with x0
+    Vec res = Vec::Zero(A.cols()); // To multiply B with x0
+
+    random_device rd;
+    mt19937 gen(rd());
+    normal_distribution<double> distribution(0.0, 1.0);
+    
+    for (size_t i = 0; i < x0.size(); i++) {
+        x0(i) = distribution(gen);
+    }
+    x0.normalize();
+
+    // Define the number of iterations
+    const double epsilon = 1.e-10;
+    const double delta = 0.05;
+    const double lambda = 0.1;
+    int s = ceil(log(4 * log(2 * A.cols() / delta) / (epsilon * delta)) / (2 * lambda));
+
+    for (unsigned int i=1; i<=s; i++) {
+        x0 = B*x0; // B = A^T*A
+        x0.normalize();
+    }
+
+    // Compute the left singlular vector
+    v = x0;
+    v.normalize();
+
+    // Compute the singular value
+    sigma = (A*v).norm();
+
+    // Compute the right singular vector
+    u = A*v/sigma;
+}
+
 void powerMethod_mpi(Eigen::MatrixXd& A, Eigen::MatrixXd& B, double& sigma, Eigen::VectorXd& u, Eigen::VectorXd& v){
     using namespace std;
     using namespace Eigen;
