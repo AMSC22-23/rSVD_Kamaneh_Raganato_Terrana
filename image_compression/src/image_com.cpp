@@ -1,63 +1,58 @@
-#include <iostream>
-#include <mpi.h>
-#include <chrono>
-#include <Eigen/Dense>
-#include "rSVD.hpp"
-// #include "stb_image.h"
-// #include "stb_image_write.h"
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 
-class Image {
-private:
-    // cv::Mat image;
+#include "image_comp.hpp"
+#include "stb_image.h"
+#include "stb_image_write.h"
 
-public:
-    // Constructor
-    Image(int width, int height) {}
 
-    // Load image from file
-    void load(const std::string& filename) {
-        // image = cv::imread(filename, cv::IMREAD_COLOR);
+// Constructors
+Image::Image() {
 
-        // if (image.empty()) {
-        //     std::cerr << "Error: Could not open or read the image file." << std::endl;
-        // }
+}
+
+Image::Image(int width, int height) {
+    // Implementation
+}
+
+void Image::load(const char *filename) {
+    unsigned char* stb_img = stbi_load(filename, &originalWidth, &originalHeight, &channels, 1);
+
+    if (stb_img == nullptr) {
+        std::cerr << "Failed to load image: " << filename << std::endl;
     }
-
-    // Downscale the image
-    void downscale(int scale_factor) {
-        // if (!image.empty()) {
-        //     cv::resize(image, image, cv::Size(), 1.0 / scale_factor, 1.0 / scale_factor);
-        // } else {
-        //     std::cerr << "Error: Image not loaded." << std::endl;
-        // }
+    // later on change to private member image_matrix 
+    // instead of original matrix
+    Eigen::MatrixXd tempMatrix(originalHeight, originalWidth);
+    for (int i = 0; i < originalHeight; ++i) {
+        for (int j = 0; j < originalWidth; ++j) {
+            tempMatrix(i, j) = static_cast<double>(stb_img[i * originalWidth + j]);
+        }
     }
+    image_matrix = tempMatrix.transpose();
+}
 
-    // Upscale the image
-    void upscale(int scale_factor) {
-        // if (!image.empty()) {
-        //     cv::resize(image, image, cv::Size(), scale_factor, scale_factor);
-        // } else {
-        //     std::cerr << "Error: Image not loaded." << std::endl;
-        // }
+void Image::save(const char *filename) {
+    // Convert Eigen matrix data to unsigned char array
+    Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> image_data = image_matrix.cast<unsigned char>();
+    int write_result = stbi_write_png(filename, originalWidth, originalHeight, 1, image_data.data(), originalWidth * sizeof(unsigned char));
+    if (!write_result) {
+        std::cerr << "Error saving image." << std::endl;
     }
+}
 
-    // Normalize pixel values to the range [0, 1]
-    void normalize() {
-        // if (!image.empty()) {
-        //     image.convertTo(image, CV_32F, 1.0 / 255.0);
-        // } else {
-        //     std::cerr << "Error: Image not loaded." << std::endl;
-        // }
-    }
+void Image::downscale(int scale_factor) {
+    // Implementation
+}
 
-    // Compress the image (dummy function for illustration)
-    void compress() {
-        // Placeholder for compression logic
-        // if (!image.empty()) {
-        //     std::cout << "Image compression applied." << std::endl;
-        // } else {
-        //     std::cerr << "Error: Image not loaded." << std::endl;
-        // }
-    }
-};
+void Image::upscale(int scale_factor) {
+    // Implementation
+}
 
+void Image::normalize() {
+    // Implementation
+}
+
+void Image::compress() {
+    // Implementation
+}

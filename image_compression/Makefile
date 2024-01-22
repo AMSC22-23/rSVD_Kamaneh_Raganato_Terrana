@@ -1,5 +1,5 @@
 CXX := mpic++
-CXXFLAGS := -w -o3 -fopenmp -Iinclude -I $(mkEigenInc) -Ilib 
+CXXFLAGS := -w -o3 -fopenmp -Iinclude -I $(mkEigenInc) -Ilib
 MK_EIGEN_INC := $(mkEigenInc)  # Assuming mkEigenInc is a variable you need
 
 SRC_DIR := src
@@ -51,7 +51,7 @@ profile: test
 # Rule to build the main executable
 main: $(OBJ_FILES)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) $(MAIN_DIR)/main.cpp $(filter %.o,$^) -o $(BIN_DIR)/main
+	$(CXX) $(CXXFLAGS) $(MAIN_DIR)/main.cpp $(filter %.o,$^) -o $(BIN_DIR)/main
 	mpirun -np 4 $(BIN_DIR)/main
 
 # Clean up generated files and remove files inside /data/output/
