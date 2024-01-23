@@ -17,15 +17,15 @@ int main(int argc, char** argv) {
     Image myImage;
 
 
-    const char* filename = "data/input/img/apple.png";
+    const char* filename = "data/input/img/Mona_Lisa-256x256(2).png";
     myImage.load(filename);
     // myImage.normalize();
     // // const char* filename = "data/input/img/Mona_Lisa-256x256(2).png";
     const char* outputFilename = "data/output/apple_compressed.png";
-    myImage.compress();
+    myImage.compress_parallel();
     // myImage.deNormalize();
-    myImage.save(outputFilename);
-    myImage.save_compressed("data/output/compressed_matrices.dat");
+    if (rank == 0) myImage.save(outputFilename);
+    // myImage.save_compressed("data/output/compressed_matrices.dat");
 
     MPI_Finalize();
     return 0;

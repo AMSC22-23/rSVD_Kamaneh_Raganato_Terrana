@@ -11,11 +11,11 @@
 
 class Image {
 private:
-    // cv::Mat image; // If you decide to use cv::Mat, include the necessary OpenCV headers
+    
     Eigen::MatrixXd image_matrix;
 
     Eigen::MatrixXd left_singular;
-    Eigen::MatrixXd singular;
+    Eigen::VectorXd singular;
     Eigen::MatrixXd right_singular;
 
     int originalWidth;
@@ -38,7 +38,7 @@ public:
 
     void save_compressed(const char *filename);
 
-    void decompress(const char *filename);
+    void load_compressed(const char *filename);
 
     Eigen::MatrixXd reconstruct();
 
@@ -53,8 +53,10 @@ public:
 
     void deNormalize();
 
-    // Compress the image (dummy function for illustration)
+    // Compress the image 
     void compress();
+
+    void compress_parallel();
 };
 
 #endif // IMAGE_COMP_HPP
