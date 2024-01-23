@@ -11,47 +11,77 @@ Image::Image() {
 }
 
 Image::Image(int width, int height) {
-    // Implementation
+   originalWidth = width;
+   originalHeight = height;
 }
 
 void Image::load(const char *filename) {
+    // Use STB library to load image data
     unsigned char* stb_img = stbi_load(filename, &originalWidth, &originalHeight, &channels, 1);
 
+    // Check if image loading was successful
     if (stb_img == nullptr) {
         std::cerr << "Failed to load image: " << filename << std::endl;
+        return; // Return early if loading fails
     }
-    // later on change to private member image_matrix 
-    // instead of original matrix
+
+    // Create a temporary matrix to hold the image data
     Eigen::MatrixXd tempMatrix(originalHeight, originalWidth);
+
+    // Copy image data from STB format to Eigen matrix
     for (int i = 0; i < originalHeight; ++i) {
         for (int j = 0; j < originalWidth; ++j) {
+            // Convert image data to double and store in the matrix
             tempMatrix(i, j) = static_cast<double>(stb_img[i * originalWidth + j]);
         }
     }
+    // Transpose the matrix to match Eigen's default storage order
     image_matrix = tempMatrix.transpose();
+
+    // Free memory allocated by stbi_load
+    stbi_image_free(stb_img);
 }
 
 void Image::save(const char *filename) {
     // Convert Eigen matrix data to unsigned char array
     Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> image_data = image_matrix.cast<unsigned char>();
+    
+    // Use STB image write library to save image data as PNG
     int write_result = stbi_write_png(filename, image_matrix.rows(), image_matrix.cols(), 1, image_data.data(), image_matrix.rows() * sizeof(unsigned char));
+    
+    // Check if saving was successful
     if (!write_result) {
         std::cerr << "Error saving image." << std::endl;
     }
 }
 
+
+/**
+ * @brief Save compressed image data to a binary file.
+ * 
+ * @param filename The name of the file to which the compressed image will be saved.
+ */
 void Image::save_compressed(const char *filename) {
     // saving 3 matrices into a binary file
     // saving the dimensions as metadata
+
+    // Open the binary file for writing
     std::ofstream file(filename, std::ios::binary);
 
-    // Save sizes as metadata
+    // Check if the file is open
+    if (!file.is_open()) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return;
+    }
+
+    // Save sizes of matrices as metadata
     int rows_U = left_singular.rows();
     int cols_U = left_singular.cols();
     int size_S = singular.size();
     int rows_V = right_singular.rows();
     int cols_V = right_singular.cols();
 
+    // Write metadata to the file
     file.write(reinterpret_cast<const char*>(&rows_U), sizeof(int));
     file.write(reinterpret_cast<const char*>(&cols_U), sizeof(int));
     file.write(reinterpret_cast<const char*>(&size_S), sizeof(int));
@@ -62,6 +92,7 @@ void Image::save_compressed(const char *filename) {
     // Save matrices as bytes
     for (int i = 0; i < rows_U; ++i) {
         for (int j = 0; j < cols_U; ++j) {
+            // Convert matrix elements to integer and save as bytes
             int value = static_cast<int>(left_singular(i, j));
             char byteValue = static_cast<char>(value & 0xFF);
             file.write(&byteValue, sizeof(char));
@@ -69,6 +100,7 @@ void Image::save_compressed(const char *filename) {
     }
 
     for (int i = 0; i < size_S; ++i) {
+        // Convert vector elements to integer and save as bytes
         int value = static_cast<int>(singular(i));
         char byteValue = static_cast<char>(value & 0xFF);
         file.write(&byteValue, sizeof(char));
@@ -76,18 +108,33 @@ void Image::save_compressed(const char *filename) {
 
     for (int i = 0; i < rows_V; ++i) {
         for (int j = 0; j < cols_V; ++j) {
+            // Convert matrix elements to integer and save as bytes
             int value = static_cast<int>(right_singular(i, j));
             char byteValue = static_cast<char>(value & 0xFF);
             file.write(&byteValue, sizeof(char));
         }
     }
+
+    // Close the file
     file.close();
     
 }
 
+
+/**
+ * @brief Load compressed image data from a binary file.
+ *
+ * @param filename The name of the file from which the compressed image will be loaded.
+ */
 void Image::load_compressed(const char *filename) {
-    // Loading matrices and vector from a binary file
+    // Open the binary file for reading
     std::ifstream file(filename, std::ios::binary);
+
+    // Check if the file is open
+    if (!file.is_open()) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return;
+    }
 
     // Read sizes from metadata
     int rows_U, cols_U, size_S, rows_V, cols_V;
@@ -105,6 +152,7 @@ void Image::load_compressed(const char *filename) {
     // Read matrices and vector from bytes
     for (int i = 0; i < rows_U; ++i) {
         for (int j = 0; j < cols_U; ++j) {
+            // Read a byte from the file and convert to double
             char byteValue;
             file.read(&byteValue, sizeof(char));
             left_singular(i, j) = static_cast<double>(static_cast<unsigned char>(byteValue));
@@ -112,6 +160,7 @@ void Image::load_compressed(const char *filename) {
     }
 
     for (int i = 0; i < size_S; ++i) {
+        // Read a byte from the file and convert to double
         char byteValue;
         file.read(&byteValue, sizeof(char));
         singular(i) = static_cast<double>(static_cast<unsigned char>(byteValue));
@@ -119,6 +168,7 @@ void Image::load_compressed(const char *filename) {
 
     for (int i = 0; i < rows_V; ++i) {
         for (int j = 0; j < cols_V; ++j) {
+            // Read a byte from the file and convert to double
             char byteValue;
             file.read(&byteValue, sizeof(char));
             right_singular(i, j) = static_cast<double>(static_cast<unsigned char>(byteValue));
@@ -131,8 +181,10 @@ void Image::load_compressed(const char *filename) {
 
 Eigen::MatrixXd Image::reconstruct() {
     // reconstruct the original matrix by multiplying
-    // the 3 SVD matrices together
+    // the three SVD matrices together
 
+    Eigen::MatrixXd reconstructed_matrix = left_singular * singular.asDiagonal() * right_singular.transpose();
+    return reconstructed_matrix;
 }
 
 
@@ -144,48 +196,91 @@ void Image::upscale(int scale_factor) {
     // Implementation
 }
 
+/**
+ * @brief Normalize pixel values of the image matrix to the range [0, 1].
+ *        This operation is performed to make the normalization more numerically stable.
+ */
 void Image::normalize() {
-    // to make the operation more numerically stable
+    // Find the minimum and maximum pixel values in the original image matrix
     original_min = image_matrix.minCoeff();
     original_max = image_matrix.maxCoeff();
-    image_matrix = (image_matrix.array() - original_min) / (original_max - original_min);
+
+    // Check if the range is not empty to avoid division by zero
+    if (original_min < original_max) {
+        // Normalize pixel values to the range [0, 1]
+        image_matrix = (image_matrix.array() - original_min) / (original_max - original_min);
+    } else {
+        // Handle the case where the range is empty or undefined (original_min >= original_max)
+        std::cerr << "Warning: Unable to normalize image. Empty or undefined pixel value range." << std::endl;
+    }
 }
 
+/**
+ * @brief Restore pixel values of the image matrix to their original range.
+ *        This operation undoes the previous normalization.
+ */
 void Image::deNormalize() {
-    // to make the operation more numerically stable
-    image_matrix = image_matrix.array() * (original_max - original_min) + original_min;
+    // Check if original_min is less than original_max to avoid potential issues
+    if (original_min < original_max) {
+        // Restore pixel values to their original range
+        image_matrix = image_matrix.array() * (original_max - original_min) + original_min;
+    } else {
+        // Handle the case where the range is empty or undefined (original_min >= original_max)
+        std::cerr << "Warning: Unable to deNormalize image. Empty or undefined pixel value range." << std::endl;
+    }
 }
 
-void Image::compress() {
-    
+/**
+ * @brief Compress the image matrix using randomized Singular Value Decomposition (rSVD).
+ *        The function computes the rSVD and stores the result in the member variables.
+ *        The image matrix is then reconstructed using the computed SVD matrices.
+ *  
+ * @param k The target rank for the rSVD.
+ */
+void Image::compress(int k /* = -1*/) {
+    // Get the dimensions of the original image matrix
     int m = image_matrix.rows();
     int n = image_matrix.cols();
-    int k = 10; // numerical rank (we need an algorithm to find it) or target rank
+
+    if (k == -1) {
+        k = std::min(m, n) / 4; // Set default rank to 1/4 the size of the matrix
+    }
+
     int p = 10; // oversampling parameter, usually it is set to 5 or 10
     int l = k + p;
+
+    // Copy the original image matrix for the rSVD computation
     Eigen::MatrixXd imageMatrix_copy = image_matrix;
+
+    // Initialize matrices for rSVD result
     Eigen::MatrixXd U = Eigen::MatrixXd::Zero(m, l);
     Eigen::VectorXd S = Eigen::VectorXd::Zero(l);
     Eigen::MatrixXd V = Eigen::MatrixXd::Zero(l, n);
+
+    // Perform rSVD
     rSVD(imageMatrix_copy, U, S, V, l);
 
+    // Store the rSVD matrices in member variables
     left_singular = U;
     singular = S;
     right_singular = V;
 
-    // remove this later
-    Eigen::MatrixXd temp = left_singular * singular.asDiagonal();
-    image_matrix = temp * right_singular.transpose();
-
 }
 
-
-void Image::compress_parallel() {
+/**
+ * @brief Compress the image matrix in parallel using rank-revealing Singular Value Decomposition (rSVD) with MPI.
+ *        The function distributes the computation across multiple MPI processes, performs rSVD, and reconstructs the image matrix.
+ *
+ * @param k The target rank for the rSVD.
+ */
+void Image::compress_parallel(int k /* = -1*/ ) {
 
     int numProcesses, myRank;
     MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 
+    // This function only works with a square number of processors
+    // e.g. 1, 4, 9, 16
     double squareRoot = std::sqrt(numProcesses);
     if (squareRoot != std::floor(squareRoot)){
         std::cout << "Number of processors is not square!" << std::endl;
@@ -194,16 +289,20 @@ void Image::compress_parallel() {
     
     int m = image_matrix.rows();
     int n = image_matrix.cols();
-    int k = 20; // numerical rank (we need an algorithm to find it) or target rank
+
+    if (k == -1) {
+        k = std::min(m, n) / 4; // Set default rank to 1/4 the size of the matrix
+    }
     int p = 10; // oversampling parameter, usually it is set to 5 or 10
     int l = k + p;
 
+    // defining the size of blocks to be decomposed in parallel
     int blockSizeRows = m / std::sqrt(numProcesses);
     int blockSizeCols = n / std::sqrt(numProcesses);
 
-    Eigen::MatrixXd copy(m, n);
-    copy = image_matrix;
+    Eigen::MatrixXd copy = image_matrix;
 
+    // Each processor takes over a block in the column-major order
     int sqrtNumProcesses = static_cast<int>(std::sqrt(numProcesses));
     Eigen::MatrixXd localMatrix = image_matrix.block(
                     (myRank / sqrtNumProcesses) * blockSizeRows,  
@@ -213,17 +312,17 @@ void Image::compress_parallel() {
                     );
 
 
-    // Do stuff
-    // ...
+    // Do rSVD computation in parallel on local matrices
     Eigen::MatrixXd imageMatrix_copy = image_matrix;
     Eigen::MatrixXd U = Eigen::MatrixXd::Zero(m, l);
     Eigen::VectorXd S = Eigen::VectorXd::Zero(l);
     Eigen::MatrixXd V = Eigen::MatrixXd::Zero(l, n);
     rSVD(localMatrix, U, S, V, l);
 
+    // Reconstruct the local matrix
     localMatrix = U * S.asDiagonal() * V.transpose();
 
-    // // Copy the gathered matrix to the global matrix (only on the root)
+    // Gather the local matrices on processor 0
     MPI_Status status;
     if (myRank == 0) {
         image_matrix.setZero();
@@ -250,9 +349,5 @@ void Image::compress_parallel() {
         MPI_Send(localMatrix.data(), blockSizeRows * blockSizeCols, MPI_DOUBLE,
                  0, 0, MPI_COMM_WORLD);
     }
-
-    // // remove this later
-    Eigen::MatrixXd temp = left_singular * singular.asDiagonal();
-    image_matrix = temp * right_singular.transpose();
 
 }

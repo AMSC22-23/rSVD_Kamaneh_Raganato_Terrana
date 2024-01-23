@@ -8,13 +8,19 @@
 #include <filesystem> // C++17 or later
 #include <Eigen/Dense>
 #include <unsupported/Eigen/SparseExtra>
+#include <mpi.h>
 
 using namespace std;
 
 // The main function for running the tests
 
-int main(int /*argc*/, char** /*argv*/) {
-    std::cout << "small test QR" << std::endl;
+int main(int argc, char** argv) {
+    // std::cout << "small test QR" << std::endl;
+
+    MPI_Init(&argc, &argv);
+    int num_procs, rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     Eigen::MatrixXd A(4, 3);
     // A << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
@@ -42,16 +48,18 @@ int main(int /*argc*/, char** /*argv*/) {
 
     int m = A.rows();
     int n = A.cols();
-    Mat Q = Mat::Identity(m, std::min(m, n));
-    Mat R = A.topRows(std::min(m, n));
-    qr_decomposition_reduced(A, Q, R);
+    Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(m, std::min(m, n));
+    Eigen::MatrixXd R = A.topRows(std::min(m, n));
+    qr_decomposition_reduced_mpi(A, Q, R);
     
-    cout << "Q: \n" << Q << endl;
-    cout << "R: \n" << R << endl;
+    if (rank == 0){
+        cout << "Q: \n" << Q << endl;
+        cout << "R: \n" << R << endl;
 
-    Mat A_tilde = Q * R;
-    cout << "A~ :\n" << A_tilde << endl;
+        Eigen::MatrixXd A_tilde = Q * R;
+        cout << "A~ :\n" << A_tilde << endl;
+    }
 
-
+    MPI_Finalize();
     return 0;
 }

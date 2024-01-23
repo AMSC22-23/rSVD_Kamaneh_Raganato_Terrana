@@ -1,5 +1,5 @@
 CXX := mpic++
-CXXFLAGS := -w -o3 -fopenmp -Iinclude -I $(mkEigenInc) -Ilib -I/usr/include/hdf5/serial
+CXXFLAGS := -w -Iinclude -I $(mkEigenInc) -Ilib
 MK_EIGEN_INC := $(mkEigenInc)  # Assuming mkEigenInc is a variable you need
 
 SRC_DIR := src
@@ -17,7 +17,7 @@ SRC_FILES := $(filter-out $(addprefix $(SRC_DIR)/,$(EXCLUDE_FILES_SRC)), $(wildc
 # Create a list of object files based on the source files
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
-EXCLUDE_FILES_TST := small_test_svd.cpp rSVD_test.cpp QRTest.cpp small_qr.cpp PMTest.cpp
+EXCLUDE_FILES_TST := small_test_svd.cpp rSVD_test.cpp QRTest.cpp PMTest.cpp small_rsvd.cpp
 
 # Test source files
 TEST_SRC_FILES := $(filter-out $(addprefix $(TESTS_DIR)/,$(EXCLUDE_FILES_TST)), $(wildcard $(TESTS_DIR)/*.cpp))
