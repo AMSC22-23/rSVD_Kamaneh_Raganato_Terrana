@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
         myImage.normalize();
 
         // Perform parallel compression using rSVD
-        myImage.compress_parallel(80);
+        myImage.compress_parallel(40);
 
         // De-normalize pixel values
         myImage.deNormalize();
