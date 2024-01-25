@@ -20,10 +20,13 @@ int main(int argc, char** argv) {
     const char* filename = "data/input/img/Mona_Lisa-256x256(2).png";
     myImage.load(filename);
     // myImage.normalize();
+    // myImage.downscale();
     // // const char* filename = "data/input/img/Mona_Lisa-256x256(2).png";
     const char* outputFilename = "data/output/apple_compressed.png";
     myImage.compress_parallel();
+    // myImage.upscale();
     // myImage.deNormalize();
+    
     if (rank == 0) myImage.save(outputFilename);
     // myImage.save_compressed("data/output/compressed_matrices.dat");
 

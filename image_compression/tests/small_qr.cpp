@@ -15,7 +15,7 @@ using namespace std;
 // The main function for running the tests
 
 int main(int argc, char** argv) {
-    // std::cout << "small test QR" << std::endl;
+    std::cout << "small test QR" << std::endl;
 
     MPI_Init(&argc, &argv);
     int num_procs, rank;
@@ -50,7 +50,9 @@ int main(int argc, char** argv) {
     int n = A.cols();
     Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(m, std::min(m, n));
     Eigen::MatrixXd R = A.topRows(std::min(m, n));
-    qr_decomposition_reduced_mpi(A, Q, R);
+    QRReducedDecomposition<double> qrReduced(A);
+    qrReduced.decompose(Q, R);
+    // qr_decomposition_reduced(A, Q, R);
     
     if (rank == 0){
         cout << "Q: \n" << Q << endl;

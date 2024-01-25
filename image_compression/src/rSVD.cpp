@@ -14,7 +14,8 @@ void intermediate_step(Eigen::MatrixXd& A, Eigen::MatrixXd& Q, Eigen::MatrixXd& 
     Mat Y0 = A * Omega; // Y0 = A * Omega = (m*n) * (n*l) = (m*l)
     Mat Q0(A.rows(), l); // Q0 = (m*l)
     Mat R0(l, l); // R0 = (l*l)
-    qr_decomposition_reduced(Y0, Q0, R0); 
+    QRReducedDecomposition<double> qrReducedA(Y0);
+    qrReducedA.decompose(Q0, R0); 
 
     Mat Ytilde(A.cols(), l); // Ytilde = (n*l)
     Mat Qtilde(A.cols(), l); // Qtilde = (n*l)
@@ -23,11 +24,13 @@ void intermediate_step(Eigen::MatrixXd& A, Eigen::MatrixXd& Q, Eigen::MatrixXd& 
     for (int j = 1; j <= q; j++) {
         Ytilde = A.transpose() * Q0; // Y0 = A.transpose() * Q0 = (n*m) * (m*l) = (n*l)
         
-        qr_decomposition_reduced(Ytilde, Qtilde, R0);
+        QRReducedDecomposition<double> qrReducedY(Ytilde);
+        qrReducedY.decompose(Qtilde, R0);
 
         Y0 = A * Qtilde; // Y0 = A * Qtilde = (m*n) * (n*l) = (m*l)
         
-        qr_decomposition_reduced(Y0, Q0, R0);
+        QRReducedDecomposition<double> qrReducedY0(Y0);
+        qrReducedY0.decompose(Q0, R0);
         
     }
     Q = Q0;
@@ -47,7 +50,9 @@ void intermediate_step_mpi(Eigen::MatrixXd& A, Eigen::MatrixXd& Q, Eigen::Matrix
     Mat Y0 = A * Omega; // Y0 = A * Omega = (m*n) * (n*l) = (m*l)
     Mat Q0(A.rows(), l); // Q0 = (m*l)
     Mat R0(l, l); // R0 = (l*l)
-    qr_decomposition_reduced(Y0, Q0, R0); 
+
+    QRReducedDecomposition<double> qrReducedA(A);
+    qrReducedA.decompose(Q0, R0);
 
     Mat Ytilde(A.cols(), l); // Ytilde = (n*l)
     Mat Qtilde(A.cols(), l); // Qtilde = (n*l)
@@ -56,11 +61,13 @@ void intermediate_step_mpi(Eigen::MatrixXd& A, Eigen::MatrixXd& Q, Eigen::Matrix
     for (int j = 1; j <= q; j++) {
         Ytilde = A.transpose() * Q0; // Y0 = A.transpose() * Q0 = (n*m) * (m*l) = (n*l)
         
-        qr_decomposition_reduced(Ytilde, Qtilde, R0);
+        QRReducedDecomposition<double> qrReducedY(Ytilde);
+        qrReducedY.decompose(Qtilde, R0);
 
         Y0 = A * Qtilde; // Y0 = A * Qtilde = (m*n) * (n*l) = (m*l)
         
-        qr_decomposition_reduced(Y0, Q0, R0);
+        QRReducedDecomposition<double> qrReducedY0(Y0);
+        qrReducedY0.decompose(Q0, R0);;
         
     }
     Q = Q0;
@@ -96,7 +103,7 @@ void intermediate_step_mpi(Eigen::MatrixXd& A, Eigen::MatrixXd& Q, Eigen::Matrix
     int q=1;
     Mat Q = Mat::Zero(m, l);
     intermediate_step(A, Q, Omega, l, q);
-    
+
     // Stage B
     // (4) Form the (k + p) × n matrix B = Q*A
     Mat B = Q.transpose() * A;
