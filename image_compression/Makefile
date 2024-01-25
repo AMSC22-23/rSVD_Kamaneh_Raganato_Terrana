@@ -48,17 +48,18 @@ profile: CXXFLAGS += -pg
 profile: test
 	@gprof $(BIN_DIR)/rSVD_test2 > profile_output.txt
 
-# Rule to build the main executable
+# Rule to build the main executable with user-specified options
+.PHONY: main
 main: $(OBJ_FILES)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) $(MAIN_DIR)/main.cpp $(filter %.o,$^) -o $(BIN_DIR)/main
-	mpirun -np 4 $(BIN_DIR)/main
+
 
 # Clean up generated files and remove files inside /data/output/
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR)
 	rm -rf data/output/QR/*
-	rm -rf data/output/*
+	rm -rf data/output/img/*
 
 # Target to create output directories
 create_directories:
@@ -67,3 +68,5 @@ create_directories:
 	mkdir -p ./data/output/SVD
 
 .PHONY: all test profile clean create_directories
+
+#mpirun -np 4 bin/main apple.png

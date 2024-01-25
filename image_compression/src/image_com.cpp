@@ -188,13 +188,59 @@ Eigen::MatrixXd Image::reconstruct() {
 }
 
 
-void Image::downscale(int scale_factor) {
-    // Implementation
+void Image::downscale(int scale_factor /* = -1*/) {
+    if (scale_factor == -1) {
+        scale_factor = 2; // Default scale factor
+    }
+
+    int new_width = originalWidth / scale_factor;
+    int new_height = originalHeight / scale_factor;
+
+    // Create a new matrix for the downscaled image
+    Eigen::MatrixXd downscaled_matrix(new_height, new_width);
+
+    // Iterate over the downscaled matrix and copy elements from the original matrix with stride
+    for (int i = 0; i < new_height; ++i) {
+        for (int j = 0; j < new_width; ++j) {
+            downscaled_matrix(i, j) = image_matrix(i * scale_factor, j * scale_factor);
+        }
+    }
+
+    // Update the image matrix
+    image_matrix = downscaled_matrix;
+
+    // Update the original dimensions
+    originalWidth = new_width;
+    originalHeight = new_height;
 }
 
-void Image::upscale(int scale_factor) {
-    // Implementation
+void Image::upscale(int scale_factor /* = -1*/) {
+    if (scale_factor == -1) {
+        scale_factor = 2; // Default scale factor
+    }
+
+    int new_width = originalWidth * scale_factor;
+    int new_height = originalHeight * scale_factor;
+
+    // Create a new matrix for the upscaled image
+    Eigen::MatrixXd upscaled_matrix(new_height, new_width);
+
+    // Iterate over the original matrix and repeat each value at regular intervals
+    for (int i = 0; i < originalHeight; ++i) {
+        for (int j = 0; j < originalWidth; ++j) {
+            upscaled_matrix.block(i * scale_factor, j * scale_factor, scale_factor, scale_factor)
+                .setConstant(image_matrix(i, j));
+        }
+    }
+
+    // Update the image matrix
+    image_matrix = upscaled_matrix;
+
+    // Update the original dimensions
+    originalWidth = new_width;
+    originalHeight = new_height;
 }
+
 
 /**
  * @brief Normalize pixel values of the image matrix to the range [0, 1].
@@ -259,6 +305,7 @@ void Image::compress(int k /* = -1*/) {
 
     // Perform rSVD
     rSVD(imageMatrix_copy, U, S, V, l);
+    degree = l;
 
     // Store the rSVD matrices in member variables
     left_singular = U;
@@ -295,6 +342,8 @@ void Image::compress_parallel(int k /* = -1*/ ) {
     }
     int p = 10; // oversampling parameter, usually it is set to 5 or 10
     int l = k + p;
+
+    degree = l;
 
     // defining the size of blocks to be decomposed in parallel
     int blockSizeRows = m / std::sqrt(numProcesses);
@@ -350,4 +399,11 @@ void Image::compress_parallel(int k /* = -1*/ ) {
                  0, 0, MPI_COMM_WORLD);
     }
 
+}
+
+double Image::get_compression_ratio(){
+    double initial_size = originalHeight * originalWidth;
+    double compressed_size =  degree * (originalWidth + originalHeight + 1);
+
+    return initial_size / compressed_size;
 }
