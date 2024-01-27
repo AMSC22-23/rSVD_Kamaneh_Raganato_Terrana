@@ -13,7 +13,13 @@
 // The main function for running the tests
 
 int main(int argc, char** argv) {
-    std::cout << "test SVD" << std::endl;
+    using namespace std;
+    using namespace Eigen;
+
+    using Mat = MatrixXd;
+    using Vec = VectorXd;
+
+    std::cout << "SVD test1" << std::endl;
     MPI_Init(&argc, &argv);
 
     // Get the path to the directory where the executable is located
@@ -63,7 +69,7 @@ int main(int argc, char** argv) {
         Mat V = Mat::Zero(m, n);
         int min= m < n ? m : n;
 
-        SVD(A, S, U, V, min);
+        singularValueDecomposition(A, S, U, V, min);
 
         // Record the end time
         auto end = std::chrono::high_resolution_clock::now();

@@ -10,11 +10,16 @@
 #include <Eigen/Dense>
 #include <unsupported/Eigen/SparseExtra>
 
-using namespace std;
 
 // The main function for running the tests
 
 int main(int argc, char** argv) {
+    using namespace std;
+    using namespace Eigen;
+
+    using Mat = MatrixXd;
+    using Vec = VectorXd;
+    
     std::cout << "small test SVD" << std::endl;
     MPI_Init(&argc, &argv);
 
@@ -32,7 +37,7 @@ int main(int argc, char** argv) {
     Mat V = Mat::Zero(m, n);
     int min= m < n ? m : n;
 
-    SVD(A, S, U, V, min);
+    singularValueDecomposition(A, S, U, V, min);
     // cout << "U: " << U << endl;
     // cout << "S: " << S << endl;
     // cout << "V: " << V << endl;

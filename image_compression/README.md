@@ -50,24 +50,54 @@ Before you begin, ensure you have met the following requirements:
 
 ## Usage
 
-1. To run the main program:
+### Running the Main Program:
 
-Execute the program by passing the name of the image you want to compress from the 'data/input/img' directory, and specify the number of processors.
-Note: In the parallel version the number of processors must be square (e.g., 1, 4, 9, ..)
-Example: 
+To execute the main program, follow these steps:
+1. Navigate to the program's root directory.
+2. Run the program by providing the name of the image you wish to compress from the `./data/input/img` directory.
+3. Specify the number of processors to be used.
+Note: For the parallel version, the number of processors must be a perfect square (e.g., 1, 4, 9, ...).
+
+
+#### Example: 
 
 ```bash
 mpirun -np 4 bin/main 1024_01.jpg
 ```
 
 
-To clean up generated files:
+### To clean up generated files:
 
 ```bash
 make clean
 ```
-To enable profiling and generate a profile output:
+
+### Running Tests:
+
+To assess different components of the program, various tests are available in the  `./tests` directory. 
+
+Compile the tests with the following command:
 
 ```bash
-make profile
+make test
 ```
+
+There are two types of tests for each component:
+
+1. A test ending with the number `1` takes matrices from `./data/input/`mat as input and writes the corresponding output to `./data/output`.
+
+#### Example:
+
+```bash
+mpirun -np 4 bin/QR_test1
+```
+
+A test file ending with the number `2` uses hardcoded matrices as input, allowing users to modify them according to their needs.
+
+#### Example:
+
+```bash
+mpirun -np 4 bin/rSVD_test2 
+```
+
+Feel free to explore and adapt the tests based on your specific requirements.

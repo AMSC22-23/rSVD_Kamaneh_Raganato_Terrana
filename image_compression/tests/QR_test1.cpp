@@ -13,6 +13,12 @@
 
 // The main function for running the tests
 int main(int /*argc*/, char** argv) {
+    using namespace std;
+    using namespace Eigen;
+
+    using Mat = MatrixXd;
+    using Vec = VectorXd;
+
     std::cout << "*** QR test ***\n" << std::endl;
     // Get the path to the directory where the executable is located
     std::filesystem::path exePath = std::filesystem::absolute(argv[0]);
@@ -61,7 +67,8 @@ int main(int /*argc*/, char** argv) {
         int n = A.cols();
         Mat Q = Mat::Identity(m, std::min(m, n));
         Mat R = A.topRows(std::min(m, n));
-        qr_decomposition_reduced(A, Q, R);
+        QRReducedDecomposition<double> qrReduced(A);
+        qrReduced.decompose(Q, R);
 
         // Record the end time
         auto end = std::chrono::high_resolution_clock::now();

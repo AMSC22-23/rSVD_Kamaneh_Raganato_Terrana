@@ -13,6 +13,11 @@
 // The main function for running the tests
 
 int main(int argc, char** argv) {
+    using namespace std;
+    using namespace Eigen;
+
+    using Mat = MatrixXd;
+    using Vec = VectorXd;
 
     MPI_Init(&argc, &argv);
     int num_procs, rank;
