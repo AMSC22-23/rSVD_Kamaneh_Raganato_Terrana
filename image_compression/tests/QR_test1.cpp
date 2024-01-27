@@ -54,10 +54,6 @@ int main(int /*argc*/, char** argv) {
         
         Eigen::loadMarket(sparseMatrix, inputFilePath.string());
         Eigen::MatrixXd A = Eigen::MatrixXd(sparseMatrix);
-        if (fileName == "simple.mtx")
-        { 
-            std::cout << A << std::endl;
-        }
 
         // start calculating the time
         auto start = std::chrono::high_resolution_clock::now();

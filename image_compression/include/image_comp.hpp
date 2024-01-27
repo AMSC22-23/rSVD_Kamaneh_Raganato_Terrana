@@ -47,25 +47,25 @@ public:
      * @brief Load image data from a file.
      * @param filename The name of the file from which to load the image.
      */
-    void load(const char *filename);
+    void load(const std::string &filename);
 
     /**
      * @brief Save the image data to a file.
      * @param filename The name of the file to which the image will be saved.
      */
-    void save(const char *filename);
+    void save(const std::string &filename);
 
     /**
      * @brief Save the compressed image data to a file.
      * @param filename The name of the file to which the compressed image will be saved.
      */
-    void save_compressed(const char *filename);
+    void save_compressed(const std::string &filename);
 
     /**
      * @brief Load compressed image data from a file.
      * @param filename The name of the file from which to load the compressed image.
      */
-    void load_compressed(const char *filename);
+    void load_compressed(const std::string &filename);
 
     /**
      * @brief Reconstruct the image from compressed data.

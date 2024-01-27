@@ -15,9 +15,10 @@ Image::Image(int width, int height) {
    originalHeight = height;
 }
 
-void Image::load(const char *filename) {
+void Image::load(const std::string &filename) {
     // Use STB library to load image data
-    unsigned char* stb_img = stbi_load(filename, &originalWidth, &originalHeight, &channels, 1);
+    const char* filename_cstr = filename.c_str();
+    unsigned char* stb_img = stbi_load(filename_cstr, &originalWidth, &originalHeight, &channels, 1);
 
     // Check if image loading was successful
     if (stb_img == nullptr) {
@@ -42,12 +43,13 @@ void Image::load(const char *filename) {
     stbi_image_free(stb_img);
 }
 
-void Image::save(const char *filename) {
+void Image::save(const std::string &filename) {
     // Convert Eigen matrix data to unsigned char array
     Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> image_data = image_matrix.cast<unsigned char>();
     
     // Use STB image write library to save image data as PNG
-    int write_result = stbi_write_png(filename, image_matrix.rows(), image_matrix.cols(), 1, image_data.data(), image_matrix.rows() * sizeof(unsigned char));
+    const char* filename_cstr = filename.c_str();
+    int write_result = stbi_write_png(filename_cstr, image_matrix.rows(), image_matrix.cols(), 1, image_data.data(), image_matrix.rows() * sizeof(unsigned char));
     
     // Check if saving was successful
     if (!write_result) {
@@ -61,7 +63,7 @@ void Image::save(const char *filename) {
  * 
  * @param filename The name of the file to which the compressed image will be saved.
  */
-void Image::save_compressed(const char *filename) {
+void Image::save_compressed(const std::string &filename) {
     // saving 3 matrices into a binary file
     // saving the dimensions as metadata
 
@@ -126,7 +128,7 @@ void Image::save_compressed(const char *filename) {
  *
  * @param filename The name of the file from which the compressed image will be loaded.
  */
-void Image::load_compressed(const char *filename) {
+void Image::load_compressed(const std::string &filename) {
     // Open the binary file for reading
     std::ifstream file(filename, std::ios::binary);
 

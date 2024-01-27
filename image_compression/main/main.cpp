@@ -25,33 +25,14 @@ int main(int argc, char** argv) {
     }
 
     // Get the string from the command line argument
-    const char* user_string = argv[1];
+    const std::string user_string = argv[1];
 
     // Get the path to load and save image
-    const char* base_string_input = "data/input/img/";
-    const char* base_string_output = "data/output/img/";
+    const std::string base_string_input = "data/input/img/";
+    const std::string filename_input = "data/input/img/" + user_string;
+    const std::string filename_output = "data/output/img/" + user_string;
+    const std::string filename_output_compressed = "data/output/img/" + user_string + ".dat";
     
-
-    // Calculate the size of the concatenated string
-    size_t size_input = std::strlen(base_string_input) + std::strlen(user_string) + 1;
-    size_t size_output = std::strlen(base_string_output) + std::strlen(user_string) + 1;
-    size_t size_output_compressed = std::strlen(base_string_output) + std::strlen(user_string) + std::strlen(".dat") + 1;
-    
-    // Allocate memory for the concatenated string
-    char* filename_input = new char[size_input];
-    char* filename_output = new char[size_output];
-    char* filename_output_compressed = new char[size_output_compressed];
-
-    // Copy the base string into the result buffer
-    std::strcpy(filename_input, base_string_input);
-    std::strcpy(filename_output, base_string_output);
-    std::strcpy(filename_output_compressed, base_string_output);
-
-    // Concatenate the user string onto the end
-    std::strcat(filename_input, user_string);
-    std::strcat(filename_output, user_string);
-    std::strcat(filename_output_compressed, user_string);
-    std::strcat(filename_output_compressed, ".dat");
 
     // Record the start time
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -66,19 +47,19 @@ int main(int argc, char** argv) {
         myImage.load(filename_input);
 
         // Downscale the image by a factor of 2
-        myImage.downscale(2);
+        myImage.downscale(1);
 
         // Normalize pixel values
         myImage.normalize();
 
         // Perform parallel compression using rSVD
-        myImage.compress_parallel(40);
+        myImage.compress_parallel(60);
 
         // De-normalize pixel values
         myImage.deNormalize();
 
         // Upscale the image
-        myImage.upscale(2);
+        myImage.upscale(1);
 
         // Save the processed image and its compressed version
         if (rank == 0) 
@@ -102,11 +83,6 @@ int main(int argc, char** argv) {
         
     }
 
-
-    // Free allocated memory
-    delete[] filename_input;
-    delete[] filename_output;
-    delete[] filename_output_compressed;
 
     MPI_Finalize();
     return 0;
