@@ -15,7 +15,7 @@ Before you begin, ensure you have met the following requirements:
 
 - **C++ Compiler:** This project requires a C++ compiler to build the source code. You can use `g++` or any other C++ compiler that supports C++11 or later.
 
-- **CMake:** CMake is used for building the project. Ensure you have CMake installed on your system. You can download it from [cmake.org](https://cmake.org/download/).
+- **MPI (Message Passing Interface):** MPI is essential for parallel computing in this project. Ensure you have MPI installed on your system.
 
 - **Eigen Library:** This project depends on the Eigen library for linear algebra operations. Download and install Eigen from [eigen.tuxfamily.org](https://eigen.tuxfamily.org/dox/GettingStarted.html).
 
