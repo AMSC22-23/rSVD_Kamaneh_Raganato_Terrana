@@ -59,6 +59,8 @@ main: $(OBJ_FILES)
 clean:
 	rm -rf $(OBJ_DIR) $(BIN_DIR)
 	rm -rf data/output/QR/*
+	rm -rf data/output/rSVD/*
+	rm -rf data/output/SVD/*
 	rm -rf data/output/img/*
 
 # Target to create output directories
