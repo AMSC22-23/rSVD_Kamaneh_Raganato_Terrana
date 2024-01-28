@@ -84,11 +84,11 @@ void Image::save_compressed(const std::string &filename) {
     int cols_V = right_singular.cols();
 
     // Write metadata to the file
-    file.write(reinterpret_cast<const char*>(&rows_U), sizeof(int));
-    file.write(reinterpret_cast<const char*>(&cols_U), sizeof(int));
-    file.write(reinterpret_cast<const char*>(&size_S), sizeof(int));
-    file.write(reinterpret_cast<const char*>(&rows_V), sizeof(int));
-    file.write(reinterpret_cast<const char*>(&cols_V), sizeof(int));
+    file.write(reinterpret_cast<const char*>(std::addressof(rows_U)), sizeof(int));
+    file.write(reinterpret_cast<const char*>(std::addressof(cols_U)), sizeof(int));
+    file.write(reinterpret_cast<const char*>(std::addressof(size_S)), sizeof(int));
+    file.write(reinterpret_cast<const char*>(std::addressof(rows_V)), sizeof(int));
+    file.write(reinterpret_cast<const char*>(std::addressof(cols_V)), sizeof(int));
 
 
     // Save matrices as bytes
