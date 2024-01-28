@@ -47,24 +47,24 @@ void intermediate_step_mpi(Eigen::MatrixXd& A, Eigen::MatrixXd& Q, Eigen::Matrix
     MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    Mat Y0 = A * Omega; // Y0 = A * Omega = (m*n) * (n*l) = (m*l)
-    Mat Q0(A.rows(), l); // Q0 = (m*l)
-    Mat R0(l, l); // R0 = (l*l)
+    Mat Y0 = A * Omega; 
+    Mat Q0(A.rows(), l);
+    Mat R0(l, l);
 
     QRReducedDecomposition<double> qrReducedA(A);
     qrReducedA.decompose(Q0, R0);
 
-    Mat Ytilde(A.cols(), l); // Ytilde = (n*l)
-    Mat Qtilde(A.cols(), l); // Qtilde = (n*l)
-    // It is useless to initialize Rtilde because it is still (l*l) and it can be overwritten
+    Mat Ytilde(A.cols(), l);
+    Mat Qtilde(A.cols(), l);
+    
     
     for (int j = 1; j <= q; j++) {
-        Ytilde = A.transpose() * Q0; // Y0 = A.transpose() * Q0 = (n*m) * (m*l) = (n*l)
+        Ytilde = A.transpose() * Q0;
         
         QRReducedDecomposition<double> qrReducedY(Ytilde);
         qrReducedY.decompose(Qtilde, R0);
 
-        Y0 = A * Qtilde; // Y0 = A * Qtilde = (m*n) * (n*l) = (m*l)
+        Y0 = A * Qtilde;
         
         QRReducedDecomposition<double> qrReducedY0(Y0);
         qrReducedY0.decompose(Q0, R0);;

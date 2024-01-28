@@ -47,19 +47,19 @@ int main(int argc, char** argv) {
         myImage.load(filename_input);
 
         // Downscale the image by a factor of 2
-        myImage.downscale(1);
+        myImage.downscale(2);
 
         // Normalize pixel values
         myImage.normalize();
 
         // Perform parallel compression using rSVD
-        myImage.compress_parallel(60);
+        myImage.compress_parallel(80);
 
         // De-normalize pixel values
         myImage.deNormalize();
 
         // Upscale the image
-        myImage.upscale(1);
+        myImage.upscale(2);
 
         // Save the processed image and its compressed version
         if (rank == 0) 
