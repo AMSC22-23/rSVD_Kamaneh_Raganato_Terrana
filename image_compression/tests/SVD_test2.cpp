@@ -20,8 +20,12 @@ int main(int argc, char** argv) {
     using Mat = MatrixXd;
     using Vec = VectorXd;
     
-    std::cout << "small test SVD" << std::endl;
     MPI_Init(&argc, &argv);
+    int num_procs, rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank==0) std::cout << "*** SVD test 2 ***\n" << std::endl;
 
     Eigen::MatrixXd A(4, 4);
     A << 1, 2, 3, 4,
@@ -48,15 +52,9 @@ int main(int argc, char** argv) {
     mid = U * diagonalMatrix;
     A_2 = mid * V.transpose();
 
-    int num_procs, rank;
-    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
     if (rank==0) cout << "A_2: \n" << A_2 << endl;
 
     Mat diff = A_copy - A_2;
-    // cout << "A: " << A_copy << endl;
-    // cout << diff << endl;
     double norm_of_difference = (diff).norm();
 
     if (rank ==0) cout << "norm : " << norm_of_difference << endl;

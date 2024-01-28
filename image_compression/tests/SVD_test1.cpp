@@ -19,8 +19,12 @@ int main(int argc, char** argv) {
     using Mat = MatrixXd;
     using Vec = VectorXd;
 
-    std::cout << "SVD test1" << std::endl;
     MPI_Init(&argc, &argv);
+    int num_procs, rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank==0) std::cout << "*** SVD test 1 ***\n" << std::endl;
 
     // Get the path to the directory where the executable is located
     std::filesystem::path exePath = std::filesystem::absolute(argv[0]);
@@ -29,8 +33,8 @@ int main(int argc, char** argv) {
     std::filesystem::path root = exeDir.parent_path();
 
     // Input and output directories
-    std::filesystem::path inputDir = root / "data" / "input";
-    std::filesystem::path outputDir = root / "data" / "output" / "SVD" / "my";
+    std::filesystem::path inputDir = root / "data" / "input"/ "mat";
+    std::filesystem::path outputDir = root / "data" / "output" / "SVD";
 
     // Create output directory if it doesn't exist
     if (!std::filesystem::exists(outputDir))
@@ -60,7 +64,6 @@ int main(int argc, char** argv) {
         // start calculating the time
         auto start = std::chrono::high_resolution_clock::now();
 
-        // Perform QR decomposition
         int m = A.rows();
         int n = A.cols();
         Mat A_copy = A;
@@ -86,11 +89,13 @@ int main(int argc, char** argv) {
         // Calculate the duration
         std::chrono::duration<double> duration = end - start;
         // Print the duration in seconds
-        std::cout << "Dataset: " << fileName << "\n";
-        std::cout << "Size: " << A.rows() << ", " << A.cols() << "\n";
-        std::cout << "Execution time: " << duration.count() << " seconds" << "\n";
-        std::cout << "norm of diff : " << norm_of_difference << "\n";
-        std::cout << "-------------------------\n" << std::endl;;
+        if (rank == 0){
+            std::cout << "Dataset: " << fileName << "\n";
+            std::cout << "Size: " << A.rows() << ", " << A.cols() << "\n";
+            std::cout << "Execution time: " << duration.count() << " seconds" << "\n";
+            std::cout << "norm of diff : " << norm_of_difference << "\n";
+            std::cout << "-------------------------\n" << std::endl;
+        }
 
         size_t lastDotPos = fileName.find_last_of('.');
 

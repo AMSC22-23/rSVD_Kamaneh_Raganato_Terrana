@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if (rank == 0) std::cout << "test rSVD reduced" << std::endl;
+    if (rank==0) std::cout << "*** rSVD test 1 ***\n" << std::endl;
     
     // Get the path to the directory where the executable is located
     std::filesystem::path exePath = std::filesystem::absolute(argv[0]);
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
 
     // Input and output directories
     std::filesystem::path inputDir = root / "data" / "input" / "mat";
-    std::filesystem::path outputDir = root / "data" / "output" / "rSVD" / "my";
+    std::filesystem::path outputDir = root / "data" / "output" / "rSVD";
 
     // Create output directory if it doesn't exist
     if (!std::filesystem::exists(outputDir))
@@ -64,11 +64,10 @@ int main(int argc, char** argv) {
         // start calculating the time
         auto start = std::chrono::high_resolution_clock::now();
 
-        // Perform QR decomposition
         int m = A.rows();
         int n = A.cols();
-        int k = 0; // numerical rank (we need an algorithm to find it) or target rank
-        int p = 16; // oversampling parameter, usually it is set to 5 or 10
+        int k = 5; 
+        int p = 10;
         int l = k + p;
         Mat A_copy = A;
         Mat U = Mat::Zero(m, l);

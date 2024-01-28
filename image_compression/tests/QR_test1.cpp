@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <mpi.h>
 #include <iomanip>
 #include <chrono>
 #include <iostream>
@@ -12,14 +13,19 @@
 #include <unsupported/Eigen/SparseExtra>
 
 // The main function for running the tests
-int main(int /*argc*/, char** argv) {
+int main(int argc, char** argv) {
     using namespace std;
     using namespace Eigen;
 
     using Mat = MatrixXd;
     using Vec = VectorXd;
 
-    std::cout << "*** QR test ***\n" << std::endl;
+    MPI_Init(&argc, &argv);
+    int num_procs, rank;
+    MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank==0) std::cout << "*** QR test 1 ***\n" << std::endl;
     // Get the path to the directory where the executable is located
     std::filesystem::path exePath = std::filesystem::absolute(argv[0]);
     std::filesystem::path exeDir = exePath.parent_path();
@@ -28,7 +34,7 @@ int main(int /*argc*/, char** argv) {
 
     // Input and output directories
     std::filesystem::path inputDir = root / "data" / "input" / "mat";
-    std::filesystem::path outputDir = root / "data" / "output" / "QR" / "my";
+    std::filesystem::path outputDir = root / "data" / "output" / "QR";
 
     // Create output directory if it doesn't exist
     if (!std::filesystem::exists(outputDir))
@@ -100,5 +106,6 @@ int main(int /*argc*/, char** argv) {
         Eigen::saveMarket(R, outputRFilePath.string());
     }
 
+    MPI_Finalize();
     return 0;
 }
