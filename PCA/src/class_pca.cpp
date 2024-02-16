@@ -36,13 +36,13 @@ void PCA::setEigenvectors(const Mat& vectors) {
         Mat cov = computeCovarianceMatrix();
 
         // Compute the EVD of the covariance matrix
-        Eigen::SelfAdjointEigenSolver<Mat> es(cov);
+        SVD::JacobiSVD(cov);
 
         // The eigenvalues are the eigenvalues of the covariance matrix
-        setEigenvalues(es.eigenvalues());
+        eigenvalues = getS().array().square();
 
         // The eigenvectors are the eigenvectors of the covariance matrix
-        setEigenvectors(es.eigenvectors());
+        eigenvectors = getV();
     }
     }
     Mat PCA::scores() {
@@ -77,14 +77,6 @@ void PCA::setEigenvectors(const Mat& vectors) {
         cov =data_.transpose()*data_;
     return cov/(n-1);
     }
-
-   /* Mat getEigenvectors() const {
-        return eigenvectors;
-    }
-
-    Vec getEigenvalues() const {
-        return eigenvalues;
-    }*/
 
 
      Mat PCA::loadDataset(const std::string& filename) {
@@ -163,52 +155,4 @@ Vec PCA::explained_variance_ratio() const {
     Mat centered_data = data.rowwise() - data.colwise().mean();
     Mat standardized_data = centered_data.array().rowwise() / centered_data.array().colwise().square().sum().sqrt();
     return standardized_data.transpose() * get_components();
-}*/
-
-/*void PCA::scree_plot(const std::string& filename) const {
-    // This method generates a scree plot, which is a plot of the explained variance ratio
-    // This requires a plotting library, such as gnuplot or ROOT
-    // The implementation will depend on the specific library you are using
-    // Here is a pseudocode example:
-    /*
-    Plot plot(filename);
-    plot.add(explained_variance_ratio());
-    plot.xlabel("Principal Component");
-    plot.ylabel("Explained Variance Ratio");
-    plot.save();
-    
-}*/
-
-
-
-
-
-
-
-/*void PCA::fit(const Mat& data, bool use_svd) {
-    if (use_svd) {
-        // Center the data
-        Mat centered_data = data.rowwise() - data.colwise().mean();
-
-        // Compute the SVD of the centered data
-        SVD::compute(centered_data);
-
-        // The eigenvalues are the singular values squared
-        eigenvalues = getS().array().square();
-
-        // The eigenvectors are the right singular vectors
-        eigenvectors = getV();
-    } else {
-        // Compute the covariance matrix
-        Mat cov = computeCovarianceMatrix(data);
-
-        // Compute the EVD of the covariance matrix
-        Eigen::SelfAdjointEigenSolver<Mat> es(cov);
-
-        // The eigenvalues are the eigenvalues of the covariance matrix
-        eigenvalues = es.eigenvalues();
-
-        // The eigenvectors are the eigenvectors of the covariance matrix
-        eigenvectors = es.eigenvectors();
-    }
 }*/

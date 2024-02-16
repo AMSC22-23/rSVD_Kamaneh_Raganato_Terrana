@@ -43,6 +43,7 @@ public:
     Mat get_loadings() const;
     //void scree_plot(const std::string& filename) const;
     
+    
 
 private:
     Mat U_; // Matrice U ottenuta dalla SVD
@@ -57,6 +58,8 @@ private:
     bool use_svd_;
     std::string filename_;
     Mat scores_;
+
+   
 
 };
 
