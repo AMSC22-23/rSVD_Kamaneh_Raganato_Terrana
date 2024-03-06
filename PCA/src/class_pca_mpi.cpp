@@ -1,4 +1,4 @@
-#include "class_pca_mpi.hpp"
+#include "../include/class_pca_mpi.hpp"
 
     
     void PCA::setEigenvalues(const Vec& values) {
