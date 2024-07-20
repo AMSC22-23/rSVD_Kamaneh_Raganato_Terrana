@@ -17,25 +17,22 @@ jobs:
     - name: Setup MPI
       uses: mpi4py/setup-mpi@v1
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10.14'
+    # - name: Setup Python
+    #   uses: actions/setup-python@v5
+    #   with:
+    #     python-version: '3.10.14'
 
-    - name: Cache Boost
-      uses: actions/cache@v2
+    - name: Install boost
+      uses: MarkusJx/install-boost@v2.4.5
+      id: install-boost
       with:
-        path: '${{runner.workspace}}/boost_*.tar.gz'
-        key: 'boost-1.72.0'
-
-    - name: Build Boost
-      uses: egor-tensin/build-boost@v1
-      with:
-        version: 1.72.0
+        boost_version: 1.73.0
 
     - name: Configure CMake
       working-directory: ./POD/ParametricDiffusion1D
       run: cmake -B ./build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      env:
+        BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
 
     - name: Build
       working-directory: ./POD/ParametricDiffusion1D
