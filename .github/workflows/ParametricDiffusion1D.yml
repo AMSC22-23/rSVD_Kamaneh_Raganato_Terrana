@@ -22,7 +22,13 @@ jobs:
     #   with:
     #     python-version: '3.10.14'
 
-    - name: Install boost
+    - name: Cache Boost
+      uses: actions/cache@v2
+      with:
+        path: '${{ runner.workspace }}/boost_*.tar.gz'
+        key: 'boost-1.73.0'
+
+    - name: Install Boost
       uses: MarkusJx/install-boost@v2.4.5
       id: install-boost
       with:
