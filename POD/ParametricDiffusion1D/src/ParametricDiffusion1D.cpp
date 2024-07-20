@@ -7,14 +7,27 @@
 // #include <Eigen/Dense>
 
 #include "POD.hpp"
-#include "Poisson2D_snapshot.hpp"
+#include "Diffusion1D.hpp"
 
 // Main function.
 int
-main(int /*argc*/, char * /*argv*/[])
+main(int argc, char * argv[])
 {
-  const std::string mesh_file_name = "../mesh/gmsh/mesh-square-h0.100000.msh";
-  const unsigned int p = 1;
+  Utilities::MPI::MPI_InitFinalize mpi_init(argc, argv);
+  const unsigned int               mpi_rank =
+    Utilities::MPI::this_mpi_process(MPI_COMM_WORLD);
+
+  const unsigned int N = 200;
+  const unsigned int r = 1;
+
+  const double T         = 0.05;
+  const double deltat    = 1e-5;
+
+  const double theta  = 1.0; // Implicit Euler
+  // const double theta  = 0.0; // Explicit Euler
+
+  // std::vector<double> errors_L2;
+  // std::vector<double> errors_H1;
 
   // ----------------------------------------------------------------------------------------------------------------------------
   // MatLab code from build_PODbased_ROM.m
@@ -39,13 +52,13 @@ main(int /*argc*/, char * /*argv*/[])
   // ----------------------------------------------------------------------------------------------------------------------------
 
   // INTERMEDIATE SNAPSHOT MATRIX
-  // NOTE: boundary_dofs_idx_new will store the indices of the boundary DOFs computed in Poisson2D::setup()
+  // NOTE: boundary_dofs_idx_new will store the indices of the boundary DOFs computed in Diffusion::setup()
   // but that is of type std::vector<types::global_dof_index>, here we use std::vector<unsigned int>
   std::vector<unsigned int> boundary_dofs_idx_int;
   std::vector<unsigned int> boundary_dofs_idx_old;
   Vec_v boundary_dofs_idx_v;
 
-  // NOTE: snapshot_array will store the solution computed in Poisson2D::solve() but that solution is of type
+  // NOTE: snapshot_array will store the solution computed in Diffusion::solve() but that solution is of type
   // Vector<double>, here we use std::vector<double>
   std::vector<double> snapshot_array;
 
@@ -57,8 +70,8 @@ main(int /*argc*/, char * /*argv*/[])
   unsigned int rows_default = 1; // default value that will be set to n_dofs at the first iteration of the for loop
   Mat_m snapshot_matrix = Mat_m::Zero(rows_default, ns);
 
-  double prm_diffusion_coefficient_min = 0.1;
-  double prm_diffusion_coefficient_max = 100.0;
+  double prm_diffusion_coefficient_min = 0.0;
+  double prm_diffusion_coefficient_max = 1.0;
   std::vector<double> prm_diffusion_coefficient;
   prm_diffusion_coefficient.resize(ns); 
 
@@ -73,12 +86,14 @@ main(int /*argc*/, char * /*argv*/[])
     std::cout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;                                   
 
     // NOTE: boundary_dofs_idx_int and snapshot_array are public members, the other arguments are protected members 
-    Poisson2D problem(mesh_file_name, p, boundary_dofs_idx_int, snapshot_array, prm_diffusion_coefficient[i]);    
+    Diffusion problem(N, r, T, deltat, theta, /*boundary_dofs_idx_int,*/ snapshot_array, prm_diffusion_coefficient[i]);    
 
     problem.setup();
-    problem.assemble();
     problem.solve();
     // problem.output(); COMMENTO PER NON APPESANTIRE
+
+    // errors_L2.push_back(problem.compute_error(VectorTools::L2_norm));
+    // errors_H1.push_back(problem.compute_error(VectorTools::H1_norm));
 
     // At the first iteration set the intermediate number of iterations as n_dofs = snapshot_array.size()
     if (i == 0)
@@ -87,16 +102,16 @@ main(int /*argc*/, char * /*argv*/[])
 
     // Check if the boundary DOFs are always the same
     // Otherwise the snapshot matrix can't be modified by erasing rows corresponding to boundary DOFs indices
-    if (problem.boundary_dofs_idx_int == boundary_dofs_idx_old)
-      std::cout << "  Check on boundary DOFs indices passed." << std::endl;
-    else
-      std::cout << "  Check on boundary DOFs indices failed." << std::endl;
-    std::cout << "===============================================" << std::endl;
-    std::cout << "===============================================" << std::endl << std::endl;
+    // if (problem.boundary_dofs_idx_int == boundary_dofs_idx_old)
+    //   std::cout << "  Check on boundary DOFs indices passed." << std::endl;
+    // else
+    //   std::cout << "  Check on boundary DOFs indices failed." << std::endl;
+    // std::cout << "===============================================" << std::endl;
+    // std::cout << "===============================================" << std::endl << std::endl;
 
     problem.snapshot_array.clear();
-    boundary_dofs_idx_old.assign(problem.boundary_dofs_idx_int.begin(), problem.boundary_dofs_idx_int.end());
-    problem.boundary_dofs_idx_int.clear();
+    // boundary_dofs_idx_old.assign(problem.boundary_dofs_idx_int.begin(), problem.boundary_dofs_idx_int.end());
+    // problem.boundary_dofs_idx_int.clear();
   }
 
   // for (int i=0; i<2; i++)
@@ -107,23 +122,23 @@ main(int /*argc*/, char * /*argv*/[])
   // FROM THE INTERMEDIATE TO THE FINAL SNAPSHOT MATRIX
   // Since we want snapshot to contain only the solution of the internal DOFs, we want to erase the rows of the snapshot matrix
   // corresponding to the boundary DOFs indices 
-  std::cout << "  Check intermediate dimensions of the snapshot_matrix: "
-            << snapshot_matrix.rows() << " * " << snapshot_matrix.cols() << std::endl << std::endl;
+  // std::cout << "  Check intermediate dimensions of the snapshot_matrix: "
+  //           << snapshot_matrix.rows() << " * " << snapshot_matrix.cols() << std::endl << std::endl;
 
-  const unsigned int Nh = snapshot_matrix.rows() - boundary_dofs_idx_old.size(); // n_dofs - n_boundary_dofs
+  // const unsigned int Nh = snapshot_matrix.rows() - boundary_dofs_idx_old.size(); // n_dofs - n_boundary_dofs
 
   // Create a map to distinguish between internal and boundary DOFs
-  std::map<unsigned int, bool> boundary_dofs_idx_map;
-  bool b = false;
-  unsigned int j = 0; // auxiliary index for traversing boundary_dofs_idx_old
-  for (unsigned int key=0; key<snapshot_matrix.rows(); key++) {
-    if (boundary_dofs_idx_old[j] == key) {
-      b = true;
-      j++;
-    }
-    boundary_dofs_idx_map.insert(std::make_pair(key, b));
-    b = false;
-  }
+  // std::map<unsigned int, bool> boundary_dofs_idx_map;
+  // bool b = false;
+  // unsigned int j = 0; // auxiliary index for traversing boundary_dofs_idx_old
+  // for (unsigned int key=0; key<snapshot_matrix.rows(); key++) {
+  //   if (boundary_dofs_idx_old[j] == key) {
+  //     b = true;
+  //     j++;
+  //   }
+  //   boundary_dofs_idx_map.insert(std::make_pair(key, b));
+  //   b = false;
+  // }
 
   // Check the creation of boundary_dofs_idx_map by traversing it with an iterator and printing "key -> b"
   // std::map<unsigned int, bool>::iterator it;
@@ -135,16 +150,16 @@ main(int /*argc*/, char * /*argv*/[])
   // Erase the rows corresponding to the boundary DOFs indices: starting from boundary_dofs_idx_map keep "false"
   // https://stackoverflow.com/questions/13290395/how-to-remove-a-certain-row-or-column-while-using-eigen-library-c
   // https://eigen.tuxfamily.org/dox/group__TutorialSlicingIndexing.html
-  std::map<unsigned int, bool>::iterator it;
-  Vec_v internal_dofs_idx; // indices to keep
-  j = 0; // auxiliary index for traversing internal_dofs_idx
-  for (it=boundary_dofs_idx_map.begin(); it!=boundary_dofs_idx_map.end(); it++) {
-    if (it->second == false) {
-      internal_dofs_idx(j) = it->first;
-      j++;
-    }
-  }
-  std::cout << "  Check internal_dofs_idx:" << std::endl << internal_dofs_idx << std::endl << std::endl;
+  // std::map<unsigned int, bool>::iterator it;
+  // Vec_v internal_dofs_idx; // indices to keep
+  // j = 0; // auxiliary index for traversing internal_dofs_idx
+  // for (it=boundary_dofs_idx_map.begin(); it!=boundary_dofs_idx_map.end(); it++) {
+  //   if (it->second == false) {
+  //     internal_dofs_idx(j) = it->first;
+  //     j++;
+  //   }
+  // }
+  // std::cout << "  Check internal_dofs_idx:" << std::endl << internal_dofs_idx << std::endl << std::endl;
 
   // snapshot_matrix = snapshot_matrix(internal_dofs_idx, Eigen::placeholders::all);
 
@@ -158,18 +173,80 @@ main(int /*argc*/, char * /*argv*/[])
   //   }
   // }
 
-  std::cout << "  Expected dimensions of the snapshot_matrix:           "
-            << Nh << " * " << ns << std::endl << std::endl;
+  // std::cout << "  Expected dimensions of the snapshot_matrix:           "
+  //           << Nh << " * " << ns << std::endl << std::endl;
   std::cout << "  Check final dimensions of the snapshot_matrix:        "
             << snapshot_matrix.rows() << " * " << snapshot_matrix.cols() << std::endl << std::endl;
 
-  const int r = ns-10;
-  const double tol = 1e-4;
-  POD pod(snapshot_matrix, r, tol);
+  // A QUESTO PUNTO SVD?
+
+  // const int r = ns-10;
+  // const double tol = 1e-4;
+  // POD pod(snapshot_matrix, r, tol);
   // POD pod(snapshot_matrix_reduced, r, tol);
 
   // E POI?
   // Ottieni W, ma cosa puoi farcene?
+
+  // Print the errors and estimate the convergence order.
+  // if (mpi_rank == 0)
+  // {
+  //   std::cout << "==============================================="
+  //             << std::endl;
+  //   ConvergenceTable table;
+  //   std::ofstream convergence_file("convergence.csv");
+  //   convergence_file << "h,eL2,eH1" << std::endl;
+
+  //   for (unsigned int i = 0; i < h_vals.size(); ++i)
+  //     {
+  //       table.add_value("h", h_vals[i]);
+  //       table.add_value("L2", errors_L2[i]);
+  //       table.add_value("H1", errors_H1[i]);
+        
+  //       convergence_file << h_vals[i] << "," << errors_L2[i] << ","
+  //                         << errors_H1[i] << std::endl;
+
+  //       std::cout << std::scientific << "h = " << std::setw(4)
+  //                 << std::setprecision(2) << h_vals[i];
+
+  //       std::cout << std::scientific << " | eL2 = " << errors_L2[i];
+
+  //       // Estimate the convergence order.
+  //       if (i > 0)
+  //         {
+  //           const double p =
+  //             std::log(errors_L2[i] / errors_L2[i - 1]) /
+  //             std::log(h_vals[i] / h_vals[i - 1]);
+
+  //           std::cout << " (" << std::fixed << std::setprecision(2)
+  //                     << std::setw(4) << p << ")";
+  //         }
+  //       else
+  //         std::cout << " (  - )";
+
+  //       std::cout << std::scientific << " | eH1 = " << errors_H1[i];
+
+  //       // Estimate the convergence order.
+  //       if (i > 0)
+  //         {
+  //           const double p =
+  //             std::log(errors_H1[i] / errors_H1[i - 1]) /
+  //             std::log(h_vals[i] / h_vals[i - 1]);
+
+  //           std::cout << " (" << std::fixed << std::setprecision(2)
+  //                     << std::setw(4) << p << ")";
+  //         }
+  //       else
+  //         std::cout << " (  - )";
+
+  //       std::cout << "\n";
+  //     }
+
+  //   table.evaluate_all_convergence_rates(ConvergenceTable::reduction_rate_log2);
+  //   table.set_scientific("L2", true);
+  //   table.set_scientific("H1", true);
+  //   table.write_text(std::cout);
+  // }
 
   return 0;
 }
