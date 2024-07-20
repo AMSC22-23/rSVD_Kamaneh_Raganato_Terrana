@@ -19,7 +19,7 @@ jobs:
 
     - name: Configure CMake
       working-directory: ./POD/ParametricDiffusion1D
-      run: cmake -B ./build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -DBoost_NO_BOOST_CMAKE=TRUE -B ./build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Build
       working-directory: ./POD/ParametricDiffusion1D
