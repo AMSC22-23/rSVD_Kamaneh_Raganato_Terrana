@@ -14,12 +14,12 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Setup MPI
+      uses: mpi4py/setup-mpi@v1
+
     - name: Configure CMake
       working-directory: ./POD/ParametricDiffusion1D
       run: cmake -B ./build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
-
-    - name: Setup MPI
-      uses: mpi4py/setup-mpi@v1
 
     - name: Build
       working-directory: ./POD/ParametricDiffusion1D
