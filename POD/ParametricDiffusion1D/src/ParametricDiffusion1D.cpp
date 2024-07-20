@@ -17,7 +17,7 @@ main(int argc, char * argv[])
   const unsigned int               mpi_rank =
     Utilities::MPI::this_mpi_process(MPI_COMM_WORLD);
 
-  const unsigned int N = 400;
+  const unsigned int N = 200;
   const unsigned int r = 1;
 
   const double T         = 0.05;
