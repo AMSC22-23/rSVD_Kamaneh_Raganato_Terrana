@@ -177,7 +177,7 @@ public:
     value(const Point<dim> &p,
           const unsigned int /*component*/ = 0) const override
     {
-      return 1.0;
+      return std::sin(M_PI*p[0]);
     }
   };
 
