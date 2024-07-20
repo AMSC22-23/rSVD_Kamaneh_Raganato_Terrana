@@ -22,6 +22,7 @@ jobs:
       uses: mpi4py/setup-mpi@v1
 
     - name: Build
+      working-directory: ./POD/ParametricDiffusion1D
       run: cmake --build ./build
 
     - name: Run test on parametric diffusion
