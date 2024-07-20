@@ -2,7 +2,8 @@ name: Parametric Diffusion 1D
 
 on:
   push:
-    paths: SVD_Raganato_Terrana/POD/ParametricDiffusion1D/
+    paths: 
+      - 'SVD_Raganato_Terrana/POD/ParametricDiffusion1D/'
 
 jobs:
   build:
