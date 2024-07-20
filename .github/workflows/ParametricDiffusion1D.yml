@@ -19,11 +19,11 @@ jobs:
 
     - name: Configure CMake
       working-directory: ./POD/ParametricDiffusion1D
-      run: cmake -DBoost_NO_BOOST_CMAKE=TRUE -B ./build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Build
       working-directory: ./POD/ParametricDiffusion1D
-      run: cmake --build ./build
+      run: cmake --build ${{github.workspace}}/build
 
     - name: Run test on parametric diffusion
       run: mpirun -n 4 ./build/ParametricDiffusion1D
