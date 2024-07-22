@@ -17,24 +17,36 @@ jobs:
     # - name: Setup MPI
     #   uses: mpi4py/setup-mpi@v1
 
-    - name: Cache dependencies
-      uses: actions/cache@v2
+    - name: Cache APT packages
+      id: cache-apt
+      uses: actions/cache@v3
       with:
-        path: ~/.cache
-        key: ${{ runner.os }}-build-${{ hashFiles('**/apt.txt') }}
+        path: /var/cache/apt/archives
+        key: ${{ runner.os }}-apt-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-
 
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-        build-essential \
-        cmake \
-        libboost-all-dev \
-        libopenmpi-dev \
-        libdeal.ii-dev \
-        libeigen3-dev
+          build-essential \
+          cmake \
+          libboost-all-dev \
+          libopenmpi-dev \
+          libdeal.ii-dev \
+          libeigen3-dev
         sudo ln -sf eigen3/Eigen Eigen
         sudo ln -sf eigen3/unsupported unsupported
+
+    - name: Cache CMake build
+      id: cache-cmake
+      uses: actions/cache@v3
+      with:
+        path: build
+        key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-cmake-
 
     - name: Configure CMake
       working-directory: ./POD/ParametricDiffusion1D
