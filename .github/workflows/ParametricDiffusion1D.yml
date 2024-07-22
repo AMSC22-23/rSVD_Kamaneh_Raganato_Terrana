@@ -17,22 +17,30 @@ jobs:
     # - name: Setup MPI
     #   uses: mpi4py/setup-mpi@v1
 
+    - name: Cache Deal.II
+      id: cache-dealii
+      uses: actions/cache@v2
+      with:
+        path: '${{ runner.workspace }}/dealii_*.tar.gz'
+        key: 'dealii-9.3.3'
+
     - name: Install dependencies
+      if: steps.cache-dealii.outputs.cache-hit != 'true'
       run: |
         sudo apt-get update
         sudo apt-get install -y \
         build-essential \
         cmake \
         libboost-all-dev \
-        libopenmpi-dev \
+        libpetsc-dev \
+        libslepc-dev \
         libtrilinos-dev \
+        libtrilinos-zoltan-dev \
+        libp4est-dev \
+        libhdf5-dev \
+        libparmetis-dev \
+        libz-dev \
         wget
-    
-    - name: Cache Deal.II
-      uses: actions/cache@v2
-      with:
-        path: '${{ runner.workspace }}/dealii_*.tar.gz'
-        key: 'dealii-9.3.3'
 
     - name: Install Deal.II
       run: |

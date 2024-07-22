@@ -100,13 +100,13 @@ main(int argc, char * argv[])
     std::cout << "  Check dimensions of snapshots: "
           << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
 
-    if (mpi_rank == 0) {
-      std::cout << snapshot_matrix[0][0] << std::endl;
-      std::cout << snapshot_matrix[17][17] << std::endl;
-      std::cout << snapshot_matrix[20][20] << std::endl;
-      std::cout << snapshots[0][0] << std::endl;
-      std::cout << snapshots[17][17] << std::endl;
-      std::cout << snapshots[20][20] << std::endl;
+    // if (mpi_rank == 0) {
+    //   std::cout << snapshot_matrix[0][0] << std::endl;
+    //   std::cout << snapshot_matrix[17][17] << std::endl;
+    //   std::cout << snapshot_matrix[20][20] << std::endl;
+    //   std::cout << snapshots[0][0] << std::endl;
+    //   std::cout << snapshots[17][17] << std::endl;
+    //   std::cout << snapshots[20][20] << std::endl;
 
     //   std::cout << "  Check dimensions of snapshots: "
     //             << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
