@@ -39,8 +39,8 @@ jobs:
         path: '${{ runner.workspace }}/dealii_*.tar.gz'
         key: 'dealii-9.3.3'
 
-     - name: Install Deal.II
-       run: |
+    - name: Install Deal.II
+      run: |
         wget https://github.com/dealii/dealii/releases/download/v9.3.3/dealii-9.3.3.tar.gz
         tar -xzf dealii-9.3.3.tar.gz
         mkdir dealii-9.3.3/build
