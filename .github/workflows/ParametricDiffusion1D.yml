@@ -14,8 +14,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup MPI
-      uses: mpi4py/setup-mpi@v1
+    # - name: Setup MPI
+    #   uses: mpi4py/setup-mpi@v1
 
     - name: Install dependencies
       run: |
@@ -24,13 +24,7 @@ jobs:
         build-essential \
         cmake \
         libboost-all-dev \
-        libpetsc-dev \
-        libslepc-dev \
-        libtrilinos-zoltan-dev \
-        libp4est-dev \
-        libhdf5-dev \
-        libparmetis-dev \
-        libz-dev \
+        libopenmpi-dev \
         wget
     
     - name: Cache Deal.II
