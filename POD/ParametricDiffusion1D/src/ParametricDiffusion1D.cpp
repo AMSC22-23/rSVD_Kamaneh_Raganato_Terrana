@@ -7,7 +7,7 @@
 // #include <Eigen/Dense>
 
 #include "POD.hpp"
-#include "Diffusion1D.hpp"
+#include "AdvDiff1D.hpp"
 
 // Main function.
 int
@@ -17,11 +17,12 @@ main(int argc, char * argv[])
   const unsigned int               mpi_rank =
     Utilities::MPI::this_mpi_process(MPI_COMM_WORLD);
 
-  const unsigned int N = 200;
+  const unsigned int N = 120;
   const unsigned int r = 1;
 
   const double T         = 0.05;
-  const double deltat    = 1e-5;
+  // const double deltat    = 1e-5; // 5000 steps
+  const double deltat    = 1e-3; // 50 steps
 
   const double theta  = 1.0; // Implicit Euler
   // const double theta  = 0.0; // Explicit Euler
@@ -60,7 +61,7 @@ main(int argc, char * argv[])
 
   // NOTE: snapshot_array will store the solution computed in Diffusion::solve() but that solution is of type
   // Vector<double>, here we use std::vector<double>
-  std::vector<double> snapshot_array;
+  // std::vector<double> snapshot_array;
 
   // Compute only one snapshot to understand better what entries in snapshot_array correspond to internal DOFs
   // const unsigned int ns = 2; 
@@ -68,7 +69,9 @@ main(int argc, char * argv[])
   // NOTE: the intermediate number of rows of the snapshot matrix will be n_dofs,
   // the final number of rows will be n_dofs - n_boundary_dofs
   unsigned int rows_default = 1; // default value that will be set to n_dofs at the first iteration of the for loop
-  Mat_m snapshot_matrix = Mat_m::Zero(rows_default, ns);
+  // Mat_m snapshot_matrix = Mat_m::Zero(rows_default, ns);
+  std::vector<std::vector<double>> snapshot_matrix;
+  Mat_m snapshots;
 
   double prm_diffusion_coefficient_min = 0.0;
   double prm_diffusion_coefficient_max = 1.0;
@@ -78,27 +81,28 @@ main(int argc, char * argv[])
   std::cout << "===============================================" << std::endl;
   std::cout << "Compute snapshots ..." << std::endl;
 
-  for (unsigned int i=0; i<ns; i++) {
+  // for (unsigned int i=0; i<ns; i++) {
 
-    std::cout << "  Computing snapshot " << i+1 << " out of " << ns << std::endl;
-    prm_diffusion_coefficient[i] = (prm_diffusion_coefficient_min +
-                                    i*(prm_diffusion_coefficient_max - prm_diffusion_coefficient_min)/(ns-1));
-    std::cout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;                                   
+    // std::cout << "  Computing snapshot " << i+1 << " out of " << ns << std::endl;
+    // prm_diffusion_coefficient[i] = (prm_diffusion_coefficient_min +
+    //                                 i*(prm_diffusion_coefficient_max - prm_diffusion_coefficient_min)/(ns-1));
+    // std::cout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;                                   
 
     // NOTE: boundary_dofs_idx_int and snapshot_array are public members, the other arguments are protected members 
-    Diffusion problem(N, r, T, deltat, theta, /*boundary_dofs_idx_int,*/ snapshot_array, prm_diffusion_coefficient[i]);    
+    Diffusion problem(N, r, T, deltat, theta, /*boundary_dofs_idx_int,*/ snapshot_matrix/*, prm_diffusion_coefficient[i]*/);    
 
     problem.setup();
     problem.solve();
-    // problem.output(); COMMENTO PER NON APPESANTIRE
+
+    // std::cout << snapshot_matrix[0][0] << std::endl;
 
     // errors_L2.push_back(problem.compute_error(VectorTools::L2_norm));
     // errors_H1.push_back(problem.compute_error(VectorTools::H1_norm));
 
     // At the first iteration set the intermediate number of iterations as n_dofs = snapshot_array.size()
-    if (i == 0)
-      snapshot_matrix.conservativeResize(problem.snapshot_array.size(), Eigen::NoChange);
-    snapshot_matrix.col(i) = Eigen::Map<Vec_v>(problem.snapshot_array.data(), problem.snapshot_array.size());
+    // if (i == 0)
+    //   snapshot_matrix.conservativeResize(problem.snapshot_array.size(), Eigen::NoChange);
+    // snapshot_matrix.col(i) = Eigen::Map<Vec_v>(problem.snapshot_array.data(), problem.snapshot_array.size());
 
     // Check if the boundary DOFs are always the same
     // Otherwise the snapshot matrix can't be modified by erasing rows corresponding to boundary DOFs indices
@@ -109,10 +113,10 @@ main(int argc, char * argv[])
     // std::cout << "===============================================" << std::endl;
     // std::cout << "===============================================" << std::endl << std::endl;
 
-    problem.snapshot_array.clear();
+    // problem.snapshot_array.clear();
     // boundary_dofs_idx_old.assign(problem.boundary_dofs_idx_int.begin(), problem.boundary_dofs_idx_int.end());
     // problem.boundary_dofs_idx_int.clear();
-  }
+  // }
 
   // for (int i=0; i<2; i++)
   //   std::cout << "Check the snapshot matrix:" << std::endl << snapshot_matrix.col(i) << std::endl << std::endl;
@@ -176,7 +180,7 @@ main(int argc, char * argv[])
   // std::cout << "  Expected dimensions of the snapshot_matrix:           "
   //           << Nh << " * " << ns << std::endl << std::endl;
   std::cout << "  Check final dimensions of the snapshot_matrix:        "
-            << snapshot_matrix.rows() << " * " << snapshot_matrix.cols() << std::endl << std::endl;
+            << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
 
   // A QUESTO PUNTO SVD?
 

@@ -33,6 +33,7 @@ jobs:
       id: install-boost
       with:
         boost_version: 1.73.0
+        boost_install_dir: ./POD/ParametricDiffusion1D
 
     - name: Configure CMake
       working-directory: ./POD/ParametricDiffusion1D

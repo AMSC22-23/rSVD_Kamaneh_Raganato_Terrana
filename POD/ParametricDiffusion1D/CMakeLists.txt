@@ -10,6 +10,10 @@ include(../common/cmake-common.cmake)
 # deal_ii_setup_target(ParametricDiffusion)
 # target_link_libraries (ParametricDiffusion Eigen3::Eigen)
 
-add_executable(ParametricDiffusion1D src/ParametricDiffusion1D.cpp src/POD.cpp src/Diffusion1D.cpp)
+# add_executable(ParametricDiffusion1D src/ParametricDiffusion1D.cpp src/POD.cpp src/Diffusion1D.cpp)
+# deal_ii_setup_target(ParametricDiffusion1D)
+
+add_executable(ParametricDiffusion1D src/ParametricDiffusion1D.cpp src/POD.cpp src/AdvDiff1D.cpp)
 deal_ii_setup_target(ParametricDiffusion1D)
+
 # target_link_libraries (ParametricDiffusion1D Eigen3::Eigen)
