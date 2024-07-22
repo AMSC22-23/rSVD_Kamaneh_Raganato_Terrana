@@ -25,6 +25,7 @@ jobs:
         cmake \
         libboost-all-dev \
         libopenmpi-dev \
+        libtrilinos-dev \
         wget
     
     - name: Cache Deal.II
