@@ -368,9 +368,6 @@ protected:
 
   // System solution (including ghost elements).
   TrilinosWrappers::MPI::Vector solution;
-
-  // PROVA
-  // TrilinosWrappers::MPI::Vector snapshot_array;
 };
 
 #endif

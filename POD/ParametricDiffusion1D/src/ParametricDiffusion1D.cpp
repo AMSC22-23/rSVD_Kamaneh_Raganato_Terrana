@@ -94,7 +94,21 @@ main(int argc, char * argv[])
     problem.setup();
     problem.solve();
 
-    // std::cout << snapshot_matrix[0][0] << std::endl;
+    // Now the snapshot_matrix, defined with standard library, is required to fit in snapshots, defined in Eigen, since the SVD
+    // method is implemented in Eigen.
+    snapshots = Eigen::Map<Mat_m>(problem.snapshot_matrix.data(), problem.snapshot_matrix.size(), 1);
+
+    if (mpi_rank == 0) {
+      std::cout << snapshot_matrix[0][0] << std::endl;
+      std::cout << snapshot_matrix[17][17] << std::endl;
+      std::cout << snapshot_matrix[20][20] << std::endl;
+      std::cout << snapshots[0][0] << std::endl;
+      std::cout << snapshots[17][17] << std::endl;
+      std::cout << snapshots[20][20] << std::endl;
+
+      std::cout << "  Check dimensions of snapshots: "
+                << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
+    }
 
     // errors_L2.push_back(problem.compute_error(VectorTools::L2_norm));
     // errors_H1.push_back(problem.compute_error(VectorTools::H1_norm));
