@@ -24,6 +24,24 @@ jobs:
         path: '${{ runner.workspace }}/dealii_*.tar.gz'
         key: 'dealii-9.3.3'
 
+    # - name: Install dependencies
+    #   if: steps.cache-dealii.outputs.cache-hit != 'true'
+    #   run: |
+    #     sudo apt-get update
+    #     sudo apt-get install -y \
+    #     build-essential \
+    #     cmake \
+    #     libboost-all-dev \
+    #     libpetsc-dev \
+    #     libslepc-dev \
+    #     libtrilinos-dev \
+    #     libtrilinos-zoltan-dev \
+    #     libp4est-dev \
+    #     libhdf5-dev \
+    #     libparmetis-dev \
+    #     libz-dev \
+    #     wget
+
     - name: Install dependencies
       if: steps.cache-dealii.outputs.cache-hit != 'true'
       run: |
@@ -32,15 +50,64 @@ jobs:
         build-essential \
         cmake \
         libboost-all-dev \
-        libpetsc-dev \
-        libslepc-dev \
-        libtrilinos-dev \
-        libtrilinos-zoltan-dev \
         libp4est-dev \
         libhdf5-dev \
         libparmetis-dev \
         libz-dev \
-        wget
+        wget \
+        gfortran \
+        liblapack-dev \
+        libopenmpi-dev \
+        openmpi-bin
+
+    - name: Install PETSc
+      if: steps.cache-dealii.outputs.cache-hit != 'true'
+      run: |
+        cd /tmp
+        wget https://gitlab.com/petsc/petsc/-/archive/v3.14/petsc-v3.14.tar.gz
+        tar -xzf petsc-v3.14.tar.gz
+        cd petsc-v3.14
+        ./configure --download-f2cblaslapack=1 --with-mpi=1
+        make PETSC_DIR=/tmp/petsc-v3.14 PETSC_ARCH=arch-linux-c-opt all
+        sudo make PETSC_DIR=/tmp/petsc-v3.14 PETSC_ARCH=arch-linux-c-opt install
+
+    - name: Install SLEPc
+      if: steps.cache-dealii.outputs.cache-hit != 'true'
+      run: |
+        cd /tmp
+        wget https://gitlab.com/slepc/slepc/-/archive/v3.14/slepc-v3.14.tar.gz
+        tar -xzf slepc-v3.14.tar.gz
+        cd slepc-v3.14
+        export PETSC_DIR=/usr/local/petsc
+        export PETSC_ARCH=arch-linux-c-opt
+        ./configure
+        make SLEPC_DIR=/tmp/slepc-v3.14 all
+        sudo make SLEPC_DIR=/tmp/slepc-v3.14 install
+
+    - name: Install Trilinos
+      if: steps.cache-dealii.outputs.cache-hit != 'true'
+      run: |
+        cd /tmp
+        wget https://github.com/trilinos/Trilinos/archive/refs/tags/trilinos-release-13-0-1.tar.gz
+        tar -xzf trilinos-release-13-0-1.tar.gz
+        mkdir trilinos-release-13-0-1/build
+        cd trilinos-release-13-0-1/build
+        cmake .. \
+          -D CMAKE_INSTALL_PREFIX=/usr/local/trilinos \
+          -D TPL_ENABLE_MPI=ON \
+          -D CMAKE_BUILD_TYPE=Release \
+          -D Trilinos_ENABLE_ALL_PACKAGES=OFF \
+          -D Trilinos_ENABLE_Epetra=ON \
+          -D Trilinos_ENABLE_Tpetra=ON \
+          -D Trilinos_ENABLE_Ifpack=ON \
+          -D Trilinos_ENABLE_AztecOO=ON \
+          -D Trilinos_ENABLE_Amesos=ON \
+          -D Trilinos_ENABLE_Anasazi=ON \
+          -D Trilinos_ENABLE_Belos=ON \
+          -D Trilinos_ENABLE_Zoltan=ON \
+          -D Trilinos_ENABLE_Gtest=OFF
+        make -j4
+        sudo make install
 
     - name: Install Deal.II
       run: |
