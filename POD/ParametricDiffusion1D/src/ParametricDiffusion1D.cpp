@@ -195,8 +195,8 @@ main(int argc, char * argv[])
 
   // std::cout << "  Expected dimensions of the snapshot_matrix:           "
   //           << Nh << " * " << ns << std::endl << std::endl;
-  std::cout << "  Check final dimensions of the snapshot_matrix:        "
-            << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
+  // std::cout << "  Check final dimensions of the snapshot_matrix:        "
+  //           << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
 
   // A QUESTO PUNTO SVD?
 

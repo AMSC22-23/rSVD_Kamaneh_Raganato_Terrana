@@ -54,7 +54,11 @@ jobs:
 
     - name: Build
       working-directory: ./POD/ParametricDiffusion1D
-      run: cmake --build ./build
+      run: cmake --build ./build --verbose
+
+    - name: Show build log on failure
+      if: failure()
+      run: cat build/CMakeFiles/CMakeOutput.log
 
     - name: Run test on parametric diffusion
       run: mpirun -n 4 ./build/ParametricDiffusion1D
