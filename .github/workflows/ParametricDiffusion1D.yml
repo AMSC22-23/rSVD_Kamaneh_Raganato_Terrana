@@ -33,6 +33,8 @@ jobs:
         libopenmpi-dev \
         libdeal.ii-dev \
         libeigen3-dev
+        sudo ln -sf eigen3/Eigen Eigen
+        sudo ln -sf eigen3/unsupported unsupported
 
     - name: Configure CMake
       working-directory: ./POD/ParametricDiffusion1D
