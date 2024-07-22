@@ -17,33 +17,21 @@ jobs:
     - name: Setup MPI
       uses: mpi4py/setup-mpi@v1
 
-    # - name: Cache Boost
-    #   uses: actions/cache@v2
-    #   with:
-    #     path: '${{ runner.workspace }}/boost_*.tar.gz'
-    #     key: 'boost-1.73.0'
-
-    # - name: Install Boost
-    #   uses: MarkusJx/install-boost@v2.4.5
-    #   id: install-boost
-    #   with:
-    #     boost_version: 1.73.0
-
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          build-essential \
-          cmake \
-          libboost-all-dev \
-          libpetsc-dev \
-          libslepc-dev \
-          libtrilinos-zoltan-dev \
-          libp4est-dev \
-          libhdf5-dev \
-          libparmetis-dev \
-          libz-dev \
-          wget
+        build-essential \
+        cmake \
+        libboost-all-dev \
+        libpetsc-dev \
+        libslepc-dev \
+        libtrilinos-zoltan-dev \
+        libp4est-dev \
+        libhdf5-dev \
+        libparmetis-dev \
+        libz-dev \
+        wget
     
     - name: Cache Deal.II
       uses: actions/cache@v2
@@ -53,13 +41,13 @@ jobs:
 
      - name: Install Deal.II
        run: |
-          wget https://github.com/dealii/dealii/releases/download/v9.3.3/dealii-9.3.3.tar.gz
-          tar -xzf dealii-9.3.3.tar.gz
-          mkdir dealii-9.3.3/build
-          cd dealii-9.3.3/build
-          cmake -D DEAL_II_WITH_PETSC=ON -D DEAL_II_WITH_SLEPC=ON -D DEAL_II_WITH_TRILINOS=ON ..
-          make -j4
-          sudo make install
+        wget https://github.com/dealii/dealii/releases/download/v9.3.3/dealii-9.3.3.tar.gz
+        tar -xzf dealii-9.3.3.tar.gz
+        mkdir dealii-9.3.3/build
+        cd dealii-9.3.3/build
+        cmake -D DEAL_II_WITH_PETSC=ON -D DEAL_II_WITH_SLEPC=ON -D DEAL_II_WITH_TRILINOS=ON ..
+        make -j4
+        sudo make install
 
     - name: Configure CMake
       working-directory: ./POD/ParametricDiffusion1D
