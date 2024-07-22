@@ -30,16 +30,39 @@ jobs:
     #     boost_version: 1.73.0
 
     - name: Install dependencies
-      run: sudo apt-get install -y libboost-all-dev
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          libboost-all-dev \
+          libpetsc-dev \
+          libslepc-dev \
+          libtrilinos-zoltan-dev \
+          libp4est-dev \
+          libhdf5-dev \
+          libparmetis-dev \
+          libz-dev \
+          wget
+    
+    - name: Cache Deal.II
+      uses: actions/cache@v2
+      with:
+        path: '${{ runner.workspace }}/dealii_*.tar.gz'
+        key: 'dealii-9.3.3'
+
+     - name: Install Deal.II
+       run: |
+          wget https://github.com/dealii/dealii/releases/download/v9.3.3/dealii-9.3.3.tar.gz
+          tar -xzf dealii-9.3.3.tar.gz
+          mkdir dealii-9.3.3/build
+          cd dealii-9.3.3/build
+          cmake -D DEAL_II_WITH_PETSC=ON -D DEAL_II_WITH_SLEPC=ON -D DEAL_II_WITH_TRILINOS=ON ..
+          make -j4
+          sudo make install
 
     - name: Configure CMake
       working-directory: ./POD/ParametricDiffusion1D
-      # run: |
-      #   cmake . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -B build\
-      #   -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include\
-      #   -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib\
-      # env:
-      #   BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
       run: cmake -B ./build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Build
