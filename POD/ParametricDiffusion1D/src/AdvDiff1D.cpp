@@ -364,7 +364,10 @@ Diffusion::solve()
 
     // Output the initial solution.
     output(0);
-    assemble_snapshot_matrix(0);
+    // if (initial_state.empty())
+    // {
+      assemble_snapshot_matrix(0);
+    // }
     pcout << "-----------------------------------------------" << std::endl;
   }
 
@@ -381,7 +384,10 @@ Diffusion::solve()
 
       assemble_rhs(time);
       solve_time_step();
-      assemble_snapshot_matrix(time_step);
+      // if(initial_state.empty())
+      // {
+        assemble_snapshot_matrix(time_step);
+      // }
       output(time_step);
     }
 }

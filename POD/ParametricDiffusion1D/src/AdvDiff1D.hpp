@@ -165,13 +165,37 @@ public:
     FunctionU0()
     {}
 
+    FunctionU0(const std::vector<double> initial_state) : u0(initial_state)
+    {}
+
     // Evaluation.
     virtual double
-    value(const Point<dim> &p,
+    value(const Point<dim> & p,
           const unsigned int /*component*/ = 0) const override
     {
-      return std::sin(M_PI*p[0]);
+      if (u0.empty())
+        return std::sin(M_PI*p[0]);
+      else
+      { // QUESTO SICURAMENTE NON CORRETTO
+        for (unsigned int i = 0; i < u0.size(); ++i)
+          return u0[i];
+      }
+        // return u0 * p[0];
     }
+
+    private:
+      std::vector<double> u0;
+
+    // // Evaluation.
+    // virtual double
+    // value(const Point<dim> &p,
+    //       const unsigned int /*component*/ = 0) const override
+    // {
+    //   if (initial_state.empty())
+    //     return std::sin(M_PI*p[0]);
+    //   else
+    //     return initial_state;
+    // }
   };
 
   // Exact solution.
@@ -207,16 +231,12 @@ public:
   //   }
   // };
 
-  // Constructor. We provide the final time, time step Delta t and theta method
-  // parameter as constructor arguments.
+  // Default constructor.
   Diffusion(const unsigned int N_,
             const unsigned int &r_,
             const double       &T_,
             const double       &deltat_,
-            const double       &theta_,
-            /*std::vector<unsigned int> &boundary_dofs_idx_int_,*/
-            std::vector<std::vector<double>> &snapshot_matrix_
-            /*const double &prm_diffusion_coefficient_*/)
+            const double       &theta_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
@@ -225,9 +245,25 @@ public:
     , r(r_)
     , deltat(deltat_)
     , theta(theta_)
-    /*, boundary_dofs_idx_int(boundary_dofs_idx_int_)*/
-    , snapshot_matrix(snapshot_matrix_)
-    /*, mu(prm_diffusion_coefficient_)*/
+    , mesh(MPI_COMM_WORLD)
+  {}
+
+  // Constructor for ROM.
+  Diffusion(const unsigned int N_,
+            const unsigned int &r_,
+            const double       &T_,
+            const double       &deltat_,
+            const double       &theta_,
+            std::vector<double> &initial_state_)
+    : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
+    , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
+    , pcout(std::cout, mpi_rank == 0)
+    , T(T_)
+    , N(N_)
+    , r(r_)
+    , deltat(deltat_)
+    , theta(theta_)
+    , u_0(initial_state_)
     , mesh(MPI_COMM_WORLD)
   {}
 
@@ -249,6 +285,10 @@ public:
   // Snapshot matrix.
   std::vector<std::vector<double>> snapshot_matrix;
 
+  // MODIFICATO PER ROM
+  // System solution (including ghost elements).
+  TrilinosWrappers::MPI::Vector solution;
+
 protected:
   // Assemble the mass and stiffness matrices.
   void
@@ -263,6 +303,7 @@ protected:
   solve_time_step();
 
   // Assemble the snapshot matrix.
+  // create this method only for the default constructor
   void
   assemble_snapshot_matrix(const unsigned int &time_step);
 
@@ -300,6 +341,9 @@ protected:
 
   // Initial condition.
   FunctionU0 u_0;
+
+  // Initial ROM state.
+  // const std::vector<double> initial_state;
 
   // h(x).
   // FunctionH function_h;
@@ -365,9 +409,6 @@ protected:
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
-
-  // System solution (including ghost elements).
-  TrilinosWrappers::MPI::Vector solution;
 };
 
 #endif

@@ -6,7 +6,7 @@
 #include <map>
 // #include <Eigen/Dense>
 
-#include "POD.hpp"
+#include "SVD.hpp"
 #include "AdvDiff1D.hpp"
 
 // Main function.
@@ -24,8 +24,8 @@ main(int argc, char * argv[])
   // const double deltat    = 1e-5; // 5000 steps
   const double deltat    = 1e-3; // 50 steps
 
-  const double theta  = 1.0; // Implicit Euler
-  // const double theta  = 0.0; // Explicit Euler
+  // const double theta  = 1.0; // Implicit Euler
+  const double theta  = 0.0; // Explicit Euler
 
   // std::vector<double> errors_L2;
   // std::vector<double> errors_H1;
@@ -70,8 +70,6 @@ main(int argc, char * argv[])
   // the final number of rows will be n_dofs - n_boundary_dofs
   unsigned int rows_default = 1; // default value that will be set to n_dofs at the first iteration of the for loop
   // Mat_m snapshot_matrix = Mat_m::Zero(rows_default, ns);
-  std::vector<std::vector<double>> snapshot_matrix;
-  Mat_m snapshots;
 
   double prm_diffusion_coefficient_min = 0.0;
   double prm_diffusion_coefficient_max = 1.0;
@@ -79,7 +77,7 @@ main(int argc, char * argv[])
   prm_diffusion_coefficient.resize(ns); 
 
   std::cout << "===============================================" << std::endl;
-  std::cout << "Compute snapshots ..." << std::endl;
+  std::cout << "Run FOM and collect snapshots" << std::endl;
 
   // for (unsigned int i=0; i<ns; i++) {
 
@@ -89,28 +87,83 @@ main(int argc, char * argv[])
     // std::cout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;                                   
 
     // NOTE: boundary_dofs_idx_int and snapshot_array are public members, the other arguments are protected members 
-    Diffusion problem(N, r, T, deltat, theta, /*boundary_dofs_idx_int,*/ snapshot_matrix/*, prm_diffusion_coefficient[i]*/);    
+    Diffusion problem(N, r, T, deltat, theta);    
 
     problem.setup();
     problem.solve();
 
     // Now the snapshot_matrix, defined with standard library, is required to fit in snapshots, defined in Eigen, since the SVD
     // method is implemented in Eigen.
-    // snapshots = Eigen::Map<Mat_m>(problem.snapshot_matrix.data(), problem.snapshot_matrix.size(), 1);
-    // std::cout << "  Check dimensions of snapshots: "
-    //       << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
+    size_t snapshot_length = problem.snapshot_matrix.size();
+    size_t time_steps = problem.snapshot_matrix[0].size();
+    Mat_m snapshots = Mat_m::Zero(snapshot_length, time_steps);
+    for (size_t i=0; i<snapshots.rows(); i++)
+      for (size_t j=0; j<snapshots.cols(); j++)
+        snapshots(i, j) = problem.snapshot_matrix[i][j];
 
     // if (mpi_rank == 0) {
-    //   std::cout << snapshot_matrix[0][0] << std::endl;
-    //   std::cout << snapshot_matrix[17][17] << std::endl;
-    //   std::cout << snapshot_matrix[20][20] << std::endl;
-    //   std::cout << snapshots[0][0] << std::endl;
-    //   std::cout << snapshots[17][17] << std::endl;
-    //   std::cout << snapshots[20][20] << std::endl;
+      std::cout << "\nCheck dimensions of snapshots: "
+                << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
 
-    //   std::cout << "  Check dimensions of snapshots: "
-    //             << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
-    // }
+      std::cout << "===============================================" << std::endl;
+      std::cout << "Compute POD modes" << std::endl;
+
+      // Initialize the vector sigma to store the singular values
+      int rank = std::min(snapshots.rows(), snapshots.cols());
+      Vec_v sigma = Vec_v::Zero(rank);
+
+      // Initialize the other inputs required by the SVD method, Note that the SVD method returns sigma as a vector, then it has
+      // to be converted into a diagonal matrix
+      Mat_m U = Mat_m::Zero(snapshots.rows(), snapshots.rows());
+      Mat_m V = Mat_m::Zero(snapshots.cols(), snapshots.cols());
+
+      SVD(snapshots, sigma, U, V, rank);
+      std::cout << "\nCheck dimensions of U:     " << U.rows() << " * " << U.cols() << endl;
+      std::cout << "Check dimensions of sigma: " << sigma.size() << endl;
+      std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << endl;
+
+      std::cout << "===============================================" << std::endl;
+      std::cout << "Construct and run ROM" << std::endl;
+
+      const double deltat_rom = 1e-3; // CAMBIA
+      std::vector<size_t> rom_sizes = {2, 4, 6}; 
+      Mat_m modes;
+
+      for (size_t i=0; i<rom_sizes.size(); i++) {
+        std::cout << "  Creating ROM for " << rom_sizes[i] << " modes" << std::endl;
+        modes.resize(U.rows(), rom_sizes[i]);
+        modes = U.leftCols(rom_sizes[i]);
+
+        // Projection of the initial FOM state on the ROM basis
+        Vec_v rom_initial_state = modes.transpose() * snapshots.col(0);
+        if (rom_initial_state.size() == rom_sizes[i])
+          std::cout << "  Check dimensions of rom_state: " << rom_initial_state.size() << std::endl;
+        else
+          std::cerr << "  Error in computing rom_state" << std::endl;
+        
+        std::vector<double> initial_state(rom_sizes[i]);
+        for(size_t j=0; j<rom_sizes[i]; j++)
+          initial_state[i] = rom_initial_state(j);
+
+        // USARE rom_state COME CONDIZIONE INIZIALE PER IL ROM? vedi nota ?????????
+        // USARE romsize come N???????
+        Diffusion problem_rom(rom_sizes[i], r, T, deltat_rom, theta, initial_state);    
+
+        problem_rom.setup();
+        problem_rom.solve();
+
+        // The final ROM state corresponds to the solution of the ROM problem.
+        Vec_v rom_final_state = Vec_v::Zero(rom_sizes[i]);
+        for(size_t j=0; j<rom_sizes[i]; j++)
+          rom_final_state(j) = problem_rom.solution[j];
+
+        // Reconstruction of the FOM state from the final ROM state
+        Vec_v fom_state = modes * rom_final_state;
+      }
+
+      // fomReferenceState per te è ?
+      // fomInitialState per te è snapshots[:, 0)
+
 
     // errors_L2.push_back(problem.compute_error(VectorTools::L2_norm));
     // errors_H1.push_back(problem.compute_error(VectorTools::H1_norm));

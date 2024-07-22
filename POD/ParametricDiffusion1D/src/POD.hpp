@@ -5,10 +5,15 @@
 #include <random>
 #include <limits>
 #include <numeric>
-#include <eigen3/Eigen/Dense>
-#include <eigen3/unsupported/Eigen/MatrixFunctions>
-#include <eigen3/Eigen/Sparse>
-#include <eigen3/unsupported/Eigen/SparseExtra>
+
+#include <Eigen/Dense>
+#include <unsupported/Eigen/MatrixFunctions>
+#include <Eigen/Sparse>
+#include <unsupported/Eigen/SparseExtra>
+// #include <eigen3/Eigen/Dense>
+// #include <eigen3/unsupported/Eigen/MatrixFunctions>
+// #include <eigen3/Eigen/Sparse>
+// #include <eigen3/unsupported/Eigen/SparseExtra>
 
 using namespace std;
 // using namespace Eigen;
