@@ -17,33 +17,30 @@ jobs:
     - name: Setup MPI
       uses: mpi4py/setup-mpi@v1
 
-    # - name: Setup Python
-    #   uses: actions/setup-python@v5
+    # - name: Cache Boost
+    #   uses: actions/cache@v2
     #   with:
-    #     python-version: '3.10.14'
+    #     path: '${{ runner.workspace }}/boost_*.tar.gz'
+    #     key: 'boost-1.73.0'
 
-    - name: Cache Boost
-      uses: actions/cache@v2
-      with:
-        path: '${{ runner.workspace }}/boost_*.tar.gz'
-        key: 'boost-1.73.0'
+    # - name: Install Boost
+    #   uses: MarkusJx/install-boost@v2.4.5
+    #   id: install-boost
+    #   with:
+    #     boost_version: 1.73.0
 
-    - name: Install Boost
-      uses: MarkusJx/install-boost@v2.4.5
-      id: install-boost
-      with:
-        boost_version: 1.73.0
-        boost_install_dir: ./POD/ParametricDiffusion1D
+    - name: Install dependencies
+      run: sudo apt-get install -y libboost-all-dev
 
     - name: Configure CMake
       working-directory: ./POD/ParametricDiffusion1D
-      run: |
-        cmake . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -B build\
-        -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include\
-        -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib\
-        -DBoost_NO_BOOST_CMAKE=OFF
-      env:
-        BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
+      # run: |
+      #   cmake . -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -B build\
+      #   -DBoost_INCLUDE_DIR=${{steps.install-boost.outputs.BOOST_ROOT}}/include\
+      #   -DBoost_LIBRARY_DIRS=${{steps.install-boost.outputs.BOOST_ROOT}}/lib\
+      # env:
+      #   BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
+      run: cmake -B ./build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
     - name: Build
       working-directory: ./POD/ParametricDiffusion1D
