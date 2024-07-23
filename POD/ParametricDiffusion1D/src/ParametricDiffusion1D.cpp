@@ -8,6 +8,7 @@
 
 #include "SVD.hpp"
 #include "AdvDiff1D.hpp"
+#include "AdvDiff1D_POD.hpp"
 
 // Main function.
 int
@@ -55,9 +56,9 @@ main(int argc, char * argv[])
   // INTERMEDIATE SNAPSHOT MATRIX
   // NOTE: boundary_dofs_idx_new will store the indices of the boundary DOFs computed in Diffusion::setup()
   // but that is of type std::vector<types::global_dof_index>, here we use std::vector<unsigned int>
-  std::vector<unsigned int> boundary_dofs_idx_int;
-  std::vector<unsigned int> boundary_dofs_idx_old;
-  Vec_v boundary_dofs_idx_v;
+  // std::vector<unsigned int> boundary_dofs_idx_int;
+  // std::vector<unsigned int> boundary_dofs_idx_old;
+  // Vec_v boundary_dofs_idx_v;
 
   // NOTE: snapshot_array will store the solution computed in Diffusion::solve() but that solution is of type
   // Vector<double>, here we use std::vector<double>
@@ -65,16 +66,16 @@ main(int argc, char * argv[])
 
   // Compute only one snapshot to understand better what entries in snapshot_array correspond to internal DOFs
   // const unsigned int ns = 2; 
-  const unsigned int ns = 50;
+  // const unsigned int ns = 50;
   // NOTE: the intermediate number of rows of the snapshot matrix will be n_dofs,
   // the final number of rows will be n_dofs - n_boundary_dofs
-  unsigned int rows_default = 1; // default value that will be set to n_dofs at the first iteration of the for loop
+  // unsigned int rows_default = 1; // default value that will be set to n_dofs at the first iteration of the for loop
   // Mat_m snapshot_matrix = Mat_m::Zero(rows_default, ns);
 
-  double prm_diffusion_coefficient_min = 0.0;
-  double prm_diffusion_coefficient_max = 1.0;
-  std::vector<double> prm_diffusion_coefficient;
-  prm_diffusion_coefficient.resize(ns); 
+  // double prm_diffusion_coefficient_min = 0.0;
+  // double prm_diffusion_coefficient_max = 1.0;
+  // std::vector<double> prm_diffusion_coefficient;
+  // prm_diffusion_coefficient.resize(ns); 
 
   std::cout << "===============================================" << std::endl;
   std::cout << "Run FOM and collect snapshots" << std::endl;
@@ -87,7 +88,7 @@ main(int argc, char * argv[])
     // std::cout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;                                   
 
     // NOTE: boundary_dofs_idx_int and snapshot_array are public members, the other arguments are protected members 
-    Diffusion problem(N, r, T, deltat, theta);    
+    AdvDiff problem(N, r, T, deltat, theta);    
 
     problem.setup();
     problem.solve();
@@ -101,9 +102,10 @@ main(int argc, char * argv[])
       for (size_t j=0; j<snapshots.cols(); j++)
         snapshots(i, j) = problem.snapshot_matrix[i][j];
 
-    // if (mpi_rank == 0) {
+    if (mpi_rank == 0) {
       std::cout << "\nCheck dimensions of snapshots: "
                 << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
+    }
 
       std::cout << "===============================================" << std::endl;
       std::cout << "Compute POD modes" << std::endl;
@@ -127,38 +129,45 @@ main(int argc, char * argv[])
 
       const double deltat_rom = 1e-3; // CAMBIA
       std::vector<size_t> rom_sizes = {2, 4, 6}; 
-      Mat_m modes;
+      std::vector<std::vector<double>> modes;
 
       for (size_t i=0; i<rom_sizes.size(); i++) {
         std::cout << "  Creating ROM for " << rom_sizes[i] << " modes" << std::endl;
-        modes.resize(U.rows(), rom_sizes[i]);
-        modes = U.leftCols(rom_sizes[i]);
+        modes.resize(U.rows());
+        for(auto &row : modes)
+          row.resize(rom_sizes[i], 0.0);
+        for (size_t j=0; j<U.rows(); j++)
+          for (size_t k=0; k<rom_sizes[i]; k++)
+            modes[j][k] = U(j, k);
 
         // Projection of the initial FOM state on the ROM basis
-        Vec_v rom_initial_state = modes.transpose() * snapshots.col(0);
-        if (rom_initial_state.size() == rom_sizes[i])
-          std::cout << "  Check dimensions of rom_state: " << rom_initial_state.size() << std::endl;
-        else
-          std::cerr << "  Error in computing rom_state" << std::endl;
+        // Vec_v rom_initial_state = modes.transpose() * snapshots.col(0);
+        // if (rom_initial_state.size() == rom_sizes[i])
+        //   std::cout << "  Check dimensions of rom_state: " << rom_initial_state.size() << std::endl;
+        // else
+        //   std::cerr << "  Error in computing rom_state" << std::endl;
         
-        std::vector<double> initial_state(rom_sizes[i]);
-        for(size_t j=0; j<rom_sizes[i]; j++)
-          initial_state[i] = rom_initial_state(j);
+        // std::vector<double> initial_state(rom_sizes[i]);
+        // for(size_t j=0; j<rom_sizes[i]; j++)
+        //   initial_state[i] = rom_initial_state(j);
 
         // USARE rom_state COME CONDIZIONE INIZIALE PER IL ROM? vedi nota ?????????
         // USARE romsize come N???????
-        Diffusion problem_rom(rom_sizes[i], r, T, deltat_rom, theta, initial_state);    
 
-        problem_rom.setup();
-        problem_rom.solve();
+        // MODES SAREBBE V SUL LIBRO
+        AdvDiffPOD problemPOD(N, r, T, deltat_rom, theta, modes);    
+
+        problemPOD.setup();
+        problemPOD.solve();
 
         // The final ROM state corresponds to the solution of the ROM problem.
-        Vec_v rom_final_state = Vec_v::Zero(rom_sizes[i]);
-        for(size_t j=0; j<rom_sizes[i]; j++)
-          rom_final_state(j) = problem_rom.solution[j];
+        // Vec_v rom_final_state = Vec_v::Zero(rom_sizes[i]);
+        // for(size_t j=0; j<rom_sizes[i]; j++)
+        //   rom_final_state(j) = problemPOD.solution[j];
 
         // Reconstruction of the FOM state from the final ROM state
-        Vec_v fom_state = modes * rom_final_state;
+        // Vec_v fom_state = modes * rom_final_state;
+        modes.clear();
       }
 
       // fomReferenceState per te è ?

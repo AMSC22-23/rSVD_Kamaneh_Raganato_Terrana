@@ -1,7 +1,7 @@
-#include "AdvDiff1D.hpp"
+#include "AdvDiff1D_POD.hpp"
 
 void
-AdvDiff::setup()
+AdvDiffPOD::setup()
 {
   // Create the mesh.
   {
@@ -122,7 +122,7 @@ AdvDiff::setup()
 }
 
 void
-AdvDiff::assemble_matrices()
+AdvDiffPOD::assemble_matrices()
 {
   pcout << "===============================================" << std::endl;
   pcout << "Assembling the system matrices" << std::endl;
@@ -216,7 +216,7 @@ AdvDiff::assemble_matrices()
 }
 
 void
-AdvDiff::assemble_rhs(const double &time)
+AdvDiffPOD::assemble_rhs(const double &time)
 {
   const unsigned int dofs_per_cell = fe->dofs_per_cell;
   const unsigned int n_q           = quadrature->size();
@@ -291,48 +291,58 @@ AdvDiff::assemble_rhs(const double &time)
   }
 }
 
+// COMMENTA PROIEZIONE
 void
-AdvDiff::solve_time_step()
+AdvDiffPOD::convert_modes()
 {
-  SolverControl solver_control(1000, 1e-6 * system_rhs.l2_norm());
+  transformation_matrix.reinit(modes.size(), modes[0].size());
+  for (unsigned int i = 0; i < transformation_matrix.m(); ++i)
+    for (unsigned int j = 0; j < transformation_matrix.n(); ++j)
+        transformation_matrix(i, j) = modes[i][j];
+  pcout << "  Check transformation_matrix: " << std::endl;
+  pcout << modes[0][0] << std::endl;
+  pcout << transformation_matrix(0, 0) << std::endl;
+  pcout << modes[1][0] << std::endl;
+  pcout << transformation_matrix(1, 0) << std::endl;
+}
+
+void
+AdvDiffPOD::project_u0()
+{
+  reduced_u_0 = Tvmult(transformation_matrix, u_0);
+  // reduced_u_0 = transformation_matrixT * u_0;
+}
+
+void
+AdvDiffPOD::project_lhs()
+{
+  reduced_system_lhs = mmult(Tmmult(transformation_matrix, lhs_matrix), transformation_matrix);
+}
+
+void
+AdvDiffPOD::project_rhs()
+{
+  reduced_system_rhs = Tvmult(transformation_matrix, system_rhs);
+}
+
+void
+AdvDiffPOD::solve_time_step()
+{
+  SolverControl solver_control(1000, 1e-6 * reduced_system_rhs.l2_norm());
 
   SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
   TrilinosWrappers::PreconditionSSOR      preconditioner;
   preconditioner.initialize(
-    lhs_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+    reduced_system_lhs, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
 
-  solver.solve(lhs_matrix, solution_owned, system_rhs, preconditioner);
+  solver.solve(reduced_system_lhs, solution_owned, reduced_system_rhs, preconditioner);
   pcout << "  " << solver_control.last_step() << " CG iterations" << std::endl;
 
   solution = solution_owned;
 }
 
 void
-AdvDiff::assemble_snapshot_matrix(const unsigned int &time_step)
-{
-  // At the first call, it is useful to resize the snapshot matrix so that it can be easily filled. It has as many rows as the
-  // solution size and as many columns as the number of time steps.
-  if(time_step == 0) {
-    snapshot_matrix.resize(solution.size());
-    for(auto &row : snapshot_matrix)
-      row.resize(T/deltat, 0.0);
-  }
-
-  // It is not necessarily to build a snapshot_array, since snapshot_matrix can be directly filled with solution.
-  // The idea of a snapshot_array helps in understanding that the snapshot_matrix will be filled with column vectors that
-  // represent the solution at each time step.
-  // std::vector<double> snapshot_array(solution.size());
-  // for (unsigned int i=0; i<solution.size(); i++)
-  //   snapshot_array[i] = solution[i];
-  // pcout << "  Check solution.size()       = " << solution.size() << std::endl;
-  // pcout << "  Check snapshot_array.size() = " << snapshot_array.size() << std::endl;
-
-  for (unsigned int i=0; i<solution.size(); i++)
-    snapshot_matrix[i][time_step] = solution[i];
-}
-
-void
-AdvDiff::output(const unsigned int &time_step) const
+AdvDiffPOD::output(const unsigned int &time_step) const
 {
   DataOut<dim> data_out;
   data_out.add_data_vector(dof_handler, solution, "u");
@@ -349,9 +359,11 @@ AdvDiff::output(const unsigned int &time_step) const
 }
 
 void
-AdvDiff::solve()
+AdvDiffPOD::solve()
 {
   assemble_matrices();
+  convert_modes();
+  project_lhs();
 
   pcout << "===============================================" << std::endl;
 
@@ -359,15 +371,12 @@ AdvDiff::solve()
   {
     pcout << "Applying the initial condition" << std::endl;
 
-    VectorTools::interpolate(dof_handler, u_0, solution_owned);
+    project_u0();
+    VectorTools::interpolate(dof_handler, reduced_u_0, solution_owned);
     solution = solution_owned;
 
     // Output the initial solution.
     output(0);
-    // if (initial_state.empty())
-    // {
-      assemble_snapshot_matrix(0);
-    // }
     pcout << "-----------------------------------------------" << std::endl;
   }
 
@@ -383,17 +392,14 @@ AdvDiff::solve()
             << time << ":" << std::flush;
 
       assemble_rhs(time);
+      project_rhs();
       solve_time_step();
-      // if(initial_state.empty())
-      // {
-        assemble_snapshot_matrix(time_step);
-      // }
       output(time_step);
     }
 }
 
 // double
-// AdvDiff::compute_error(const VectorTools::NormType &norm_type)
+// AdvDiffPOD::compute_error(const VectorTools::NormType &norm_type)
 // {
 //   FE_Q<dim> fe_linear(1);
 //   MappingFE mapping(fe_linear);

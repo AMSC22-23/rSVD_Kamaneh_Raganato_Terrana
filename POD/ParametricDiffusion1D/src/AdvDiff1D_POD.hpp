@@ -1,8 +1,8 @@
-#ifndef ADV_DIFF_1D_HPP
-#define ADV_DIFF_1D_HPP
+#ifndef ADV_DIFF_1D_POD_HPP
+#define ADV_DIFF_1D_POD_HPP
 
 /**
- * The aim of this class is to solve the advection diffusion full order problem in 1D in order to collect the snapshot matrix.
+ * The aim of this class is to solve the advection diffusion reduced order problem in 1D.
  */
 
 #include <deal.II/base/conditional_ostream.h>
@@ -28,6 +28,7 @@
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/trilinos_precondition.h>
 #include <deal.II/lac/trilinos_sparse_matrix.h>
+// #include <deal.II/lac/full_matrix.h>
 
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/matrix_tools.h>
@@ -40,10 +41,18 @@
 #include <iostream>
 #include <set>
 
+// #include <Eigen/Dense>
+// #include <unsupported/Eigen/MatrixFunctions>
+// #include <Eigen/Sparse>
+// #include <unsupported/Eigen/SparseExtra>
+
+// using Mat_m = Eigen::MatrixXd;
+// using Vec_v = Eigen::VectorXd;
+
 using namespace dealii;
 
 // Class representing the linear diffusion problem.
-class AdvDiff
+class AdvDiffPOD
 {
 public:
   // Physical dimension (1D, 2D, 3D)
@@ -65,6 +74,23 @@ public:
       return std::pow(p[0], 4);
     }
   };
+
+  // Reaction coefficient.
+  // class ReactionCoefficient : public Function<dim>
+  // {
+  // public:
+  //   // Constructor.
+  //   ReactionCoefficient()
+  //   {}
+
+  //   // Evaluation.
+  //   virtual double
+  //   value(const Point<dim> & /*p*/,
+  //         const unsigned int /*component*/ = 0) const override
+  //   {
+  //     return 1.0;
+  //   }
+  // };
 
   // Transport coefficient.
   class TransportCoefficient : public Function<dim>
@@ -219,11 +245,12 @@ public:
   // };
 
   // Default constructor.
-  AdvDiff(const unsigned int N_,
-          const unsigned int &r_,
-          const double       &T_,
-          const double       &deltat_,
-          const double       &theta_)
+  AdvDiffPOD(const unsigned int N_,
+             const unsigned int &r_,
+             const double       &T_,
+             const double       &deltat_,
+             const double       &theta_,
+             std::vector<std::vector<double>> &modes_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
@@ -232,6 +259,7 @@ public:
     , r(r_)
     , deltat(deltat_)
     , theta(theta_)
+    , modes(modes_)
     , mesh(MPI_COMM_WORLD)
   {}
 
@@ -250,9 +278,6 @@ public:
   // Boundary DOFs indices.
   // std::vector<unsigned int> boundary_dofs_idx_int;
 
-  // Snapshot matrix.
-  std::vector<std::vector<double>> snapshot_matrix;
-
 protected:
   // Assemble the mass and stiffness matrices.
   void
@@ -262,14 +287,22 @@ protected:
   void
   assemble_rhs(const double &time);
 
+  // Project the full order system to the reduced order system thanks to the transformation matrix.
+  void
+  convert_modes();
+
+  void
+  project_u0();
+
+  void
+  project_lhs();
+
+  void
+  project_rhs();
+
   // Solve the problem for one time step.
   void
   solve_time_step();
-
-  // Assemble the snapshot matrix.
-  // create this method only for the default constructor
-  void
-  assemble_snapshot_matrix(const unsigned int &time_step);
 
   // Output.
   void
@@ -335,6 +368,22 @@ protected:
   // Theta parameter of the theta method.
   const double theta;
 
+  // Projection. ///////////////////////////////////////////////////////////
+
+  // Transformation matrix.
+  std::vector<std::vector<double>> modes;
+  TrilinosWrappers::SparseMatrix transformation_matrix;
+
+// for (unsigned int i = 0; i < modesT.m(); ++i)
+//     for (unsigned int j = 0; j < modesT.n(); ++j)
+//         modesT(i, j) = modesT_vec[i][j];
+
+// dealii::FullMatrix<double> modes(modes_vec.size(), modes_vec[0].size());
+// for (unsigned int i = 0; i < modes.m(); ++i)
+//     for (unsigned int j = 0; j < modes.n(); ++j)
+//         modes(i, j) = modes_vec[i][j];
+
+
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;
 
@@ -364,12 +413,17 @@ protected:
 
   // Matrix on the left-hand side (M / deltat + theta A).
   TrilinosWrappers::SparseMatrix lhs_matrix;
+  TrilinosWrappers::SparseMatrix reduced_system_lhs;
 
   // Matrix on the right-hand side (M / deltat - (1 - theta) A).
   TrilinosWrappers::SparseMatrix rhs_matrix;
 
   // Right-hand side vector in the linear system.
   TrilinosWrappers::MPI::Vector system_rhs;
+  TrilinosWrappers::MPI::Vector reduced_system_rhs;
+
+  // ...
+  TrilinosWrappers::MPI::Vector reduced_u_0;
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
