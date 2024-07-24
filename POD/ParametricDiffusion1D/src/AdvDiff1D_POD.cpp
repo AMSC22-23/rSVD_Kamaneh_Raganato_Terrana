@@ -295,10 +295,13 @@ AdvDiffPOD::assemble_rhs(const double &time)
 void
 AdvDiffPOD::convert_modes()
 {
-  transformation_matrix.reinit(modes.size(), modes[0].size());
-  for (unsigned int i = 0; i < transformation_matrix.m(); ++i)
-    for (unsigned int j = 0; j < transformation_matrix.n(); ++j)
-        transformation_matrix(i, j) = modes[i][j];
+  // transformation_matrix.copy_from(modes);
+  // transformation_matrix.reinit(modes.size(), modes[0].size());
+  // transformation_matrix.m() = modes.size();
+  // transformation_matrix.n() = modes[0].size();
+  for (unsigned int i = 0; i < modes.size(); ++i)
+    for (unsigned int j = 0; j < modes[0].size(); ++j)
+        transformation_matrix.set(i, j, modes[i][j]);
   pcout << "  Check transformation_matrix: " << std::endl;
   pcout << modes[0][0] << std::endl;
   pcout << transformation_matrix(0, 0) << std::endl;
@@ -309,20 +312,22 @@ AdvDiffPOD::convert_modes()
 void
 AdvDiffPOD::project_u0()
 {
-  reduced_u_0 = Tvmult(transformation_matrix, u_0);
+  reduced_u_0.Tvmult(transformation_matrix, u_0);
   // reduced_u_0 = transformation_matrixT * u_0;
 }
 
 void
 AdvDiffPOD::project_lhs()
 {
-  reduced_system_lhs = mmult(Tmmult(transformation_matrix, lhs_matrix), transformation_matrix);
+  TrilinosWrappers::SparseMatrix aux;
+  aux.Tmmult(transformation_matrix, lhs_matrix);
+  reduced_system_lhs.mmult(aux, transformation_matrix);
 }
 
 void
 AdvDiffPOD::project_rhs()
 {
-  reduced_system_rhs = Tvmult(transformation_matrix, system_rhs);
+  reduced_system_rhs.Tvmult(transformation_matrix, system_rhs);
 }
 
 void

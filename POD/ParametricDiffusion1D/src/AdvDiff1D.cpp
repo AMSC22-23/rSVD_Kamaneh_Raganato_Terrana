@@ -8,12 +8,12 @@ AdvDiff::setup()
     pcout << "Initializing the mesh" << std::endl;
 
     Triangulation<dim> mesh_serial;
-    GridGenerator::subdivided_hyper_cube(mesh_serial, N + 1, 0.0, 1.0, true);
+    GridGenerator::subdivided_hyper_cube(mesh_serial, N, 0.0, 1.0, true);
     pcout << "  Number of elements = " << mesh.n_active_cells()
               << std::endl;
 
     // Write the mesh to file.
-    const std::string mesh_file_name = "mesh-" + std::to_string(N + 1) + ".vtk";
+    const std::string mesh_file_name = "mesh-" + std::to_string(N) + ".vtk";
     GridOut           grid_out;
     std::ofstream     grid_out_file(mesh_file_name);
     grid_out.write_vtk(mesh_serial, grid_out_file);
@@ -315,7 +315,7 @@ AdvDiff::assemble_snapshot_matrix(const unsigned int &time_step)
   if(time_step == 0) {
     snapshot_matrix.resize(solution.size());
     for(auto &row : snapshot_matrix)
-      row.resize(T/deltat, 0.0);
+      row.resize(T/(deltat*sample_every)+1, 0.0); // COSI SAREBBE INIZIALE + 25 SNAPSHOTS OGNI 200 ISTANTI TEMPORALI
   }
 
   // It is not necessarily to build a snapshot_array, since snapshot_matrix can be directly filled with solution.
@@ -328,7 +328,31 @@ AdvDiff::assemble_snapshot_matrix(const unsigned int &time_step)
   // pcout << "  Check snapshot_array.size() = " << snapshot_array.size() << std::endl;
 
   for (unsigned int i=0; i<solution.size(); i++)
-    snapshot_matrix[i][time_step] = solution[i];
+    snapshot_matrix[i][time_step/sample_every] = solution[i];
+}
+
+void
+AdvDiff::assemble_system_rhs_matrix(const unsigned int &time_step)
+{
+  // At the first call, it is useful to resize the snapshot matrix so that it can be easily filled. It has as many rows as the
+  // solution size and as many columns as the number of time steps.
+  if(time_step == 0) {
+    system_rhs_matrix.resize(system_rhs.size());
+    for(auto &row : system_rhs_matrix)
+      row.resize(T/deltat, 0.0);
+  }
+
+  // It is not necessarily to build a snapshot_array, since snapshot_matrix can be directly filled with solution.
+  // The idea of a snapshot_array helps in understanding that the snapshot_matrix will be filled with column vectors that
+  // represent the solution at each time step.
+  // std::vector<double> snapshot_array(solution.size());
+  // for (unsigned int i=0; i<solution.size(); i++)
+  //   snapshot_array[i] = solution[i];
+  // pcout << "  Check solution.size()       = " << solution.size() << std::endl;
+  // pcout << "  Check snapshot_array.size() = " << snapshot_array.size() << std::endl;
+
+  for (unsigned int i=0; i<system_rhs.size(); i++)
+    system_rhs_matrix[i][time_step] = system_rhs[i];
 }
 
 void
@@ -367,6 +391,7 @@ AdvDiff::solve()
     // if (initial_state.empty())
     // {
       assemble_snapshot_matrix(0);
+      assemble_system_rhs_matrix(0);
     // }
     pcout << "-----------------------------------------------" << std::endl;
   }
@@ -374,7 +399,7 @@ AdvDiff::solve()
   unsigned int time_step = 0;
   double       time      = 0;
 
-  while (time < T)
+  while (time < T && time_step < floor(T/deltat))
     {
       time += deltat;
       ++time_step;
@@ -386,7 +411,11 @@ AdvDiff::solve()
       solve_time_step();
       // if(initial_state.empty())
       // {
+      if (time_step % sample_every == 0)
+      {
         assemble_snapshot_matrix(time_step);
+      }
+      assemble_system_rhs_matrix(time_step);
       // }
       output(time_step);
     }

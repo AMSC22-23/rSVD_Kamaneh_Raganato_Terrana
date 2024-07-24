@@ -62,7 +62,8 @@ public:
     value(const Point<dim> & p,
           const unsigned int /*component*/ = 0) const override
     {
-      return std::pow(p[0], 4);
+      // return std::pow(p[0], 4);
+      return p[0];
     }
   };
 
@@ -160,13 +161,14 @@ public:
     value(const Point<dim> & p,
           const unsigned int /*component*/ = 0) const override
     {
-      if (u0.empty())
-        return std::sin(M_PI*p[0]);
-      else
-      { // QUESTO SICURAMENTE NON CORRETTO
-        for (unsigned int i = 0; i < u0.size(); ++i)
-          return u0[i];
-      }
+      // if (u0.empty())
+        // return std::sin(M_PI*p[0]);
+        return 2.0*std::sin(9.0*M_PI*p[0]) - std::sin(4.0*M_PI*p[0]);
+      // else
+      // { // QUESTO SICURAMENTE NON CORRETTO
+      //   for (unsigned int i = 0; i < u0.size(); ++i)
+      //     return u0[i];
+      // }
         // return u0 * p[0];
     }
 
@@ -223,7 +225,8 @@ public:
           const unsigned int &r_,
           const double       &T_,
           const double       &deltat_,
-          const double       &theta_)
+          const double       &theta_,
+          const unsigned int &sample_every_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
@@ -232,6 +235,7 @@ public:
     , r(r_)
     , deltat(deltat_)
     , theta(theta_)
+    , sample_every(sample_every_)
     , mesh(MPI_COMM_WORLD)
   {}
 
@@ -253,6 +257,9 @@ public:
   // Snapshot matrix.
   std::vector<std::vector<double>> snapshot_matrix;
 
+  // System rhs.
+  std::vector<std::vector<double>> system_rhs_matrix;
+
 protected:
   // Assemble the mass and stiffness matrices.
   void
@@ -267,9 +274,11 @@ protected:
   solve_time_step();
 
   // Assemble the snapshot matrix.
-  // create this method only for the default constructor
   void
   assemble_snapshot_matrix(const unsigned int &time_step);
+
+  void
+  assemble_system_rhs_matrix(const unsigned int &time_step);
 
   // Output.
   void
@@ -334,6 +343,9 @@ protected:
 
   // Theta parameter of the theta method.
   const double theta;
+
+  // .. 
+  const unsigned int sample_every;
 
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;

@@ -420,10 +420,10 @@ protected:
 
   // Right-hand side vector in the linear system.
   TrilinosWrappers::MPI::Vector system_rhs;
-  TrilinosWrappers::MPI::Vector reduced_system_rhs;
+  TrilinosWrappers::SparseMatrix reduced_system_rhs;
 
   // ...
-  TrilinosWrappers::MPI::Vector reduced_u_0;
+  TrilinosWrappers::SparseMatrix reduced_u_0;
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;

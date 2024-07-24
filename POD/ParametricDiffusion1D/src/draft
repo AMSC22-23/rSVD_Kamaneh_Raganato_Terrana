@@ -78,3 +78,48 @@
 
       // fomReferenceState per te è ?
       // fomInitialState per te è snapshots[:, 0)
+
+
+
+
+
+          // std::vector<double> initial_state(rom_sizes[i]);
+    // for(size_t j=0; j<rom_sizes[i]; j++)
+    //   initial_state[i] = rom_initial_state(j);
+
+        // USARE rom_state COME CONDIZIONE INIZIALE PER IL ROM? vedi nota ?????????
+        // USARE romsize come N???????
+
+        // MODES SAREBBE V SUL LIBRO
+        // AdvDiffPOD problemPOD(N, r, T, deltat_rom, theta, modes);    
+
+        // problemPOD.setup();
+        // problemPOD.solve();
+
+        // RISOLUZIONE
+        // ? fom reference state?
+  //         # create problem
+  // scheme = ode.stepscheme.ForwardEuler
+  // problem = rom.galerkin.DefaultExplicitProblem(scheme, fomObj, linearDecoder, romState, fomReferenceState)
+
+  // # create object to monitor the romState at every iteration
+  // myObs = RomStateObserver()
+  // # solve problem
+  // ode.advance_n_steps_and_observe(problem, romState, 0., dt, nsteps, myObs)
+
+
+      // Time-stepping parameters
+    // double dt = 0.01;
+    // int nsteps = 100;
+
+    // // Time-stepping loop
+    // for (int step = 0; step < nsteps; ++step) {
+    //     // Compute the derivative in ROM space (this is problem-specific)
+    //     // Here, we assume a simple linear model for illustration
+    //     Eigen::VectorXd romDerivative = -romState; // Replace with your actual derivative computation
+
+    //     // Advance the ROM state
+    //     romState = advanceOneStep(romState, romDerivative, dt);
+    // }
+
+        // Set the reduced order problem with Forward Euler
