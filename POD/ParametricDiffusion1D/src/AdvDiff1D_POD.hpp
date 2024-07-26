@@ -71,7 +71,9 @@ public:
     value(const Point<dim> & p,
           const unsigned int /*component*/ = 0) const override
     {
-      return std::pow(p[0], 4);
+      // return std::pow(p[0], 4);
+      // return p[0];
+      return 0.01;
     }
   };
 
@@ -178,26 +180,27 @@ public:
     FunctionU0()
     {}
 
-    FunctionU0(const std::vector<double> initial_state) : u0(initial_state)
-    {}
+    // FunctionU0(const std::vector<double> initial_state) : u0(initial_state)
+    // {}
 
     // Evaluation.
     virtual double
     value(const Point<dim> & p,
           const unsigned int /*component*/ = 0) const override
     {
-      if (u0.empty())
+      // if (u0.empty())
         return std::sin(M_PI*p[0]);
-      else
-      { // QUESTO SICURAMENTE NON CORRETTO
-        for (unsigned int i = 0; i < u0.size(); ++i)
-          return u0[i];
-      }
-        // return u0 * p[0];
+        // return 2.0*std::sin(9.0*M_PI*p[0]) - std::sin(4.0*M_PI*p[0]);
+      // else
+      // { // QUESTO SICURAMENTE NON CORRETTO
+      //   for (unsigned int i = 0; i < u0.size(); ++i)
+      //     return u0[i];
+      // }
+      //   // return u0 * p[0];
     }
 
-    private:
-      std::vector<double> u0;
+    // private:
+    //   std::vector<double> u0;
 
     // // Evaluation.
     // virtual double
@@ -250,7 +253,7 @@ public:
              const double       &T_,
              const double       &deltat_,
              const double       &theta_,
-             std::vector<std::vector<double>> &modes_)
+             const std::vector<std::vector<double>> &modes_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
@@ -261,6 +264,7 @@ public:
     , theta(theta_)
     , modes(modes_)
     , mesh(MPI_COMM_WORLD)
+    , mesh_r(MPI_COMM_WORLD)
   {}
 
   // Initialization.
@@ -269,7 +273,7 @@ public:
 
   // Solve the problem.
   void
-  solve();
+  solve_reduced();
 
   // Compute the error for convergence analysis.
   // double
@@ -278,7 +282,16 @@ public:
   // Boundary DOFs indices.
   // std::vector<unsigned int> boundary_dofs_idx_int;
 
+  // HAI SPOSTATO TU PER RIPROIEZIONE IN MAIN poi eventualmente sposta poiezione di qui
+  // System solution (including ghost elements).
+  // TrilinosWrappers::MPI::Vector solution; 
+  TrilinosWrappers::MPI::Vector reduced_solution; 
+
 protected:
+  // Setup the reduced system.
+  void
+  setup_reduced();
+
   // Assemble the mass and stiffness matrices.
   void
   assemble_matrices();
@@ -289,20 +302,20 @@ protected:
 
   // Project the full order system to the reduced order system thanks to the transformation matrix.
   void
-  convert_modes();
+  convert_modes(TrilinosWrappers::SparseMatrix &transformation_matrix);
 
   void
-  project_u0();
+  project_u0(TrilinosWrappers::SparseMatrix &transformation_matrix);
 
   void
-  project_lhs();
+  project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix);
 
   void
-  project_rhs();
+  project_rhs(TrilinosWrappers::SparseMatrix &transformation_matrix);
 
   // Solve the problem for one time step.
   void
-  solve_time_step();
+  solve_time_step_reduced();
 
   // Output.
   void
@@ -371,8 +384,9 @@ protected:
   // Projection. ///////////////////////////////////////////////////////////
 
   // Transformation matrix.
-  std::vector<std::vector<double>> modes;
-  TrilinosWrappers::SparseMatrix transformation_matrix;
+  const std::vector<std::vector<double>> modes;
+  // TrilinosWrappers::SparseMatrix transformation_matrix;
+  // FullMatrix<double> transformation_matrix; // (modes.size(), modes[0].size());
 
 // for (unsigned int i = 0; i < modesT.m(); ++i)
 //     for (unsigned int j = 0; j < modesT.n(); ++j)
@@ -387,11 +401,20 @@ protected:
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;
 
+  // Reduced mesh.
+  parallel::fullydistributed::Triangulation<dim> mesh_r;
+
   // Finite element space.
   std::unique_ptr<FiniteElement<dim>> fe;
 
+  // Finite element space for reduced system.
+  std::unique_ptr<FiniteElement<dim>> fe_r;
+
   // Quadrature formula.
   std::unique_ptr<Quadrature<dim>> quadrature;
+
+  // Quadrature formula for reduced system.
+  std::unique_ptr<Quadrature<dim>> quadrature_r;
 
   // Quadrature formula used on boundary lines.
   std::unique_ptr<Quadrature<dim - 1>> quadrature_boundary;
@@ -399,11 +422,20 @@ protected:
   // DoF handler.
   DoFHandler<dim> dof_handler;
 
+  // DoF handler for reduced system.
+  DoFHandler<dim> dof_handler_r;
+
   // DoFs owned by current process.
   IndexSet locally_owned_dofs;
 
+  // DoFs owned by current process. .........
+  IndexSet locally_owned_dofs_r;
+
   // DoFs relevant to the current process (including ghost DoFs).
   IndexSet locally_relevant_dofs;
+
+  // DoFs relevant to the current process (including ghost DoFs). ........
+  IndexSet locally_relevant_dofs_r;
 
   // Mass matrix M / deltat.
   TrilinosWrappers::SparseMatrix mass_matrix;
@@ -420,16 +452,18 @@ protected:
 
   // Right-hand side vector in the linear system.
   TrilinosWrappers::MPI::Vector system_rhs;
-  TrilinosWrappers::SparseMatrix reduced_system_rhs;
+  TrilinosWrappers::MPI::Vector reduced_system_rhs;
 
-  // ...
+  // ... qui eventualmente togli se puoi evitare u_0
+  // però mi sa che devi moltiplicare per V la condizione iniziale e allora potresti fare project_solutionowned
   TrilinosWrappers::SparseMatrix reduced_u_0;
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
 
-  // System solution (including ghost elements).
-  TrilinosWrappers::MPI::Vector solution;
+  // System solution (without ghost elements).
+  TrilinosWrappers::MPI::Vector reduced_solution_owned; // che è praticamente usata per condizione iniziale ridotta
+
 };
 
 #endif

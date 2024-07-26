@@ -8,12 +8,12 @@ AdvDiff::setup()
     pcout << "Initializing the mesh" << std::endl;
 
     Triangulation<dim> mesh_serial;
-    GridGenerator::subdivided_hyper_cube(mesh_serial, N, 0.0, 1.0, true);
+    GridGenerator::subdivided_hyper_cube(mesh_serial, N + 1, 0.0, 1.0, true);
     pcout << "  Number of elements = " << mesh.n_active_cells()
               << std::endl;
 
     // Write the mesh to file.
-    const std::string mesh_file_name = "mesh-" + std::to_string(N) + ".vtk";
+    const std::string mesh_file_name = "mesh-" + std::to_string(N + 1) + ".vtk";
     GridOut           grid_out;
     std::ofstream     grid_out_file(mesh_file_name);
     grid_out.write_vtk(mesh_serial, grid_out_file);
@@ -315,7 +315,7 @@ AdvDiff::assemble_snapshot_matrix(const unsigned int &time_step)
   if(time_step == 0) {
     snapshot_matrix.resize(solution.size());
     for(auto &row : snapshot_matrix)
-      row.resize(T/(deltat*sample_every)+1, 0.0); // COSI SAREBBE INIZIALE + 25 SNAPSHOTS OGNI 200 ISTANTI TEMPORALI
+      row.resize(T/(deltat*sample_every), 0.0); // COSI SAREBBE INIZIALE + 25 SNAPSHOTS OGNI 200 ISTANTI TEMPORALI
   }
 
   // It is not necessarily to build a snapshot_array, since snapshot_matrix can be directly filled with solution.

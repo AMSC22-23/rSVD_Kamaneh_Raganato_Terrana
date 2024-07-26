@@ -63,7 +63,8 @@ public:
           const unsigned int /*component*/ = 0) const override
     {
       // return std::pow(p[0], 4);
-      return p[0];
+      // return p[0];
+      return 0.01;
     }
   };
 
@@ -162,8 +163,8 @@ public:
           const unsigned int /*component*/ = 0) const override
     {
       // if (u0.empty())
-        // return std::sin(M_PI*p[0]);
-        return 2.0*std::sin(9.0*M_PI*p[0]) - std::sin(4.0*M_PI*p[0]);
+        return std::sin(M_PI*p[0]);
+        // return 2.0*std::sin(9.0*M_PI*p[0]) - std::sin(4.0*M_PI*p[0]);
       // else
       // { // QUESTO SICURAMENTE NON CORRETTO
       //   for (unsigned int i = 0; i < u0.size(); ++i)
