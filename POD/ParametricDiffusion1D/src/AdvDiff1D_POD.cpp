@@ -229,13 +229,13 @@ AdvDiffPOD::setup_reduced()
     sparsity_r.compress();
 
     // pcout << "  Initializing the matrices" << std::endl;
-    // mass_matrix.reinit(sparsity);
-    // stiffness_matrix.reinit(sparsity);
-    // lhs_matrix.reinit(sparsity);
-    // rhs_matrix.reinit(sparsity);
+    // mass_matrix.reinit(sparsity_r);
+    // stiffness_matrix.reinit(sparsity_r);
+    // lhs_matrix.reinit(sparsity_r);
+    // rhs_matrix.reinit(sparsity_r);
 
-    // pcout << "  Initializing the system right-hand side" << std::endl;
-    // system_rhs.reinit(locally_owned_dofs_r, MPI_COMM_WORLD);
+    pcout << "  Initializing the system right-hand side" << std::endl;
+    reduced_system_rhs.reinit(locally_owned_dofs_r, MPI_COMM_WORLD); // SCOMMENTANDO QUESTO IL CODICE FUNZIONA SENZA MPI
     pcout << "  Initializing the solution vector" << std::endl;
     reduced_solution_owned.reinit(locally_owned_dofs_r, MPI_COMM_WORLD);
     reduced_solution.reinit(locally_owned_dofs_r, locally_relevant_dofs_r, MPI_COMM_WORLD);
@@ -392,7 +392,7 @@ AdvDiffPOD::assemble_rhs(const double &time)
   system_rhs.compress(VectorOperation::add);
 
   // Add the term that comes from the old solution.
-  rhs_matrix.vmult_add(system_rhs, solution_owned);
+  rhs_matrix.vmult_add(system_rhs, solution_owned); // QUI TI SERVIREBBE NUOVA SOLUTION
   
   // Boundary conditions.
   {
@@ -711,6 +711,7 @@ AdvDiffPOD::project_u0(TrilinosWrappers::SparseMatrix &transformation_matrix)
 
   // TrilinosWrappers::MPI::Vector dst;
   transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
+  reduced_solution_owned.compress(VectorOperation::add);
   // solution_owned.reinit(dst);
   // for (unsigned int i = 0; i < dst.size(); ++i)
   //   solution_owned(i) = dst(i);
@@ -743,7 +744,7 @@ AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   TrilinosWrappers::SparseMatrix aux;
   transformation_matrix.Tmmult(aux, lhs_matrix);
   aux.mmult(reduced_system_lhs, transformation_matrix);
-
+  reduced_system_lhs.compress(VectorOperation::add);
 
 
 
@@ -827,7 +828,7 @@ AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
 
 
   
-    pcout << "  Check reduced_system_lhs: " << std::endl;
+  pcout << "  Check reduced_system_lhs: " << std::endl;
   // pcout << dst(0, 0) << std::endl;
   pcout << reduced_system_lhs(0, 0) << std::endl;
   // pcout << dst(1, 0) << std::endl;
@@ -856,12 +857,14 @@ AdvDiffPOD::project_rhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   // pcout << system_rhs(41) << std::endl;
   // pcout << system_rhs_copy(41) << std::endl;
   // PROBLEMINO QUI
+  reduce_system_rhs = 0.0;
   transformation_matrix.Tvmult(reduced_system_rhs, system_rhs);
+  reduced_system_rhs.compress(VectorOperation::add);
   // reduced_system_rhs.reinit(dst);
   // for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
   //   reduced_system_rhs(i) = dst(i); // RICERCATI POI DEFINIZIONE DELLE VARIE FUNZIONI PER I VARI OGGETTI
 
-      pcout << "  Check reduced_system_rhs: " << std::endl;
+  pcout << "  Check reduced_system_rhs: " << std::endl;
   // pcout << dst(40) << std::endl;
   pcout << reduced_system_rhs(0) << std::endl;
   // pcout << dst(41) << std::endl;
