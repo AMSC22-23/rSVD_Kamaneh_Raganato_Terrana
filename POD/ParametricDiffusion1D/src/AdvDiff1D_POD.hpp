@@ -107,7 +107,8 @@ public:
     vector_value(const Point<dim> & /*p*/,
                  Vector<double> &values) const override
     {
-      values[0] = 2.0;
+      // values[0] = 2.0;
+      values[0] = 0.2;
     }
 
     virtual double
@@ -115,7 +116,8 @@ public:
           const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 2.0;
+        // return 2.0;
+        return 0.2;
       else
         return 0.0;
     }
@@ -300,6 +302,10 @@ protected:
   void
   assemble_rhs(const double &time);
 
+  // Assemble the right-hand side of the problem.  ..... altrimenti serve solution_owned
+  void
+  assemble_reduced_rhs(const double &time);
+
   // Project the full order system to the reduced order system thanks to the transformation matrix.
   void
   convert_modes(TrilinosWrappers::SparseMatrix &transformation_matrix);
@@ -312,6 +318,9 @@ protected:
 
   void
   project_rhs(TrilinosWrappers::SparseMatrix &transformation_matrix);
+
+  void
+  project_rhs_matrix(TrilinosWrappers::SparseMatrix &transformation_matrix);
 
   // Solve the problem for one time step.
   void
@@ -449,6 +458,7 @@ protected:
 
   // Matrix on the right-hand side (M / deltat - (1 - theta) A).
   TrilinosWrappers::SparseMatrix rhs_matrix;
+  TrilinosWrappers::SparseMatrix reduced_rhs_matrix;
 
   // Right-hand side vector in the linear system.
   TrilinosWrappers::MPI::Vector system_rhs;

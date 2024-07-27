@@ -81,7 +81,8 @@ public:
     vector_value(const Point<dim> & /*p*/,
                  Vector<double> &values) const override
     {
-      values[0] = 2.0;
+      // values[0] = 2.0;
+      values[0] = 0.2;
     }
 
     virtual double
@@ -89,7 +90,8 @@ public:
           const unsigned int component = 0) const override
     {
       if (component == 0)
-        return 2.0;
+        // return 2.0;
+        return 0.2;
       else
         return 0.0;
     }
@@ -259,7 +261,10 @@ public:
   std::vector<std::vector<double>> snapshot_matrix;
 
   // System rhs.
-  std::vector<std::vector<double>> system_rhs_matrix;
+  // std::vector<std::vector<double>> system_rhs_matrix;
+
+    // System solution (including ghost elements). SPOSTATO QUI PER CONTROLLO STAMPA
+  TrilinosWrappers::MPI::Vector solution;
 
 protected:
   // Assemble the mass and stiffness matrices.
@@ -278,8 +283,8 @@ protected:
   void
   assemble_snapshot_matrix(const unsigned int &time_step);
 
-  void
-  assemble_system_rhs_matrix(const unsigned int &time_step);
+  // void
+  // assemble_system_rhs_matrix(const unsigned int &time_step);
 
   // Output.
   void
@@ -387,8 +392,6 @@ protected:
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
 
-  // System solution (including ghost elements).
-  TrilinosWrappers::MPI::Vector solution;
 };
 
 #endif

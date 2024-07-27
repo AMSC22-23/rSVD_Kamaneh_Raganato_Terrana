@@ -25,7 +25,7 @@ main(int argc, char * argv[])
   const double T         = 0.05;
   // const double deltat    = 1e-5; // 5000 steps
   // const double deltat    = 1e-4; // 500 steps
-  const double deltat    = 1e-3; // 50 steps
+  const double deltat    = 5e-4; // 50 steps
   // const double deltat    = 2.5e-3;
 
   // const double theta  = 1.0; // Implicit Euler
@@ -56,7 +56,13 @@ main(int argc, char * argv[])
   pcout << "\nCheck dimensions of snapshots: "
             << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
 
-  // pcout << "  Check snapshots:" << std::endl << snapshots << std::endl << std::endl;
+  pcout << "  Check snapshots + sol coincidente:" << std::endl;
+  pcout << snapshots(0, time_steps-1) << std::endl;
+  pcout << problem.solution(0) << std::endl;
+  pcout << snapshots(1, time_steps-1) << std::endl;
+  pcout << problem.solution(1) << std::endl;
+  pcout << snapshots(17, time_steps-1) << std::endl;
+  pcout << problem.solution(17) << std::endl;
 
   // CALCOLO DI U APPLICANDO SVD A SNAPSHOT MATRIX
   pcout << "===============================================" << std::endl;
@@ -87,13 +93,13 @@ main(int argc, char * argv[])
   // const double deltat_rom = 3.01204e-4; // CAMBIA
   // ORA PROVA A TENERE STESSA deltat
   // std::vector<size_t> rom_sizes = {2, 4, 6}; // CAMBIA
-  std::vector<size_t> rom_sizes = {5, 10, 15};
+  std::vector<size_t> rom_sizes = {5, 10, 100};
   std::vector<std::vector<double>> modes;
   // Mat_m modes;
   Mat_m approximations = Mat_m::Zero(snapshots.rows(), rom_sizes.size());
 
-  // for (size_t i=0; i<rom_sizes.size(); i++) {
-  for (size_t i=0; i<1; i++) {
+  for (size_t i=0; i<rom_sizes.size(); i++) {
+  // for (size_t i=0; i<1; i++) {
     pcout << "  Creating ROM for " << rom_sizes[i] << " modes" << std::endl;
 
     // POD hpp vuole versione modes std, non Eigen
@@ -188,8 +194,14 @@ main(int argc, char * argv[])
     approximations.col(i) = fom_state;
 
     // Compute the relative l2 error
-    double fom_solution_norm = (snapshots.col(time_steps)).norm(); // HAI TOLTO time_steps -1
-    double err = (snapshots.col(time_steps) - fom_state).norm();
+    double fom_solution_norm = (snapshots.col(time_steps-1)).norm(); // HAI TOLTO time_steps -1
+    double err = (snapshots.col(time_steps-1) - fom_state).norm();
+    pcout << " fom_solution" << snapshots(0, time_steps-1) << std::endl;
+    pcout << " rom_solution riproiettata" << fom_state(0) << std::endl;
+    pcout << " fom_solution" << snapshots(1, time_steps-1) << std::endl;
+    pcout << " rom_solution riproiettata" << fom_state(1) << std::endl;
+    pcout << " fom_solution" << snapshots(2, time_steps-1) << std::endl;
+    pcout << " rom_solution riproiettata" << fom_state(2) << std::endl;
     pcout << "  With " << rom_sizes[i] << " modes, final relative l2 error: " << err/fom_solution_norm << std::endl;
 
     // Clear the modes matrix for the next iteration

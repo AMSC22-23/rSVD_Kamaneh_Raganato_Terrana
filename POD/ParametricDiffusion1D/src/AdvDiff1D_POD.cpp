@@ -412,6 +412,82 @@ AdvDiffPOD::assemble_rhs(const double &time)
   }
 }
 
+void
+AdvDiffPOD::assemble_reduced_rhs(const double &time)
+{
+  const unsigned int dofs_per_cell_r = fe_r->dofs_per_cell;
+  const unsigned int n_q_r           = quadrature_r->size();
+
+  FEValues<dim> fe_values_r(*fe_r,
+                            *quadrature_r,
+                            update_values | update_quadrature_points |
+                            update_JxW_values);
+
+  Vector<double> cell_rhs_r(dofs_per_cell_r);
+
+  std::vector<types::global_dof_index> dof_indices_r(dofs_per_cell_r);
+
+  reduced_system_rhs = 0.0;
+
+  for (const auto &cell : dof_handler_r.active_cell_iterators())
+    {
+      if (!cell->is_locally_owned())
+        continue;
+
+      fe_values_r.reinit(cell);
+
+      cell_rhs_r = 0.0;
+
+      for (unsigned int q = 0; q < n_q_r; ++q)
+        {
+          // We need to compute the forcing term at the current time (tn+1) and
+          // at the old time (tn). deal.II Functions can be computed at a
+          // specific time by calling their set_time method.
+
+          // Compute f(tn+1)
+          forcing_term.set_time(time);
+          const double f_new_loc =
+            forcing_term.value(fe_values_r.quadrature_point(q));
+
+          // Compute f(tn)
+          forcing_term.set_time(time - deltat);
+          const double f_old_loc =
+            forcing_term.value(fe_values_r.quadrature_point(q));
+
+          for (unsigned int i = 0; i < dofs_per_cell_r; ++i)
+            {
+              cell_rhs_r(i) += (theta * f_new_loc + (1.0 - theta) * f_old_loc) *
+                               fe_values_r.shape_value(i, q) * fe_values_r.JxW(q);
+            }
+        }
+
+      cell->get_dof_indices(dof_indices_r);
+      reduced_system_rhs.add(dof_indices_r, cell_rhs_r);
+    }
+
+  reduced_system_rhs.compress(VectorOperation::add);
+
+  // Add the term that comes from the old solution.
+  reduced_rhs_matrix.vmult_add(reduced_system_rhs, reduced_solution_owned); // QUI TI SERVIREBBE NUOVA SOLUTION
+  
+  // Boundary conditions.
+  {
+    std::map<types::global_dof_index, double> boundary_values;
+
+    std::map<types::boundary_id, const Function<dim> *> boundary_functions;
+
+    boundary_functions[0] = &function_g;
+    boundary_functions[1] = &function_g;
+
+    VectorTools::interpolate_boundary_values(dof_handler_r,
+                                             boundary_functions,
+                                             boundary_values);
+
+    MatrixTools::apply_boundary_values(
+      boundary_values, reduced_system_lhs, reduced_solution_owned, reduced_system_rhs, false);
+  }
+}
+
 // // COMMENTA PROIEZIONE
 // void
 // AdvDiffPOD::convert_modes(FullMatrix<double> &transformation_matrix)
@@ -710,6 +786,7 @@ AdvDiffPOD::project_u0(TrilinosWrappers::SparseMatrix &transformation_matrix)
   // aux.reinit(solution_owned); // DIMENSIONE
 
   // TrilinosWrappers::MPI::Vector dst;
+  reduced_solution_owned = 0.0;
   transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
   reduced_solution_owned.compress(VectorOperation::add);
   // solution_owned.reinit(dst);
@@ -742,6 +819,7 @@ AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   // pcout << lhs_matrix_copy(1, 0) << std::endl;
 
   TrilinosWrappers::SparseMatrix aux;
+  reduced_system_lhs = 0.0;
   transformation_matrix.Tmmult(aux, lhs_matrix);
   aux.mmult(reduced_system_lhs, transformation_matrix);
   reduced_system_lhs.compress(VectorOperation::add);
@@ -857,7 +935,7 @@ AdvDiffPOD::project_rhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   // pcout << system_rhs(41) << std::endl;
   // pcout << system_rhs_copy(41) << std::endl;
   // PROBLEMINO QUI
-  reduce_system_rhs = 0.0;
+  reduced_system_rhs = 0.0;
   transformation_matrix.Tvmult(reduced_system_rhs, system_rhs);
   reduced_system_rhs.compress(VectorOperation::add);
   // reduced_system_rhs.reinit(dst);
@@ -869,6 +947,43 @@ AdvDiffPOD::project_rhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   pcout << reduced_system_rhs(0) << std::endl;
   // pcout << dst(41) << std::endl;
   pcout << reduced_system_rhs(1) << std::endl;
+}
+
+void
+AdvDiffPOD::project_rhs_matrix(TrilinosWrappers::SparseMatrix &transformation_matrix)
+{
+  // TrilinosWrappers::SparseMatrix aux(static_cast<unsigned int>(lhs_matrix.m()), static_cast<unsigned int>(lhs_matrix.n())); // ANCHE QUI SERVE DIMENSIONE?
+  // aux.Tmmult(transformation_matrix, lhs_matrix);
+  // reduced_system_lhs.mmult(aux, transformation_matrix);
+  // ATTENZIONE SISTEMA CAPENDO INPUT E OUTPUT
+  // aux.reinit(lhs_matrix.size());
+  // FullMatrix<double> aux(transformation_matrix.n(), lhs_matrix.n()); // (Tn * Tm) * (Lm * Ln) = Tn * Ln
+  // FullMatrix<double> dst(transformation_matrix.n(), transformation_matrix.n()); // (Tn * Ln) * (Tm * Tn) = Tn * Tn
+  // FullMatrix<double> lhs_matrix_copy(lhs_matrix.m(), lhs_matrix.n());
+  // for (unsigned int i = 0; i < lhs_matrix.m(); ++i)
+  //   for (unsigned int j = 0; j < lhs_matrix.n(); ++j)
+  //     lhs_matrix_copy(i, j) = lhs_matrix(i, j);
+  // lhs_matrix_copy.copy_from(lhs_matrix); // non mi sembra funzionare
+
+  // pcout << "  Check lhs_matrix_copy: " << std::endl;
+  // pcout << lhs_matrix(0, 0) << std::endl;
+  // pcout << lhs_matrix_copy(0, 0) << std::endl;
+  // pcout << lhs_matrix(1, 0) << std::endl;
+  // pcout << lhs_matrix_copy(1, 0) << std::endl;
+
+  TrilinosWrappers::SparseMatrix aux;
+  reduced_rhs_matrix = 0.0;
+  transformation_matrix.Tmmult(aux, rhs_matrix);
+  aux.mmult(reduced_rhs_matrix, transformation_matrix);
+  reduced_rhs_matrix.compress(VectorOperation::add);
+
+
+  
+  pcout << "  Check reduced_rhs_matrix: " << std::endl;
+  // pcout << dst(0, 0) << std::endl;
+  pcout << reduced_rhs_matrix(0, 0) << std::endl;
+  // pcout << dst(1, 0) << std::endl;
+  pcout << reduced_rhs_matrix(1, 0) << std::endl;
 }
 
 
@@ -918,7 +1033,6 @@ AdvDiffPOD::solve_reduced()
   convert_modes(transformation_matrix);
   project_lhs(transformation_matrix);
 
-
   pcout << "  Check lhs:" << reduced_system_lhs.m() << " * " << reduced_system_lhs.n() << std::endl;
   pcout << reduced_system_lhs(0, 0) << std::endl;
 
@@ -955,8 +1069,15 @@ AdvDiffPOD::solve_reduced()
       pcout << "n = " << std::setw(3) << time_step << ", t = " << std::setw(5)
             << time << ":" << std::flush;
 
-      assemble_rhs(time);
-      project_rhs(transformation_matrix);
+      if (time_step == 1)
+      {
+        assemble_rhs(time);
+        project_rhs(transformation_matrix);
+        project_rhs_matrix(transformation_matrix); // per usarla in tutti gli step successivi un po' come lhs
+      }
+      else
+        assemble_reduced_rhs(time); // Otherwise we would need solution_owned to assemble the reduced system.
+
       solve_time_step_reduced();
       output(time_step);
     }
