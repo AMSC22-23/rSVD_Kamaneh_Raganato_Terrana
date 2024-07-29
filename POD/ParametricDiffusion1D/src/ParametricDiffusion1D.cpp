@@ -92,11 +92,13 @@ main(int argc, char * argv[])
   // const double deltat_rom = 1e-3; // CAMBIA
   // const double deltat_rom = 3.01204e-4; // CAMBIA
   // ORA PROVA A TENERE STESSA deltat
-  // std::vector<size_t> rom_sizes = {2, 4, 6}; // CAMBIA
-  std::vector<size_t> rom_sizes = {5, 10, 100};
+  std::vector<size_t> rom_sizes = {2, 4, 6}; // CAMBIA
+  // std::vector<size_t> rom_sizes = {5, 10, 100};
   std::vector<std::vector<double>> modes;
   // Mat_m modes;
   Mat_m approximations = Mat_m::Zero(snapshots.rows(), rom_sizes.size());
+
+  std::vector<std::vector<double>> snapshot_matrix_aux;
 
   for (size_t i=0; i<rom_sizes.size(); i++) {
   // for (size_t i=0; i<1; i++) {
@@ -132,9 +134,13 @@ main(int argc, char * argv[])
     //PROVA a farti la classe per farti dare rhs e prenderlo e usarlo di qui
     // const unsigned int sample_every_pod = 166;
 
-
-
-    AdvDiffPOD problemPOD(N, r, T, deltat, theta, modes); // qui sample every non serve
+    snapshot_matrix_aux.resize(snapshots.rows());
+    for(auto &row : snapshot_matrix_aux)
+      row.resize(snapshots.cols(), 0.0);
+    for (size_t j=0; j<snapshots.rows(); j++) // magari cambiare con iteratori? o esiste una copy_from?
+      for (size_t k=0; k<snapshots.cols(); k++)
+        snapshot_matrix_aux[j][k] = snapshots(j, k);
+    AdvDiffPOD problemPOD(N, r, T, deltat, theta, snapshot_matrix_aux, modes); // qui sample every non serve
     
     problemPOD.setup();
     problemPOD.solve_reduced();

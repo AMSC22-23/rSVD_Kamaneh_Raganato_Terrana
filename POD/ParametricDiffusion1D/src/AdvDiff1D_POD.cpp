@@ -228,10 +228,10 @@ AdvDiffPOD::setup_reduced()
     DoFTools::make_sparsity_pattern(dof_handler_r, sparsity_r);
     sparsity_r.compress();
 
-    // pcout << "  Initializing the matrices" << std::endl;
+    pcout << "  Initializing the matrices" << std::endl;
     // mass_matrix.reinit(sparsity_r);
     // stiffness_matrix.reinit(sparsity_r);
-    // lhs_matrix.reinit(sparsity_r);
+    reduced_system_lhs.reinit(sparsity_r); // prova ad aggiungere questo per risolvere il problema di mpi
     // rhs_matrix.reinit(sparsity_r);
 
     pcout << "  Initializing the system right-hand side" << std::endl;
@@ -337,7 +337,7 @@ AdvDiffPOD::assemble_matrices()
 }
 
 void
-AdvDiffPOD::assemble_rhs(const double &time)
+AdvDiffPOD::assemble_rhs(const double &time, TrilinosWrappers::SparseMatrix &snapshot_matrix_trilinos)
 {
   const unsigned int dofs_per_cell = fe->dofs_per_cell;
   const unsigned int n_q           = quadrature->size();
@@ -392,7 +392,16 @@ AdvDiffPOD::assemble_rhs(const double &time)
   system_rhs.compress(VectorOperation::add);
 
   // Add the term that comes from the old solution.
-  rhs_matrix.vmult_add(system_rhs, solution_owned); // QUI TI SERVIREBBE NUOVA SOLUTION
+  TrilinosWrappers::MPI::Vector aux(locally_owned_dofs, MPI_COMM_WORLD);
+  // pcout << "  Check aux.size() = " << aux.size() << std::endl;
+  // pcout << "  Check solution_owned.size() = " << solution_owned.size() << std::endl;
+  for (unsigned int i = 0; i < aux.size(); ++i)
+    // aux.add(i, snapshot_matrix[i][(time-deltat)/deltat]);
+    aux(i) = snapshot_matrix_trilinos(i, (time-deltat)/deltat);
+  aux.compress(VectorOperation::add);
+  pcout << "BLOCCO QUI" << std::endl;
+
+  rhs_matrix.vmult_add(system_rhs, aux); // QUI TI SERVIREBBE NUOVA SOLUTION
   
   // Boundary conditions.
   {
@@ -818,7 +827,7 @@ AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   // pcout << lhs_matrix(1, 0) << std::endl;
   // pcout << lhs_matrix_copy(1, 0) << std::endl;
 
-  TrilinosWrappers::SparseMatrix aux;
+  TrilinosWrappers::SparseMatrix aux(locally_owned_dofs, MPI_COMM_WORLD); // AGGIUNTO Locally owned
   reduced_system_lhs = 0.0;
   transformation_matrix.Tmmult(aux, lhs_matrix);
   aux.mmult(reduced_system_lhs, transformation_matrix);
@@ -1025,6 +1034,7 @@ void
 AdvDiffPOD::solve_reduced()
 {
   assemble_matrices();
+  setup_reduced();
 
   // convertire matrice modes
   // FullMatrix<double> transformation_matrix(modes.size(), modes[0].size());
@@ -1036,7 +1046,81 @@ AdvDiffPOD::solve_reduced()
   pcout << "  Check lhs:" << reduced_system_lhs.m() << " * " << reduced_system_lhs.n() << std::endl;
   pcout << reduced_system_lhs(0, 0) << std::endl;
 
-  setup_reduced();
+
+  pcout << snapshot_matrix[0][0] << std::endl;
+
+  pcout << "===============================================SEPARA" << std::endl;
+  // PROVA, al massimo poi differenzia funzione per non rendere questa troppo lunga
+  TrilinosWrappers::SparseMatrix snapshot_matrix_trilinos(snapshot_matrix.size(),
+    snapshot_matrix[0].size(), snapshot_matrix[0].size());
+  pcout << "===============================================" << std::endl;
+  pcout << "Converting the snapshot matrix" << std::endl;
+
+//   const unsigned int dofs_per_cell_s = fe->dofs_per_cell;
+//     const unsigned int n_q           = quadrature->size();
+
+
+//   FullMatrix<double> cell_snapshot_matrix(dofs_per_cell_s, dofs_per_cell_s);
+
+//   std::vector<types::global_dof_index> dof_indices_s(dofs_per_cell_s);
+
+//   snapshot_matrix_trilinos = 0.0;
+
+//   for (const auto &cell : dof_handler.active_cell_iterators())
+//     {
+//       if (!cell->is_locally_owned())
+//         continue;
+
+//       // fe_values.reinit(cell);
+
+//       cell_snapshot_matrix = 0.0;
+
+//       for (unsigned int q = 0; q < n_q; ++q)
+//         {
+//           for (unsigned int i = 0; i < dofs_per_cell_s; ++i)
+//             {
+//               for (unsigned int j = 0; j < dofs_per_cell_s; ++j)
+//                 {
+//                   cell_snapshot_matrix(i, j) = snapshot_matrix[i][j];    
+//                 }
+//             }
+//         }
+
+//       cell->get_dof_indices(dof_indices_s);
+
+//       snapshot_matrix_trilinos.add(dof_indices_s, cell_snapshot_matrix);
+//     }
+
+//   snapshot_matrix_trilinos.compress(VectorOperation::add);
+// pcout << "FINE PROVA" << std::endl;
+
+
+
+
+  // convert_modes(snapshot_matrix_trilinos); SARÀ CONVERT SNAPSHOTS
+  for (unsigned int i = 0; i < snapshot_matrix.size(); ++i)
+    for (unsigned int j = 0; j < snapshot_matrix[0].size(); ++j)
+  //     // transformation_matrix.set(i, j, modes[i][j]);
+      // transformation_matrix(i, j) = modes[i][j];
+      snapshot_matrix_trilinos.set(i, j, snapshot_matrix[i][j]);
+  snapshot_matrix_trilinos.compress(VectorOperation::add);
+
+  
+  pcout << "  Check snapshot_matrix_trilinos: " << std::endl;
+  pcout << snapshot_matrix[0][0] << std::endl;
+  pcout << snapshot_matrix_trilinos(0, 0) << std::endl;
+  pcout << snapshot_matrix[0][1] << std::endl;
+  pcout << snapshot_matrix_trilinos(0, 1) << std::endl;
+
+
+
+
+
+
+
+  
+
+
 
   pcout << "===============================================" << std::endl;
 
@@ -1069,14 +1153,19 @@ AdvDiffPOD::solve_reduced()
       pcout << "n = " << std::setw(3) << time_step << ", t = " << std::setw(5)
             << time << ":" << std::flush;
 
-      if (time_step == 1)
-      {
-        assemble_rhs(time);
-        project_rhs(transformation_matrix);
-        project_rhs_matrix(transformation_matrix); // per usarla in tutti gli step successivi un po' come lhs
-      }
-      else
-        assemble_reduced_rhs(time); // Otherwise we would need solution_owned to assemble the reduced system.
+      // if (time_step == 1)
+      // {
+      //   assemble_rhs(time);
+      //   project_rhs(transformation_matrix);
+      //   project_rhs_matrix(transformation_matrix); // per usarla in tutti gli step successivi un po' come lhs
+      // }
+      // else
+      //   assemble_reduced_rhs(time); // Otherwise we would need solution_owned to assemble the reduced system.
+
+      // Prova usando snapshot_matrix come solution_owned full
+      // direi ad ogni tempo di prendere solution_owned come snapshot_matrix colonna al tempo precedente
+      assemble_rhs(time, snapshot_matrix_trilinos);
+      project_rhs(transformation_matrix);
 
       solve_time_step_reduced();
       output(time_step);
