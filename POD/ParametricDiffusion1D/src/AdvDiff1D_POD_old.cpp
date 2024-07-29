@@ -228,7 +228,7 @@ AdvDiffPOD::setup_reduced()
     DoFTools::make_sparsity_pattern(dof_handler_r, sparsity_r);
     sparsity_r.compress();
 
-    // pcout << "  Initializing the matrices" << std::endl;
+    pcout << "  Initializing the matrices" << std::endl;
     // mass_matrix.reinit(sparsity_r);
     // stiffness_matrix.reinit(sparsity_r);
     reduced_system_lhs.reinit(sparsity_r); // prova ad aggiungere questo per risolvere il problema di mpi
@@ -725,13 +725,98 @@ AdvDiffPOD::assemble_reduced_rhs(const double &time)
 void
 AdvDiffPOD::convert_modes(TrilinosWrappers::SparseMatrix &transformation_matrix)
 {
-  if (mpi_rank == 0)
-  {
-    for (unsigned int i = 0; i < modes.size(); ++i)
-      for (unsigned int j = 0; j < modes[0].size(); ++j)
-        transformation_matrix.set(i, j, modes[i][j]);
-    transformation_matrix.compress(VectorOperation::add);
-  }
+  // transformation_matrix.copy_from(modes);
+  // transformation_matrix.reinit(modes.size(), modes[0].size());
+  // transformation_matrix.m() = modes.size();
+  // transformation_matrix.n() = modes[0].size();
+  // TrilinosWrappers::SparseMatrix transformation_matrix(modes.size(), modes[0].size());
+  // TrilinosWrappers::SparseMatrix transformation_matrix(static_cast<unsigned int>(modes.size()), 
+  //                                                      static_cast<unsigned int>(modes[0].size()));
+
+
+
+
+  // unsigned int local_start_row = (mpi_rank * modes.size()) / mpi_size; // cambia nomi
+  // unsigned int local_end_row = ((mpi_rank + 1) * modes.size()) / mpi_size;
+
+  // for (unsigned int i = local_start_row; i < local_end_row; ++i) {
+  //     for (unsigned int j = 0; j < modes[0].size(); ++j) {
+  //         transformation_matrix.set(i, j, modes[i][j]);
+  //     }
+  // }
+
+
+  const unsigned int rows_per_cell = transformation_matrix.m()/mpi_size;
+  const unsigned int cols_per_cell = transformation_matrix.n()/mpi_size;
+
+  FullMatrix<double> cell_transformation_matrix(rows_per_cell, cols_per_cell);
+  // // std::vector<types::global_dof_index> row_indices(rows_per_cell);
+  // // std::vector<types::global_dof_index> col_indices(cols_per_cell);
+
+  // transformation_matrix = 0.0;
+
+  IndexSet row_indices(rows_per_cell);
+  IndexSet col_indices(cols_per_cell);
+  row_indices.add_range(rows_per_cell*mpi_rank, rows_per_cell*(mpi_rank+1));
+  col_indices.add_range(cols_per_cell*mpi_rank, cols_per_cell*(mpi_rank+1));
+  // for (unsigned int i=0; i<rows_per_cell; i++)
+  //   row_indices(i) = i + rows_per_cell*mpi_rank;
+  // for (unsigned int j=0; j<cols_per_cell; j++)
+  //   col_indices(j) = j + cols_per_cell*mpi_rank;
+
+  // // for (unsigned int k=0; k<rows_per_cell; k++) // qui cambiare
+  // {
+    // cell_transformation_matrix = 0.0;
+    for (unsigned int i=0; i<row_indices; i++)
+      for (unsigned int j=0; j<col_indices; j++)
+        cell_transformation_matrix(i, j) = modes[i][j];
+    transformation_matrix.set(row_indices, col_indices, cell_transformation_matrix);
+  // }
+  transformation_matrix.compress(VectorOperation::add);
+
+//     const unsigned int dofs_per_cell_s = fe->dofs_per_cell;
+//   const unsigned int n_q           = quadrature->size();
+
+//   FullMatrix<double> cell_snapshot_matrix(dofs_per_cell_s, dofs_per_cell_s);
+
+//   std::vector<types::global_dof_index> dof_indices_s(dofs_per_cell_s);
+
+
+//   for (const auto &cell : rows_per_cell)
+//     {
+//       if (!cell->is_locally_owned())
+//         continue;
+
+//       cell_snapshot_matrix = 0.0;
+
+//       for (unsigned int q = 0; q < n_q; ++q)
+//         {
+//           for (unsigned int i = 0; i < dofs_per_cell_s; ++i)
+//             {
+//               for (unsigned int j = 0; j < dofs_per_cell_s; ++j)
+//                 {
+//                   cell_snapshot_matrix(i, j) = snapshot_matrix[i][j];    
+//                 }
+//             }
+//         }
+
+//       cell->get_dof_indices(dof_indices_s);
+
+//       snapshot_matrix_trilinos.add(dof_indices_s, cell_snapshot_matrix);
+//     }
+
+//   snapshot_matrix_trilinos.compress(VectorOperation::add);
+pcout << "FINE PROVA" << std::endl;
+
+
+  // for (unsigned int i = 0; i < modes.size(); ++i)
+  //   for (unsigned int j = 0; j < modes[0].size(); ++j)
+  // //     // transformation_matrix.set(i, j, modes[i][j]);
+  //     // transformation_matrix(i, j) = modes[i][j];
+  //     transformation_matrix.set(i, j, modes[i][j]);
+      
+  // transformation_matrix.compress(VectorOperation::add);
+  // transformation_matrix.copy_from(modes); // vedi se l'errore di .m e .n è qui e mi sa che era qui ...
 
   pcout << "  Check transformation_matrix: " << std::endl;
   pcout << modes[0][0] << std::endl;
@@ -788,13 +873,9 @@ AdvDiffPOD::project_u0(TrilinosWrappers::SparseMatrix &transformation_matrix)
   // aux.reinit(solution_owned); // DIMENSIONE
 
   // TrilinosWrappers::MPI::Vector dst;
-  if (mpi_rank == 0)
-  {
-    reduced_solution_owned = 0.0;
-    transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
-    reduced_solution_owned.compress(VectorOperation::add);
-    pcout << "check size reduced_solution_owned: " << reduced_solution_owned.size() << std::endl;
-  }
+  reduced_solution_owned = 0.0;
+  transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
+  reduced_solution_owned.compress(VectorOperation::add);
   // solution_owned.reinit(dst);
   // for (unsigned int i = 0; i < dst.size(); ++i)
   //   solution_owned(i) = dst(i);
@@ -878,118 +959,56 @@ AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   //   }
   // }
 
+  IndexSet all_indexes(transformation_matrix.n());
+  for (unsigned int i=0; i<transformation_matrix.n(); ++i)
+    all_indexes.add_index(i);
+  TrilinosWrappers::SparseMatrix tm_aux(transformation_matrix.m()/mpi_size, transformation_matrix.n(), transformation_matrix.m()/mpi_size);
+  TrilinosWrappers::SparseMatrix lhs_aux(lhs_matrix.m()/mpi_size, lhs_matrix.n(), lhs_matrix.m()/mpi_size);
+  TrilinosWrappers::SparseMatrix aux(transformation_matrix.n(), lhs_matrix.n(), transformation_matrix.n());
+  TrilinosWrappers::SparseMatrix dst(transformation_matrix.n(), transformation_matrix.n(), transformation_matrix.n());
+  unsigned int local_start_row = (mpi_rank * transformation_matrix.m()) / mpi_size; // cambia nomi
+  unsigned int local_end_row = ((mpi_rank + 1) * transformation_matrix.m()) / mpi_size;
 
-  // DA QUI
-
-  // IndexSet all_indexes(transformation_matrix.n());
-  // for (unsigned int i=0; i<transformation_matrix.n(); ++i)
-  //   all_indexes.add_index(i);
-  // TrilinosWrappers::SparseMatrix tm_aux(transformation_matrix.m()/mpi_size, transformation_matrix.n(), transformation_matrix.m()/mpi_size);
-  // TrilinosWrappers::SparseMatrix lhs_aux(lhs_matrix.m()/mpi_size, lhs_matrix.n(), lhs_matrix.m()/mpi_size);
-  // TrilinosWrappers::SparseMatrix aux(transformation_matrix.n(), lhs_matrix.n(), transformation_matrix.n());
-  // TrilinosWrappers::SparseMatrix dst(transformation_matrix.n(), transformation_matrix.n(), transformation_matrix.n());
-  // unsigned int local_start_row = (mpi_rank * transformation_matrix.m()) / mpi_size; // cambia nomi
-  // unsigned int local_end_row = ((mpi_rank + 1) * transformation_matrix.m()) / mpi_size;
-
-  // for (unsigned int i = local_start_row; i < local_end_row; ++i) {
-  //   for (unsigned int j = 0; j < transformation_matrix.n(); ++j) {
-  //     tm_aux.set(i, j, transformation_matrix(i, j));
-  //   }
-  //   for (unsigned int j = 0; j < lhs_matrix.n(); ++j) {
-  //     lhs_aux.set(i, j, lhs_matrix(i, j));
-  //   }
-  // }
-  // pcout << " BLOCCO QUI 1" << std::endl;
-  // // tm_aux.compress(VectorOperation::add);
-  // pcout << " BLOCCO QUI 2" << std::endl;
-  // tm_aux.Tmmult(aux, lhs_aux);
-  // pcout << " BLOCCO QUI 3" << std::endl;
-  // aux.mmult(dst, tm_aux);
-  // pcout << " BLOCCO QUI 4" << std::endl;
-  // // dst.compress(VectorOperation::add);
-  // pcout << " BLOCCO QUI 5" << std::endl;
-  // reduced_system_lhs.copy_from(dst);
-  // pcout << " BLOCCO QUI 6" << std::endl;
-  // reduced_system_lhs.compress(VectorOperation::add);
-  // pcout << " BLOCCO QUI 7" << std::endl;
-
-
-  // PROVA
-
-
-  const unsigned int dofs_per_cell_r = fe_r->dofs_per_cell; // qui hai lasciato il secondo senza _r
-  const unsigned int n_q_r           = quadrature_r->size();
-
-  FEValues<dim> fe_values_r(*fe_r,
-                            *quadrature_r,
-                            update_values | update_quadrature_points);
-
-  FullMatrix<double> cell_lhs(dofs_per_cell_r, dofs_per_cell_r);
-  FullMatrix<double> aux;
-
-  std::vector<types::global_dof_index> dof_indices_r(dofs_per_cell_r);
-
-  reduced_system_lhs = 0.0;
-
-  for (const auto &cell : dof_handler_r.active_cell_iterators())
-  {
-    if (!cell->is_locally_owned())
-      continue;
-
-    fe_values_r.reinit(cell);
-    cell_lhs = 0.0;
-    aux = 0.0;
-
-    for (unsigned int q = 0; q < n_q_r; ++q)
-    {
-      for (unsigned int i = 0; i < dofs_per_cell_r; ++i)
-      {
-        for (unsigned int j = 0; j < dofs_per_cell_r; ++j)
-        {
-          aux(i, j) += transformation_matrix(j, i) * lhs_matrix(i, j);
-          cell_lhs(i, j) += aux(i, j) * transformation_matrix(i, j);
-        }
-      }
+  for (unsigned int i = local_start_row; i < local_end_row; ++i) {
+    for (unsigned int j = 0; j < transformation_matrix.n(); ++j) {
+      tm_aux.set(i, j, transformation_matrix(i, j));
     }
-
-    cell->get_dof_indices(dof_indices_r);
-
-    reduced_system_lhs.add(dof_indices_r, cell_lhs);
+    for (unsigned int j = 0; j < lhs_matrix.n(); ++j) {
+      lhs_aux.set(i, j, lhs_matrix(i, j));
+    }
   }
-
+  pcout << " BLOCCO QUI 1" << std::endl;
+  // tm_aux.compress(VectorOperation::add);
+  pcout << " BLOCCO QUI 2" << std::endl;
+  tm_aux.Tmmult(aux, lhs_aux);
+  pcout << " BLOCCO QUI 3" << std::endl;
+  aux.mmult(dst, tm_aux);
+  pcout << " BLOCCO QUI 4" << std::endl;
+  // dst.compress(VectorOperation::add);
+  pcout << " BLOCCO QUI 5" << std::endl;
+  reduced_system_lhs.copy_from(dst);
+  pcout << " BLOCCO QUI 6" << std::endl;
   reduced_system_lhs.compress(VectorOperation::add);
-    pcout << " BLOCCO QUI 1" << std::endl;
-
+  pcout << " BLOCCO QUI 7" << std::endl;
 
 
   // ULTIMA VERSIONE
-//   if (mpi_rank == 0)
-//   {
+  // pcout << " BLOCCO QUI 1" << std::endl;
+  // // TrilinosWrappers::SparseMatrix aux(locally_owned_dofs, MPI_COMM_WORLD);
+  // TrilinosWrappers::SparseMatrix aux;
+  // TrilinosWrappers::SparseMatrix dst;
+  // reduced_system_lhs = 0.0;
+  // transformation_matrix.Tmmult(aux, lhs_matrix);
+  // pcout << " BLOCCO QUI 2" << std::endl;
+  // aux.mmult(dst, transformation_matrix);
+  // pcout << " BLOCCO QUI 3" << std::endl;
+  // reduced_system_lhs.copy_from(dst);
+  // pcout << " BLOCCO QUI 4" << std::endl;
+  // reduced_system_lhs.compress(VectorOperation::add);
+  // pcout << " BLOCCO QUI 5" << std::endl;
 
-//   try
-//   {
-  
-//   pcout << " BLOCCO QUI 1" << std::endl;
-//   // TrilinosWrappers::SparseMatrix aux(locally_owned_dofs, MPI_COMM_WORLD);
-//   TrilinosWrappers::SparseMatrix aux;
-//   reduced_system_lhs = 0.0;
-//   transformation_matrix.Tmmult(aux, lhs_matrix);
-//   pcout << " BLOCCO QUI 2" << std::endl;
-//   aux.mmult(reduced_system_lhs, transformation_matrix);
-//   pcout << " BLOCCO QUI 3" << std::endl;
-//   // reduced_system_lhs.compress(VectorOperation::add);
-//   pcout << " BLOCCO QUI 4" << std::endl;
 
-// } catch (const dealii::TrilinosWrappers::SparseMatrix::ExcTrilinosError &e) { // modifica
-//   pcout << "Caught a Trilinos error: " << e.what() << std::endl;
-// } catch (const std::exception &e) {
-//   pcout << "Caught a standard exception: " << e.what() << std::endl;
-// } catch (int e) {
-//   pcout << "Caught an integer exception: " << e << std::endl;
-// } catch (...) {
-//   pcout << "Caught an unknown exception." << std::endl;
-// }
-//   }
+
 
 
   // PROVA A COMPORRE VETTORE PER VETTORE
@@ -1100,23 +1119,18 @@ AdvDiffPOD::project_rhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   // pcout << system_rhs(41) << std::endl;
   // pcout << system_rhs_copy(41) << std::endl;
   // PROBLEMINO QUI
-  if (mpi_rank == 0)
-  {
-    reduced_system_rhs = 0.0;
-    transformation_matrix.Tvmult(reduced_system_rhs, system_rhs);
-    reduced_system_rhs.compress(VectorOperation::add);
-
-  }
+  reduced_system_rhs = 0.0;
+  transformation_matrix.Tvmult(reduced_system_rhs, system_rhs);
+  reduced_system_rhs.compress(VectorOperation::add);
   // reduced_system_rhs.reinit(dst);
   // for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
   //   reduced_system_rhs(i) = dst(i); // RICERCATI POI DEFINIZIONE DELLE VARIE FUNZIONI PER I VARI OGGETTI
 
-  pcout << " check rhs size" << reduced_system_rhs.size() << std::endl;
-  // pcout << "  Check reduced_system_rhs: " << std::endl;
-  // // pcout << dst(40) << std::endl;
-  // pcout << reduced_system_rhs(0) << std::endl;
-  // // pcout << dst(41) << std::endl;
-  // pcout << reduced_system_rhs(1) << std::endl;
+  pcout << "  Check reduced_system_rhs: " << std::endl;
+  // pcout << dst(40) << std::endl;
+  pcout << reduced_system_rhs(0) << std::endl;
+  // pcout << dst(41) << std::endl;
+  pcout << reduced_system_rhs(1) << std::endl;
 }
 
 void
@@ -1141,14 +1155,12 @@ AdvDiffPOD::project_rhs_matrix(TrilinosWrappers::SparseMatrix &transformation_ma
   // pcout << lhs_matrix(1, 0) << std::endl;
   // pcout << lhs_matrix_copy(1, 0) << std::endl;
 
-  if (mpi_rank == 0)
-  {
-    TrilinosWrappers::SparseMatrix aux;
-    reduced_rhs_matrix = 0.0;
-    transformation_matrix.Tmmult(aux, rhs_matrix);
-    aux.mmult(reduced_rhs_matrix, transformation_matrix);
-    reduced_rhs_matrix.compress(VectorOperation::add);
-  }
+  TrilinosWrappers::SparseMatrix aux;
+  reduced_rhs_matrix = 0.0;
+  transformation_matrix.Tmmult(aux, rhs_matrix);
+  aux.mmult(reduced_rhs_matrix, transformation_matrix);
+  reduced_rhs_matrix.compress(VectorOperation::add);
+
 
   
   pcout << "  Check reduced_rhs_matrix: " << std::endl;
@@ -1201,18 +1213,18 @@ AdvDiffPOD::solve_reduced()
 
   // convertire matrice modes
   // FullMatrix<double> transformation_matrix(modes.size(), modes[0].size());
-  TrilinosWrappers::SparseMatrix transformation_matrix(modes.size(), modes[0].size(), modes[0].size());
+  // TrilinosWrappers::SparseMatrix transformation_matrix(modes.size(), modes[0].size(), modes[0].size());
   // TrilinosWrappers::SparseMatrix transformation_matrix(locally_owned_dofs, MPI_COMM_WORLD, modes[0].size());
 
   // Define IndexSet for rows and columns
-  // IndexSet row_indices(modes.size());
-  // row_indices.add_range(0, modes.size());
+  IndexSet row_indices(modes.size());
+  row_indices.add_range(0, modes.size());
 
-  // IndexSet col_indices(modes[0].size());
-  // col_indices.add_range(0, modes[0].size());
+  IndexSet col_indices(modes[0].size());
+  col_indices.add_range(0, modes[0].size());
 
-  // // Initialize the transformation_matrix with the row and column IndexSet and MPI support
-  // TrilinosWrappers::SparseMatrix transformation_matrix(row_indices, col_indices, MPI_COMM_WORLD);
+  // Initialize the transformation_matrix with the row and column IndexSet and MPI support
+  TrilinosWrappers::SparseMatrix transformation_matrix(row_indices, col_indices, MPI_COMM_WORLD);
 
   convert_modes(transformation_matrix);
   project_lhs(transformation_matrix);

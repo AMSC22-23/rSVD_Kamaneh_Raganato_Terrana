@@ -25,7 +25,8 @@ main(int argc, char * argv[])
   const double T         = 0.05;
   // const double deltat    = 1e-5; // 5000 steps
   // const double deltat    = 1e-4; // 500 steps
-  const double deltat    = 5e-4; // 50 steps
+  // const double deltat    = 5e-4; // 100 steps
+  const double deltat    = 1e-3;
   // const double deltat    = 2.5e-3;
 
   // const double theta  = 1.0; // Implicit Euler
