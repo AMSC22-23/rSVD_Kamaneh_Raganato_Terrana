@@ -28,11 +28,11 @@ int main () {
     const double tol    = 1e-12;
     const double tol_sv = 1e-12;
 
-    POD pod_(A, U, Sigma, V, dim, c, M, r, tol, tol_sv);
-    pod_.standard_iSVD(U, Sigma, V, c, tol, tol_sv);
+    // POD pod_(A, U, Sigma, V, dim, c, M, r, tol, tol_sv);
+    // pod_.standard_iSVD(U, Sigma, V, c, tol, tol_sv);
 
-    POD pod_e(A_e, U_e, Sigma_e, V_e, dim, c, M, r, tol, tol_sv);
-    pod_e.enhanced_iSVD(U_e, Sigma_e, V_e, c, M, tol, tol_sv);
+    // POD pod_e(A_e, U_e, Sigma_e, V_e, dim, c, M, r, tol, tol_sv);
+    // pod_e.enhanced_iSVD(U_e, Sigma_e, V_e, c, M, tol, tol_sv);
 
     // Naive test for standard POD
     Mat S1 = Mat::Zero(n, n);                           

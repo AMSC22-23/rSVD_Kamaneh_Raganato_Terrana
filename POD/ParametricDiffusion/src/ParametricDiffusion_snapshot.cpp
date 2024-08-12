@@ -168,5 +168,8 @@ main(int /*argc*/, char * /*argv*/[])
   POD pod(snapshot_matrix, r, tol);
   // POD pod(snapshot_matrix_reduced, r, tol);
 
+  // E POI?
+  // Ottieni W, ma cosa puoi farcene?
+
   return 0;
 }

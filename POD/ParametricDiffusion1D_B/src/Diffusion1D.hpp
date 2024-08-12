@@ -1,26 +1,29 @@
-#ifndef POISSON_2D_HPP
-#define POISSON_2D_HPP
+#ifndef DIFFUSION1D_HPP
+#define DIFFUSION1D_HPP
 
+#include <deal.II/base/conditional_ostream.h>
 #include <deal.II/base/quadrature_lib.h>
+
+#include <deal.II/distributed/fully_distributed_tria.h>
 
 #include <deal.II/dofs/dof_handler.h>
 #include <deal.II/dofs/dof_tools.h>
 
-#include <deal.II/fe/fe_simplex_p.h>
+#include <deal.II/fe/fe_q.h>
+#include <deal.II/fe/fe_system.h>
 #include <deal.II/fe/fe_values.h>
+#include <deal.II/fe/fe_values_extractors.h>
 #include <deal.II/fe/mapping_fe.h>
 
 #include <deal.II/grid/grid_generator.h>
-#include <deal.II/grid/grid_in.h>
 #include <deal.II/grid/grid_out.h>
 #include <deal.II/grid/tria.h>
+#include <deal.II/grid/grid_in.h>
 
 #include <deal.II/lac/dynamic_sparsity_pattern.h>
-#include <deal.II/lac/precondition.h>
 #include <deal.II/lac/solver_cg.h>
-#include <deal.II/lac/solver_gmres.h>
-#include <deal.II/lac/sparse_matrix.h>
-#include <deal.II/lac/vector.h>
+#include <deal.II/lac/trilinos_precondition.h>
+#include <deal.II/lac/trilinos_sparse_matrix.h>
 
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/matrix_tools.h>
@@ -35,19 +38,14 @@
 
 using namespace dealii;
 
-/**
- * Class managing the differential problem.
- */
-class Poisson2D
+// Class representing the linear diffusion problem.
+class Diffusion
 {
 public:
   // Physical dimension (1D, 2D, 3D)
-  static constexpr unsigned int dim = 2;
+  static constexpr unsigned int dim = 1;
 
   // Diffusion coefficient.
-  // In deal.ii, functions are implemented by deriving the dealii::Function
-  // class, which provides an interface for the computation of function values
-  // and their derivatives.
   class DiffusionCoefficient : public Function<dim>
   {
   public:
@@ -125,14 +123,14 @@ public:
 
     // Evaluation.
     virtual double
-    value(const Point<dim> &/*p*/,
+    value(const Point<dim> & /*p*/,
           const unsigned int /*component*/ = 0) const override
     {
-      return 1.0;
+      return 0.0;
     }
   };
 
-  // Dirichlet boundary conditions.
+    // Dirichlet boundary conditions.
   class FunctionG : public Function<dim>
   {
   public:
@@ -150,19 +148,36 @@ public:
   };
 
   // Neumann boundary conditions.
-  class FunctionH : public Function<dim>
+  // class FunctionH : public Function<dim>
+  // {
+  // public:
+  //   // Constructor.
+  //   FunctionH()
+  //   {}
+
+  //   // Evaluation:
+  //   virtual double
+  //   value(const Point<dim> &/*p*/,
+  //         const unsigned int /*component*/ = 0) const override
+  //   {
+  //     return 0.0;
+  //   }
+  // };
+
+  // Function for the initial condition.
+  class FunctionU0 : public Function<dim>
   {
   public:
     // Constructor.
-    FunctionH()
+    FunctionU0()
     {}
 
-    // Evaluation:
+    // Evaluation.
     virtual double
-    value(const Point<dim> &/*p*/,
+    value(const Point<dim> &p,
           const unsigned int /*component*/ = 0) const override
     {
-      return 0.0;
+      return std::sin(M_PI*p[0]);
     }
   };
 
@@ -179,7 +194,7 @@ public:
   //   value(const Point<dim> &p,
   //         const unsigned int /*component*/ = 0) const override
   //   {
-  //     return (std::exp(p[0])-1) * (std::exp(p[1])-1);
+  //     return std::cos(M_PI*p[0]) * std::exp(-this->get_time());
   //   }
 
   //   // Gradient evaluation.
@@ -189,60 +204,87 @@ public:
   //   {
   //     Tensor<1, dim> result;
 
+  //     // duex / dx
+  //     result[0] = -M_PI * std::sin(M_PI * p[0]) * std::exp(-this->get_time());
   //     result[0] =
   //       std::exp(p[0]) * (std::exp(p[1])-1);
   //     result[1] =
   //       std::exp(p[1]) * (std::exp(p[0])-1);
-
   //     return result;
   //   }
   // };
 
-  // Constructor.
-  Poisson2D(const std::string &mesh_file_name_, const unsigned int &r_,
-            std::vector<unsigned int> &boundary_dofs_idx_int_,
-            std::vector<double> &snapshot_array_, const double &prm_diffusion_coefficient_)
-    : mesh_file_name(mesh_file_name_)
+  // Constructor. We provide the final time, time step Delta t and theta method
+  // parameter as constructor arguments.
+  Diffusion(const unsigned int N_,
+            const unsigned int &r_,
+            const double       &T_,
+            const double       &deltat_,
+            const double       &theta_,
+            /*std::vector<unsigned int> &boundary_dofs_idx_int_,*/
+            std::vector<double> &snapshot_array_,
+            const double &prm_diffusion_coefficient_)
+    : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
+    , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
+    , pcout(std::cout, mpi_rank == 0)
+    , T(T_)
+    , N(N_)
     , r(r_)
-    , boundary_dofs_idx_int(boundary_dofs_idx_int_)
+    , deltat(deltat_)
+    , theta(theta_)
+    /*, boundary_dofs_idx_int(boundary_dofs_idx_int_)*/
     , snapshot_array(snapshot_array_)
-    , diffusion_coefficient(prm_diffusion_coefficient_)
+    , mu(prm_diffusion_coefficient_)
+    , mesh(MPI_COMM_WORLD)
   {}
 
   // Initialization.
   void
   setup();
 
-  // System assembly.
-  void
-  assemble();
-
-  // System solution.
+  // Solve the problem.
   void
   solve();
 
-  // Output.
-  void
-  output() const;
-
-  // Compute the error.
-  double
-  compute_error(const VectorTools::NormType &norm_type) const;
+  // Compute the error for convergence analysis.
+  // double
+  // compute_error(const VectorTools::NormType &norm_type);
 
   // Boundary DOFs indices.
-  std::vector<unsigned int> boundary_dofs_idx_int;
+  // std::vector<unsigned int> boundary_dofs_idx_int;
 
   // Snapshot array.
   std::vector<double> snapshot_array;
 
 protected:
-  // Path to the mesh file.
-  const std::string mesh_file_name;
+  // Assemble the mass and stiffness matrices.
+  void
+  assemble_matrices();
 
-  // Polynomial degree.
-  const unsigned int r;
+  // Assemble the right-hand side of the problem.
+  void
+  assemble_rhs(const double &time);
 
-  // const double prm_diffusion_coefficient;
+  // Solve the problem for one time step.
+  void
+  solve_time_step();
+
+  // Output.
+  void
+  output(const unsigned int &time_step) const;
+
+  // MPI parallel. /////////////////////////////////////////////////////////////
+
+  // Number of MPI processes.
+  const unsigned int mpi_size;
+
+  // This MPI process.
+  const unsigned int mpi_rank;
+
+  // Parallel output stream.
+  ConditionalOStream pcout;
+
+  // Problem definition. ///////////////////////////////////////////////////////
 
   // Diffusion coefficient.
   DiffusionCoefficient mu;
@@ -259,22 +301,42 @@ protected:
   // g(x).
   FunctionG function_g;
 
-  // h(x).
-  FunctionH function_h;
+  // Initial condition.
+  FunctionU0 u_0;
 
-  // Triangulation.
-  Triangulation<dim> mesh;
+  // h(x).
+  // FunctionH function_h;
+
+  // Exact solution.
+  // ExactSolution exact_solution;
+
+  // Current time.
+  double time;
+  
+  // Final time.
+  const double T;
+
+  // Number of elements.
+  const unsigned int N;
+
+  // Discretization. ///////////////////////////////////////////////////////////
+
+  // Polynomial degree.
+  const unsigned int r;
+
+  // Time step.
+  const double deltat;
+
+  // Theta parameter of the theta method.
+  const double theta;
+
+  // Mesh.
+  parallel::fullydistributed::Triangulation<dim> mesh;
 
   // Finite element space.
-  // We use a unique_ptr here so that we can choose the type and degree of the
-  // finite elements at runtime (the degree is a constructor parameter). The
-  // class FiniteElement<dim> is an abstract class from which all types of
-  // finite elements implemented by deal.ii inherit.
   std::unique_ptr<FiniteElement<dim>> fe;
 
   // Quadrature formula.
-  // We use a unique_ptr here so that we can choose the type and order of the
-  // quadrature formula at runtime (the order is a constructor parameter).
   std::unique_ptr<Quadrature<dim>> quadrature;
 
   // Quadrature formula used on boundary lines.
@@ -283,17 +345,32 @@ protected:
   // DoF handler.
   DoFHandler<dim> dof_handler;
 
-  // Sparsity pattern.
-  SparsityPattern sparsity_pattern;
+  // DoFs owned by current process.
+  IndexSet locally_owned_dofs;
 
-  // System matrix.
-  SparseMatrix<double> system_matrix;
+  // DoFs relevant to the current process (including ghost DoFs).
+  IndexSet locally_relevant_dofs;
 
-  // System right-hand side.
-  Vector<double> system_rhs;
+  // Mass matrix M / deltat.
+  TrilinosWrappers::SparseMatrix mass_matrix;
 
-  // System solution.
-  Vector<double> solution;
+  // Stiffness matrix A.
+  TrilinosWrappers::SparseMatrix stiffness_matrix;
+
+  // Matrix on the left-hand side (M / deltat + theta A).
+  TrilinosWrappers::SparseMatrix lhs_matrix;
+
+  // Matrix on the right-hand side (M / deltat - (1 - theta) A).
+  TrilinosWrappers::SparseMatrix rhs_matrix;
+
+  // Right-hand side vector in the linear system.
+  TrilinosWrappers::MPI::Vector system_rhs;
+
+  // System solution (without ghost elements).
+  TrilinosWrappers::MPI::Vector solution_owned;
+
+  // System solution (including ghost elements).
+  TrilinosWrappers::MPI::Vector solution;
 };
 
 #endif
