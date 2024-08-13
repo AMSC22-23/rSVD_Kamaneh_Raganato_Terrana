@@ -396,6 +396,7 @@ protected:
 
   // La metti qui per proiezione nel senso che serve solution_owned, ma è okay? ha senso? rende il codice riproducibile?
   const std::vector<std::vector<double>> snapshot_matrix; 
+  // TrilinosWrappers::SparseMatrix snapshot_matrix_trilinos;
 
   // Transformation matrix.
   const std::vector<std::vector<double>> modes;
@@ -450,6 +451,9 @@ protected:
 
   // DoFs relevant to the current process (including ghost DoFs). ........
   IndexSet locally_relevant_dofs_r;
+
+  // ...
+  // IndexSet modes_idx;
 
   // Mass matrix M / deltat.
   TrilinosWrappers::SparseMatrix mass_matrix;

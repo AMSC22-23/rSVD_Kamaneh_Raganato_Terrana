@@ -107,11 +107,23 @@ AdvDiffPOD::setup()
     DoFTools::make_sparsity_pattern(dof_handler, sparsity);
     sparsity.compress();
 
+    for (unsigned int i = 0; i < modes[0].size(); ++i)
+      modes_idx.add_index(i);
+    TrilinosWrappers::SparsityPattern sparsity_modes(modes_idx,
+                                                     MPI_COMM_WORLD);
+    // DoFTools::make_sparsity_pattern(dof_handler, sparsity_modes);
+    sparsity_modes.compress();                                                
+
     pcout << "  Initializing the matrices" << std::endl;
     mass_matrix.reinit(sparsity);
     stiffness_matrix.reinit(sparsity);
     lhs_matrix.reinit(sparsity);
     rhs_matrix.reinit(sparsity);
+    // transformation_matrix.reinit(sparsity, sparsity_modes); // qui hai provato perché hai scoperto che definendo numero di elementi non nulli per colonna
+    // hai una matrice definita localmente e infatti sembra che tu sia passata ad un nuovo errore
+    // snapshot_matrix_trilinos.reinit(sparsity); // prova lo stesso con questo
+
+    // transformation_matrix.reinit(locally_owned_dofs, locally_owned_dofs_r, sparsity, MPI_COMM_WORLD);
 
     pcout << "  Initializing the system right-hand side" << std::endl;
     system_rhs.reinit(locally_owned_dofs, MPI_COMM_WORLD);
@@ -828,12 +840,23 @@ AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   // pcout << lhs_matrix_copy(1, 0) << std::endl;
 
   TrilinosWrappers::SparseMatrix aux(locally_owned_dofs, MPI_COMM_WORLD); // AGGIUNTO Locally owned
+  // TrilinosWrappers::SparseMatrix aux(transformation_matrix.n(), lhs_matrix.n(), lhs_matrix.n());
+  // TrilinosWrappers::SparseMatrix res(transformation_matrix.n(), transformation_matrix.n(), transformation_matrix.n());
+
+  pcout << "BLOCCO QUI 1" << std::endl;
   reduced_system_lhs = 0.0;
+  assert(transformation_matrix.m() == lhs_matrix.m()); // controllo
   transformation_matrix.Tmmult(aux, lhs_matrix);
+  pcout << "BLOCCO QUI 2" << std::endl;
+  assert(aux.n() == transformation_matrix.m());
+  // aux.mmult(res, transformation_matrix);
   aux.mmult(reduced_system_lhs, transformation_matrix);
+  pcout << "BLOCCO QUI 3" << std::endl;
+  // for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
+  //   for (unsigned int j = 0; j < transformation_matrix.n(); ++j)
+  //     reduced_system_lhs.set(i, j, res(i, j));
   reduced_system_lhs.compress(VectorOperation::add);
-
-
+  pcout << "BLOCCO QUI 4" << std::endl;
 
 
   // PROVA A COMPORRE VETTORE PER VETTORE
@@ -1038,7 +1061,11 @@ AdvDiffPOD::solve_reduced()
 
   // convertire matrice modes
   // FullMatrix<double> transformation_matrix(modes.size(), modes[0].size());
-  TrilinosWrappers::SparseMatrix transformation_matrix(modes.size(), modes[0].size(), modes[0].size());
+  // TrilinosWrappers::SparseMatrix transformation_matrix(modes.size(), modes[0].size(), modes[0].size());
+  // TrilinosWrappers::SparseMatrix transformation_matrix(modes.size(), modes[0].size(),
+  //                                                      MPI_COMM_WORLD, modes[0].size());
+  TrilinosWrappers::SparseMatrix transformation_matrix(locally_owned_dofs, modes[0].size(),
+                                                      MPI_COMM_WORLD, modes[0].size());
 
   convert_modes(transformation_matrix);
   project_lhs(transformation_matrix);
@@ -1051,8 +1078,10 @@ AdvDiffPOD::solve_reduced()
 
   pcout << "===============================================SEPARA" << std::endl;
   // PROVA, al massimo poi differenzia funzione per non rendere questa troppo lunga
-  TrilinosWrappers::SparseMatrix snapshot_matrix_trilinos(snapshot_matrix.size(),
-    snapshot_matrix[0].size(), snapshot_matrix[0].size());
+  // TrilinosWrappers::SparseMatrix snapshot_matrix_trilinos(snapshot_matrix.size(),
+  //   snapshot_matrix[0].size(), snapshot_matrix[0].size()); // Prova a fare transformation_matrix.reinit(sparsity); anche con questa
+  TrilinosWrappers::SparseMatrix snapshot_matrix_trilinos(snapshot_matrix.size(), snapshot_matrix[0].size(),
+                                                          MPI_COMM_WORLD, snapshot_matrix[0].size());
   pcout << "===============================================" << std::endl;
   pcout << "Converting the snapshot matrix" << std::endl;
 
