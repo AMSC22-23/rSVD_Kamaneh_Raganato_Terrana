@@ -141,13 +141,12 @@ AdvDiffPOD::setup_reduced()
     pcout << "Initializing the reduced mesh" << std::endl;
 
     Triangulation<dim> mesh_serial_r;
-    GridGenerator::subdivided_hyper_cube(mesh_serial_r, modes[0].size()-1, 0.0, 1.0, true); 
-    // QUI HAI CAMBIATO IN MODO CHE LA MATRICE NON ABBIA UN ELEMENTO IN PIU
+    GridGenerator::subdivided_hyper_cube(mesh_serial_r, modes[0].size(), 0.0, 1.0, true);
     pcout << "  Number of elements = " << mesh_r.n_active_cells()
               << std::endl;
 
     // Write the mesh to file.
-    const std::string mesh_file_name_r = "mesh_r-" + std::to_string(modes[0].size()-1) + ".vtk";
+    const std::string mesh_file_name_r = "mesh_r-" + std::to_string(modes[0].size()) + ".vtk";
     GridOut           grid_out_r;
     std::ofstream     grid_out_file_r(mesh_file_name_r);
     grid_out_r.write_vtk(mesh_serial_r, grid_out_file_r);
@@ -412,8 +411,7 @@ AdvDiffPOD::assemble_rhs(const double &time, TrilinosWrappers::SparseMatrix &sna
     // aux.add(i, snapshot_matrix[i][(time-deltat)/deltat]);
     aux(i) = snapshot_matrix_trilinos(i, (time-deltat)/deltat);
   aux.compress(VectorOperation::add);
-  pcout << "BLOCCO QUI" << std::endl;
-  pcout << "check aux" << aux(10) << " " << snapshot_matrix_trilinos(10, (time-deltat)/deltat) << std::endl;
+  // pcout << "BLOCCO QUI" << std::endl;
 
   rhs_matrix.vmult_add(system_rhs, aux); // QUI TI SERVIREBBE NUOVA SOLUTION
   
@@ -752,8 +750,7 @@ AdvDiffPOD::convert_modes(FullMatrix<double> &transformation_matrix)
   //     // transformation_matrix.set(i, j, modes[i][j]);
       // transformation_matrix(i, j) = modes[i][j];
       transformation_matrix.set(i, j, modes[i][j]);
-  // transformation_matrix.compress(VectorOperation::add);
-  // transformation_matrix.compress(VectorOperation::values);
+  transformation_matrix.compress(VectorOperation::add);
   // transformation_matrix.copy_from(modes); // vedi se l'errore di .m e .n è qui e mi sa che era qui ...
 
   pcout << "  Check transformation_matrix: " << std::endl;
@@ -789,15 +786,10 @@ AdvDiffPOD::project_u0(FullMatrix<double> &transformation_matrix)
   // reduced_u_0 = transformation_matrixT * u_0;
 
   // Vector<double> dst(solution_owned.size());
-  Vector<double> dst(transformation_matrix.n()); // controlla
-  // Vector<double> solution_owned_copy(solution_owned); // Copy constructor
-  Vector<double> solution_owned_copy(solution_owned.size());
-  for(unsigned int i = 0; i < solution_owned.size(); ++i)
-    solution_owned_copy(i) = solution_owned(i);
-  solution_owned_copy.compress(VectorOperation::add);
+  // Vector<double> solution_owned_copy(solution_owned.size());
+  // for(unsigned int i = 0; i < solution_owned.size(); ++i)
+  //   solution_owned_copy(i) = solution_owned(i);
   // solution_owned_copy.copy_from(solution_owned);
-  pcout << "Check solution owned" << solution_owned(8) << "  " << solution_owned_copy(8) << std::endl;
-  pcout << "Check solution owned" << solution_owned(80) << "  " << solution_owned_copy(80) << std::endl;
 //   std::vector<Point<dim>> &points;
 
 
@@ -822,17 +814,8 @@ AdvDiffPOD::project_u0(FullMatrix<double> &transformation_matrix)
 
   // TrilinosWrappers::MPI::Vector dst;
   reduced_solution_owned = 0.0;
-  transformation_matrix.Tvmult(dst, solution_owned_copy);
-  // for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
-  //   reduced_solution_owned(i) = dst(i);
-  reduced_solution_owned = dst; // Copy OKAY da Vector a trilinos, valori stampati sotto combaciano
-  // reduced_solution_owned.copy_from(dst);
-
-  // transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
-  // reduced_solution_owned
+  transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
   reduced_solution_owned.compress(VectorOperation::add);
-  pcout << "Check reduced solution owned" << reduced_solution_owned(0) << "  " << dst(0) << std::endl;
-  pcout << "Check reduced solution owned" << reduced_solution_owned(1) << "  " << dst(1) << std::endl;
   // solution_owned.reinit(dst);
   // for (unsigned int i = 0; i < dst.size(); ++i)
   //   solution_owned(i) = dst(i);
@@ -854,35 +837,30 @@ AdvDiffPOD::project_lhs(FullMatrix<double> &transformation_matrix)
   FullMatrix<double> lhs_matrix_copy(lhs_matrix.m(), lhs_matrix.n());
   for (unsigned int i = 0; i < lhs_matrix.m(); ++i)
     for (unsigned int j = 0; j < lhs_matrix.n(); ++j)
-      // lhs_matrix_copy(i, j) = lhs_matrix(i, j);
-      lhs_matrix_copy.set(i, j, lhs_matrix(i, j));
-  // lhs_matrix_copy.copy_from(lhs_matrix); // non mi sembra funzionare
+      lhs_matrix_copy(i, j) = lhs_matrix(i, j);
+  lhs_matrix_copy.copy_from(lhs_matrix); // non mi sembra funzionare
 
   pcout << "  Check lhs_matrix_copy: " << std::endl;
   pcout << lhs_matrix(0, 0) << std::endl;
   pcout << lhs_matrix_copy(0, 0) << std::endl;
   pcout << lhs_matrix(1, 0) << std::endl;
   pcout << lhs_matrix_copy(1, 0) << std::endl;
-  pcout << lhs_matrix(100, 70) << std::endl;
-  pcout << lhs_matrix_copy(100, 70) << std::endl;
-  pcout << lhs_matrix(120, 70) << std::endl;
-  pcout << lhs_matrix_copy(120, 70) << std::endl;
 
   pcout << "BLOCCO QUI 1" << std::endl;
-  reduced_system_lhs = 0.0;
+  // reduced_system_lhs = 0.0;
   assert(transformation_matrix.m() == lhs_matrix_copy.m()); // controllo
   pcout << "Check lhs size" << lhs_matrix_copy.m() << "*" << lhs_matrix_copy.n() << std::endl;
   transformation_matrix.Tmmult(aux, lhs_matrix_copy);
   pcout << "Check aux size" << aux.m() << "*" << aux.n() << std::endl;
-  pcout << "check aux " << aux(1, 1) << std::endl;
+  pcout << "check aux 1, 1" << aux(1, 1) << std::endl;
   pcout << "BLOCCO QUI 2" << std::endl;
   assert(aux.n() == transformation_matrix.m());
   aux.mmult(dst, transformation_matrix);
   pcout << "Check res size" << dst.m() << "*" << dst.n() << std::endl;
   // aux.mmult(reduced_system_lhs, transformation_matrix);
   pcout << "BLOCCO QUI 3" << std::endl;
-  for (unsigned int i = 0; i < dst.m(); ++i)
-    for (unsigned int j = 0; j < dst.n(); ++j) // Dimensioni giuste??
+  for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
+    for (unsigned int j = 0; j < transformation_matrix.n(); ++j)
       reduced_system_lhs.set(i, j, dst(i, j));
   // reduced_system_lhs.copy_from(); // eventualmente togliere
   reduced_system_lhs.compress(VectorOperation::add);
@@ -1043,37 +1021,30 @@ void
 AdvDiffPOD::project_rhs(FullMatrix<double> &transformation_matrix)
 {
   // reduced_system_rhs.Tvmult(transformation_matrix, system_rhs);
-  Vector<double> dst(transformation_matrix.n());
-  // Vector<double> system_rhs_copy(system_rhs); // Copy constructor
-  Vector<double> system_rhs_copy(system_rhs.size());
+  // Vector<double> dst(transformation_matrix.n());
   // Vector<double> system_rhs_copy(transformation_matrix.m());
 
   // // FAI CHECK SU DIMENSIONI CON ERRORE
-  for (unsigned int i = 0; i < transformation_matrix.m(); ++i)
-    system_rhs_copy(i) = system_rhs(i);
-  system_rhs_copy.compress(VectorOperation::add);
+  // for (unsigned int i = 0; i < transformation_matrix.m(); ++i)
+  //   system_rhs_copy(i) = system_rhs(i);
+
   //   pcout << "  Check rhs_matrix_copy: " << std::endl;
   // pcout << system_rhs(40) << std::endl;
   // pcout << system_rhs_copy(40) << std::endl;
   // pcout << system_rhs(41) << std::endl;
   // pcout << system_rhs_copy(41) << std::endl;
   // PROBLEMINO QUI
-  reduced_system_rhs = 0.0; // TENERE?
-  
-  transformation_matrix.Tvmult(dst, system_rhs_copy);
-  // for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
-  //   reduced_system_rhs(i) = dst(i);
-  reduced_system_rhs = dst; // Copy
-    // reduced_system_rhs.set(i, dst(i));
-  reduced_system_rhs.compress(VectorOperation::insert);
+  reduced_system_rhs = 0.0;
+  transformation_matrix.Tvmult(reduced_system_rhs, system_rhs);
+  reduced_system_rhs.compress(VectorOperation::add);
   // reduced_system_rhs.reinit(dst);
   // for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
   //   reduced_system_rhs(i) = dst(i); // RICERCATI POI DEFINIZIONE DELLE VARIE FUNZIONI PER I VARI OGGETTI
 
   // pcout << "  Check reduced_system_rhs: " << std::endl;
-  // pcout << dst(0) << std::endl;
+  // // pcout << dst(40) << std::endl;
   // pcout << reduced_system_rhs(0) << std::endl;
-  // pcout << dst(1) << std::endl;
+  // // pcout << dst(41) << std::endl;
   // pcout << reduced_system_rhs(1) << std::endl;
 }
 
@@ -1100,20 +1071,10 @@ AdvDiffPOD::project_rhs_matrix(FullMatrix<double> &transformation_matrix)
   // pcout << lhs_matrix(1, 0) << std::endl;
   // pcout << lhs_matrix_copy(1, 0) << std::endl;
 
-  // TrilinosWrappers::SparseMatrix aux;
+  TrilinosWrappers::SparseMatrix aux;
   reduced_rhs_matrix = 0.0;
-
-  FullMatrix<double> rhs_matrix_copy(rhs_matrix.m(), rhs_matrix.n());
-  rhs_matrix_copy.copy_from(rhs_matrix); // questo dovrebbe essere ammesso
-  FullMatrix<double> aux(transformation_matrix.n(), rhs_matrix.n()); // (Tn * Tm) * (Rm * Rn) = Tn * Rn
-  FullMatrix<double> dst(transformation_matrix.n(), transformation_matrix.n()); // (Tn * Rn) * (Tm * Tn) = Tn * Tn
-  
-  transformation_matrix.Tmmult(aux, rhs_matrix_copy);
-  aux.mmult(dst, transformation_matrix);
-
-  for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
-    for (unsigned int j = 0; j < transformation_matrix.n(); ++j)
-      reduced_rhs_matrix.set(i, j, dst(i, j));
+  transformation_matrix.Tmmult(aux, rhs_matrix);
+  aux.mmult(reduced_rhs_matrix, transformation_matrix);
   reduced_rhs_matrix.compress(VectorOperation::add);
 
 
