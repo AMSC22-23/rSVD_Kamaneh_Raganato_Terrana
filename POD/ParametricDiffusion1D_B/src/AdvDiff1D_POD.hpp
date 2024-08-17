@@ -310,19 +310,19 @@ protected:
 
   // Project the full order system to the reduced order system thanks to the transformation matrix.
   void
-  convert_modes(FullMatrix<double> &transformation_matrix);
+  convert_modes(TrilinosWrappers::SparseMatrix &transformation_matrix);
 
   void
-  project_u0(FullMatrix<double> &transformation_matrix);
+  project_u0(TrilinosWrappers::SparseMatrix &transformation_matrix);
 
   void
-  project_lhs(FullMatrix<double> &transformation_matrix);
+  project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix);
 
   void
-  project_rhs(FullMatrix<double> &transformation_matrix);
+  project_rhs(TrilinosWrappers::SparseMatrix &transformation_matrix);
 
   void
-  project_rhs_matrix(FullMatrix<double> &transformation_matrix);
+  project_rhs_matrix(TrilinosWrappers::SparseMatrix &transformation_matrix);
 
   // Solve the problem for one time step.
   void
