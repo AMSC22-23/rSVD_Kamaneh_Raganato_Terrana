@@ -413,10 +413,13 @@ AdvDiffPOD::assemble_rhs(const double &time)
   //   // aux.add(i, snapshot_matrix[i][(time-deltat)/deltat]);
   //   aux(i) = snapshot_matrix_trilinos(i, (time-deltat)/deltat);
   // aux.compress(VectorOperation::add);
-  pcout << "BLOCCO QUI" << std::endl;
+
+  // SPIEGA IL MOTIVO DI FOM SOLUTION
+
+
 
   // if (time == deltat) // equivalent to time_step == 1, when solution_owned corresponds to the initial condition
-    rhs_matrix.vmult_add(system_rhs, solution_owned);
+    rhs_matrix.vmult_add(system_rhs, fom_solution);
   // else // ATTENZIONE CHE POI VA MESSA ANCHE SOTTO PER BOUNDARY
   //   rhs_matrix.vmult_add(system_rhs, fom_solution); // QUI TI SERVIREBBE NUOVA SOLUTION
   
@@ -434,7 +437,7 @@ AdvDiffPOD::assemble_rhs(const double &time)
                                              boundary_values);
 
     MatrixTools::apply_boundary_values(
-      boundary_values, lhs_matrix, solution_owned, system_rhs, false);
+      boundary_values, lhs_matrix, fom_solution, system_rhs, false);
   }
 }
 
@@ -1126,7 +1129,8 @@ AdvDiffPOD::expand_solution(TrilinosWrappers::SparseMatrix &transformation_matri
   transformation_matrix.vmult(fom_solution, reduced_solution);
   fom_solution.compress(VectorOperation::add);
 
-  pcout << "Check fom_solution size:" << fom_solution.size() << std::endl;
+  // pcout << "Check fom_solution size:" << fom_solution.size() << std::endl;
+  pcout << "Check fom_solution value:" << fom_solution(17) << std::endl;
   // reduced_system_rhs.reinit(dst);
   // for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
   //   reduced_system_rhs(i) = dst(i); // RICERCATI POI DEFINIZIONE DELLE VARIE FUNZIONI PER I VARI OGGETTI
@@ -1338,6 +1342,13 @@ TrilinosWrappers::SparseMatrix transformation_matrix(locally_owned_modes_rows, l
     // DOPO PROVA, mi sembra più giusto concettualmente
     VectorTools::interpolate(dof_handler, u_0, solution_owned);
     fom_solution = solution_owned;
+
+    pcout << "Check fom_sol" << std::endl;
+    pcout << solution_owned(0) << " " << fom_solution(0) << std::endl;
+    pcout << solution_owned(17) << " " << fom_solution(17) << std::endl;
+    pcout << solution_owned(100) << " " << fom_solution(100) << std::endl;
+
+
     project_u0(transformation_matrix);
     reduced_solution = reduced_solution_owned;
 
