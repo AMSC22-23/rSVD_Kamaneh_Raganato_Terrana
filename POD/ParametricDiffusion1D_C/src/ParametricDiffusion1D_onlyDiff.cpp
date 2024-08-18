@@ -20,7 +20,7 @@ main(int argc, char * argv[])
   dealii::ConditionalOStream pcout(std::cout, mpi_rank == 0);
 
   // const unsigned int N = 119;
-  const unsigned int N = 99;
+  const unsigned int N = 149;
   const unsigned int r = 1;
 
   const double T         = 0.05;
@@ -43,8 +43,8 @@ main(int argc, char * argv[])
 
   const unsigned int n = 1; // Number of parameters
   // prova a vedere cosa succede con uno solo
-  double prm_diffusion_coefficient_min = 0.01;
-  double prm_diffusion_coefficient_max = 0.05;
+  double prm_diffusion_coefficient_min = 0.001;
+  double prm_diffusion_coefficient_max = 0.005;
   std::vector<double> prm_diffusion_coefficient;
   prm_diffusion_coefficient.resize(n); 
 

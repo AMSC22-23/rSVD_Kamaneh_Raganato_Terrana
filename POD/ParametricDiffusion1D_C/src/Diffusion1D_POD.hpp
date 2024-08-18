@@ -184,7 +184,7 @@ public:
     value(const Point<dim> &p,
           const unsigned int /*component*/ = 0) const override
     {
-      return 2*std::sin(M_PI*p[0]);
+      return std::sin(M_PI*p[0]);
     }
   };
 
@@ -434,6 +434,8 @@ protected:
 
     // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
+  TrilinosWrappers::MPI::Vector fom_solution;
+
 
   // System solution (without ghost elements).
   // TrilinosWrappers::MPI::Vector solution_owned;

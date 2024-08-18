@@ -333,7 +333,7 @@ DiffusionPOD::assemble_rhs(const double &time)
   system_rhs.compress(VectorOperation::add);
 
   // Add the term that comes from the old solution.
-  rhs_matrix.vmult_add(system_rhs, solution_owned);
+  rhs_matrix.vmult_add(system_rhs, fom_solution);
   
   // Boundary conditions.
   {
@@ -349,7 +349,7 @@ DiffusionPOD::assemble_rhs(const double &time)
                                              boundary_values);
 
     MatrixTools::apply_boundary_values(
-      boundary_values, lhs_matrix, solution_owned, system_rhs, false);
+      boundary_values, lhs_matrix, fom_solution, system_rhs, false);
   }
 }
 
@@ -564,11 +564,11 @@ DiffusionPOD::project_lhs(FullMatrix<double> &transformation_matrix)
   FullMatrix<double> aux(transformation_matrix.n(), lhs_matrix.n()); // (Tn * Tm) * (Lm * Ln) = Tn * Ln
   FullMatrix<double> dst(transformation_matrix.n(), transformation_matrix.n()); // (Tn * Ln) * (Tm * Tn) = Tn * Tn
   FullMatrix<double> lhs_matrix_copy(lhs_matrix.m(), lhs_matrix.n());
-  // for (unsigned int i = 0; i < lhs_matrix.m(); ++i)
-  //   for (unsigned int j = 0; j < lhs_matrix.n(); ++j)
-  //     // lhs_matrix_copy(i, j) = lhs_matrix(i, j);
-  //     lhs_matrix_copy.set(i, j, lhs_matrix(i, j));
-  lhs_matrix_copy.copy_from(lhs_matrix); // non mi sembra funzionare
+  for (unsigned int i = 0; i < lhs_matrix.m(); ++i)
+    for (unsigned int j = 0; j < lhs_matrix.n(); ++j)
+      // lhs_matrix_copy(i, j) = lhs_matrix(i, j);
+      lhs_matrix_copy.set(i, j, lhs_matrix(i, j));
+  // lhs_matrix_copy.copy_from(lhs_matrix); // non mi sembra funzionare
 
   pcout << "  Check lhs_matrix_copy: " << std::endl;
   pcout << lhs_matrix(0, 0) << std::endl;
@@ -1073,6 +1073,18 @@ TrilinosWrappers::SparseMatrix transformation_matrix(locally_owned_modes_rows, l
 
     // DOPO PROVA, mi sembra più giusto concettualmente
     VectorTools::interpolate(dof_handler, u_0, solution_owned);
+    
+    fom_solution = solution_owned;
+    // for (unsigned int i = 0; i < solution_owned.size(); ++i)
+    //   fom_solution(i) = solution_owned(i);
+    // fom_solution.copy_from(solution_owned);
+
+    pcout << "Check fom_sol" << std::endl;
+    pcout << solution_owned(0) << " " << fom_solution(0) << std::endl;
+    pcout << solution_owned(17) << " " << fom_solution(17) << std::endl;
+    pcout << solution_owned(100) << " " << fom_solution(100) << std::endl;
+
+
     project_u0(transformation_matrix);
     // reduced_solution = reduced_solution_owned;
 
