@@ -218,15 +218,22 @@ main(int argc, char * argv[])
     // for(size_t j=0; j<rom_sizes[i]; j++)
     //   rom_state(j) = problemPOD.solution[j]; // CONTROLLA
     // Vec_v fom_state = modes * rom_state; // (U.rows() * rom_sizes[i]) * (rom_sizes[i] * 1)
-    std::vector<double> rom_state;
-    rom_state.resize(rom_sizes[i]);
-      for(size_t j=0; j<rom_sizes[i]; j++)
-        rom_state[j] = problemPOD.reduced_solution[j]; // CONTROLLA
+
+    // CAMBIATO
+    // std::vector<double> rom_state;
+    // rom_state.resize(rom_sizes[i]);
+    //   for(size_t j=0; j<rom_sizes[i]; j++)
+    //     rom_state[j] = problemPOD.reduced_solution[j]; // CONTROLLA
+    // Vec_v fom_state = Vec_v::Zero(compute_modes.W.rows()); // SISTEMA DIMENSIONI
+    // for (size_t j=0; j<compute_modes.W.rows(); j++)
+    //   for (size_t k=0; k<rom_sizes[i]; k++)
+    //     fom_state(j) += modes[j][k] * rom_state[k]; // PRODOTTO MATRICE VETTORE MAGARI ESISTE
+
+    // Spiega fom_state proiettato dentro
     Vec_v fom_state = Vec_v::Zero(compute_modes.W.rows()); // SISTEMA DIMENSIONI
     for (size_t j=0; j<compute_modes.W.rows(); j++)
-      for (size_t k=0; k<rom_sizes[i]; k++)
-        fom_state(j) += modes[j][k] * rom_state[k]; // PRODOTTO MATRICE VETTORE MAGARI ESISTE
-
+      fom_state(j) = problemPOD.fom_solution[j];
+    
     // The current fom_state is stored in approximations matrix.
     approximations.col(i) = fom_state;
 

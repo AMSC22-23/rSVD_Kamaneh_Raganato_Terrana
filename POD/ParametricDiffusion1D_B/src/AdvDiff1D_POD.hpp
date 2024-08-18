@@ -289,7 +289,8 @@ public:
   // HAI SPOSTATO TU PER RIPROIEZIONE IN MAIN poi eventualmente sposta poiezione di qui
   // System solution (including ghost elements).
   // TrilinosWrappers::MPI::Vector solution; 
-  TrilinosWrappers::MPI::Vector reduced_solution; 
+  // TrilinosWrappers::MPI::Vector reduced_solution; 
+  TrilinosWrappers::MPI::Vector fom_solution;
 
 protected:
   // Setup the reduced system.
@@ -478,11 +479,13 @@ protected:
 
   // ... qui eventualmente togli se puoi evitare u_0
   // però mi sa che devi moltiplicare per V la condizione iniziale e allora potresti fare project_solutionowned
-  TrilinosWrappers::SparseMatrix reduced_u_0;
+  // TrilinosWrappers::SparseMatrix reduced_u_0;
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
-  TrilinosWrappers::MPI::Vector fom_solution;
+
+  // ...
+  TrilinosWrappers::MPI::Vector reduced_solution; 
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector reduced_solution_owned; // che è praticamente usata per condizione iniziale ridotta
