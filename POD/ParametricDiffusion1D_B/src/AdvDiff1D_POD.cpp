@@ -350,7 +350,7 @@ AdvDiffPOD::assemble_matrices()
 }
 
 void
-AdvDiffPOD::assemble_rhs(const double &time, TrilinosWrappers::SparseMatrix &snapshot_matrix_trilinos)
+AdvDiffPOD::assemble_rhs(const double &time)
 {
   const unsigned int dofs_per_cell = fe->dofs_per_cell;
   const unsigned int n_q           = quadrature->size();
@@ -405,17 +405,20 @@ AdvDiffPOD::assemble_rhs(const double &time, TrilinosWrappers::SparseMatrix &sna
   system_rhs.compress(VectorOperation::add);
 
   // Add the term that comes from the old solution.
-  TrilinosWrappers::MPI::Vector aux(locally_owned_dofs, MPI_COMM_WORLD);
-  // pcout << "  Check aux.size() = " << aux.size() << std::endl;
-  // pcout << "  Check solution_owned.size() = " << solution_owned.size() << std::endl;
-  // DA CORREGGERE
-  for (unsigned int i = 0; i < aux.size(); ++i)
-    // aux.add(i, snapshot_matrix[i][(time-deltat)/deltat]);
-    aux(i) = snapshot_matrix_trilinos(i, (time-deltat)/deltat);
-  aux.compress(VectorOperation::add);
+  // TrilinosWrappers::MPI::Vector aux(locally_owned_dofs, MPI_COMM_WORLD);
+  // // pcout << "  Check aux.size() = " << aux.size() << std::endl;
+  // // pcout << "  Check solution_owned.size() = " << solution_owned.size() << std::endl;
+  // // DA CORREGGERE
+  // for (unsigned int i = 0; i < aux.size(); ++i)
+  //   // aux.add(i, snapshot_matrix[i][(time-deltat)/deltat]);
+  //   aux(i) = snapshot_matrix_trilinos(i, (time-deltat)/deltat);
+  // aux.compress(VectorOperation::add);
   pcout << "BLOCCO QUI" << std::endl;
 
-  rhs_matrix.vmult_add(system_rhs, aux); // QUI TI SERVIREBBE NUOVA SOLUTION
+  // if (time == deltat) // equivalent to time_step == 1, when solution_owned corresponds to the initial condition
+    rhs_matrix.vmult_add(system_rhs, solution_owned);
+  // else // ATTENZIONE CHE POI VA MESSA ANCHE SOTTO PER BOUNDARY
+  //   rhs_matrix.vmult_add(system_rhs, fom_solution); // QUI TI SERVIREBBE NUOVA SOLUTION
   
   // Boundary conditions.
   {
@@ -818,6 +821,9 @@ AdvDiffPOD::project_u0(TrilinosWrappers::SparseMatrix &transformation_matrix)
   reduced_solution_owned = 0.0;
   transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
   reduced_solution_owned.compress(VectorOperation::add);
+
+  pcout << "Check reduced solution owned" << std::endl;
+  pcout << reduced_solution_owned(0) << " " << reduced_solution_owned(1) << std::endl;
   // solution_owned.reinit(dst);
   // for (unsigned int i = 0; i < dst.size(); ++i)
   //   solution_owned(i) = dst(i);
@@ -1097,7 +1103,40 @@ AdvDiffPOD::project_rhs_matrix(TrilinosWrappers::SparseMatrix &transformation_ma
   // pcout << reduced_rhs_matrix(1, 0) << std::endl;
 }
 
+void
+AdvDiffPOD::expand_solution(TrilinosWrappers::SparseMatrix &transformation_matrix)
+// AdvDiffPOD::project_rhs(FullMatrix<double> &transformation_matrix)
+{
+  // reduced_system_rhs.Tvmult(transformation_matrix, system_rhs);
+  // Vector<double> dst(transformation_matrix.n());
+  // Vector<double> system_rhs_copy(transformation_matrix.m());
 
+  // // FAI CHECK SU DIMENSIONI CON ERRORE
+  // for (unsigned int i = 0; i < transformation_matrix.m(); ++i)
+  //   system_rhs_copy(i) = system_rhs(i);
+
+  //   pcout << "  Check rhs_matrix_copy: " << std::endl;
+  // pcout << system_rhs(40) << std::endl;
+  // pcout << system_rhs_copy(40) << std::endl;
+  // pcout << system_rhs(41) << std::endl;
+  // pcout << system_rhs_copy(41) << std::endl;
+  // PROBLEMINO QUI
+  // questo mi sa che non funzionerà mai
+  fom_solution = 0.0;
+  transformation_matrix.vmult(fom_solution, reduced_solution);
+  fom_solution.compress(VectorOperation::add);
+
+  pcout << "Check fom_solution size:" << fom_solution.size() << std::endl;
+  // reduced_system_rhs.reinit(dst);
+  // for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
+  //   reduced_system_rhs(i) = dst(i); // RICERCATI POI DEFINIZIONE DELLE VARIE FUNZIONI PER I VARI OGGETTI
+
+  // pcout << "  Check reduced_system_rhs: " << std::endl;
+  // // pcout << dst(40) << std::endl;
+  // pcout << reduced_system_rhs(0) << std::endl;
+  // // pcout << dst(41) << std::endl;
+  // pcout << reduced_system_rhs(1) << std::endl;
+}
 
 void
 AdvDiffPOD::solve_time_step_reduced()
@@ -1209,16 +1248,16 @@ TrilinosWrappers::SparseMatrix transformation_matrix(locally_owned_modes_rows, l
   pcout << reduced_system_lhs(0, 0) << std::endl;
 
 
-  pcout << snapshot_matrix[1][1] << std::endl;
+  // pcout << snapshot_matrix[1][1] << std::endl;
 
   pcout << "===============================================SEPARA" << std::endl;
   // PROVA, al massimo poi differenzia funzione per non rendere questa troppo lunga
-  TrilinosWrappers::SparseMatrix snapshot_matrix_trilinos(snapshot_matrix.size(),
-    snapshot_matrix[0].size(), snapshot_matrix[0].size()); // Prova a fare transformation_matrix.reinit(sparsity); anche con questa
-  // TrilinosWrappers::SparseMatrix snapshot_matrix_trilinos(snapshot_matrix.size(), snapshot_matrix[0].size(),
-  //                                                         MPI_COMM_WORLD, snapshot_matrix[0].size());
-  pcout << "===============================================" << std::endl;
-  pcout << "Converting the snapshot matrix" << std::endl;
+  // TrilinosWrappers::SparseMatrix snapshot_matrix_trilinos(snapshot_matrix.size(),
+  //   snapshot_matrix[0].size(), snapshot_matrix[0].size()); // Prova a fare transformation_matrix.reinit(sparsity); anche con questa
+  // // TrilinosWrappers::SparseMatrix snapshot_matrix_trilinos(snapshot_matrix.size(), snapshot_matrix[0].size(),
+  // //                                                         MPI_COMM_WORLD, snapshot_matrix[0].size());
+  // pcout << "===============================================" << std::endl;
+  // pcout << "Converting the snapshot matrix" << std::endl;
 
 //   const unsigned int dofs_per_cell_s = fe->dofs_per_cell;
 //     const unsigned int n_q           = quadrature->size();
@@ -1262,19 +1301,19 @@ TrilinosWrappers::SparseMatrix transformation_matrix(locally_owned_modes_rows, l
 
 
   // convert_modes(snapshot_matrix_trilinos); SARÀ CONVERT SNAPSHOTS
-  for (unsigned int i = 0; i < snapshot_matrix.size(); ++i)
-    for (unsigned int j = 0; j < snapshot_matrix[0].size(); ++j)
-  //     // transformation_matrix.set(i, j, modes[i][j]);
-      // transformation_matrix(i, j) = modes[i][j];
-      snapshot_matrix_trilinos.set(i, j, snapshot_matrix[i][j]);
-  snapshot_matrix_trilinos.compress(VectorOperation::add);
+  // for (unsigned int i = 0; i < snapshot_matrix.size(); ++i)
+  //   for (unsigned int j = 0; j < snapshot_matrix[0].size(); ++j)
+  // //     // transformation_matrix.set(i, j, modes[i][j]);
+  //     // transformation_matrix(i, j) = modes[i][j];
+  //     snapshot_matrix_trilinos.set(i, j, snapshot_matrix[i][j]);
+  // snapshot_matrix_trilinos.compress(VectorOperation::add);
 
   
-  pcout << "  Check snapshot_matrix_trilinos: " << std::endl;
-  pcout << snapshot_matrix[1][1] << std::endl;
-  pcout << snapshot_matrix_trilinos(1, 1) << std::endl;
-  pcout << snapshot_matrix[2][1] << std::endl;
-  pcout << snapshot_matrix_trilinos(2, 1) << std::endl;
+  // pcout << "  Check snapshot_matrix_trilinos: " << std::endl;
+  // pcout << snapshot_matrix[1][1] << std::endl;
+  // pcout << snapshot_matrix_trilinos(1, 1) << std::endl;
+  // pcout << snapshot_matrix[2][1] << std::endl;
+  // pcout << snapshot_matrix_trilinos(2, 1) << std::endl;
 
 
 
@@ -1298,6 +1337,7 @@ TrilinosWrappers::SparseMatrix transformation_matrix(locally_owned_modes_rows, l
 
     // DOPO PROVA, mi sembra più giusto concettualmente
     VectorTools::interpolate(dof_handler, u_0, solution_owned);
+    fom_solution = solution_owned;
     project_u0(transformation_matrix);
     reduced_solution = reduced_solution_owned;
 
@@ -1328,10 +1368,11 @@ TrilinosWrappers::SparseMatrix transformation_matrix(locally_owned_modes_rows, l
 
       // Prova usando snapshot_matrix come solution_owned full
       // direi ad ogni tempo di prendere solution_owned come snapshot_matrix colonna al tempo precedente
-      assemble_rhs(time, snapshot_matrix_trilinos);
+      assemble_rhs(time);
       project_rhs(transformation_matrix);
 
       solve_time_step_reduced();
+      expand_solution(transformation_matrix);
       output(time_step);
     }
 

@@ -255,7 +255,7 @@ public:
              const double       &T_,
              const double       &deltat_,
              const double       &theta_,
-             const std::vector<std::vector<double>> &snapshot_matrix_,
+            //  const std::vector<std::vector<double>> &snapshot_matrix_,
              const std::vector<std::vector<double>> &modes_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
@@ -266,7 +266,7 @@ public:
     , deltat(deltat_)
     , theta(theta_)
     , modes(modes_)
-    , snapshot_matrix(snapshot_matrix_)
+    // , snapshot_matrix(snapshot_matrix_)
     , mesh(MPI_COMM_WORLD)
     , mesh_r(MPI_COMM_WORLD)
   {}
@@ -302,7 +302,7 @@ protected:
 
   // Assemble the right-hand side of the problem.
   void
-  assemble_rhs(const double &time, TrilinosWrappers::SparseMatrix &snapshot_matrix_trilinos);
+  assemble_rhs(const double &time);
 
   // Assemble the right-hand side of the problem.  ..... altrimenti serve solution_owned
   void
@@ -323,6 +323,9 @@ protected:
 
   void
   project_rhs_matrix(TrilinosWrappers::SparseMatrix &transformation_matrix);
+
+  void
+  expand_solution(TrilinosWrappers::SparseMatrix &transformation_matrix);
 
   // Solve the problem for one time step.
   void
@@ -395,7 +398,7 @@ protected:
   // Projection. ///////////////////////////////////////////////////////////
 
   // La metti qui per proiezione nel senso che serve solution_owned, ma è okay? ha senso? rende il codice riproducibile?
-  const std::vector<std::vector<double>> snapshot_matrix; 
+  // const std::vector<std::vector<double>> snapshot_matrix; 
   // TrilinosWrappers::SparseMatrix snapshot_matrix_trilinos;
 
   // Transformation matrix.
@@ -479,6 +482,7 @@ protected:
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
+  TrilinosWrappers::MPI::Vector fom_solution;
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector reduced_solution_owned; // che è praticamente usata per condizione iniziale ridotta

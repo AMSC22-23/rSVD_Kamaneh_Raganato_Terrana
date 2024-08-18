@@ -140,8 +140,8 @@ AdvDiffPOD::setup_reduced()
   {
     pcout << "Initializing the reduced mesh" << std::endl;
 
-    Triangulation<dim> mesh_serial_r;
-    GridGenerator::subdivided_hyper_cube(mesh_serial_r, modes[0].size()-1, 0.0, 1.0, true); 
+    // Triangulation<dim> mesh_serial_r;
+    GridGenerator::subdivided_hyper_cube(mesh_r, modes[0].size()-1, 0.0, 1.0, true); 
     // QUI HAI CAMBIATO IN MODO CHE LA MATRICE NON ABBIA UN ELEMENTO IN PIU
     pcout << "  Number of elements = " << mesh_r.n_active_cells()
               << std::endl;
@@ -153,10 +153,10 @@ AdvDiffPOD::setup_reduced()
     grid_out_r.write_vtk(mesh_serial_r, grid_out_file_r);
     pcout << "  Mesh saved to " << mesh_file_name_r << std::endl;
 
-    GridTools::partition_triangulation(mpi_size, mesh_serial_r);
-    const auto construction_data_r = TriangulationDescription::Utilities::
-      create_description_from_triangulation(mesh_serial_r, MPI_COMM_WORLD);
-    mesh_r.create_triangulation(construction_data_r);
+    // GridTools::partition_triangulation(mpi_size, mesh_serial_r);
+    // const auto construction_data_r = TriangulationDescription::Utilities::
+    //   create_description_from_triangulation(mesh_serial_r, MPI_COMM_WORLD);
+    // mesh_r.create_triangulation(construction_data_r);
 
     pcout << "  Number of elements = " << mesh_r.n_global_active_cells()
           << std::endl;
@@ -194,8 +194,8 @@ AdvDiffPOD::setup_reduced()
     dof_handler_r.reinit(mesh_r);
     dof_handler_r.distribute_dofs(*fe_r);
 
-    locally_owned_dofs_r = dof_handler_r.locally_owned_dofs();
-    DoFTools::extract_locally_relevant_dofs(dof_handler_r, locally_relevant_dofs_r);
+    // locally_owned_dofs_r = dof_handler_r.locally_owned_dofs();
+    // DoFTools::extract_locally_relevant_dofs(dof_handler_r, locally_relevant_dofs_r);
 
     pcout << "  Number of DoFs = " << dof_handler_r.n_dofs() << std::endl;
 

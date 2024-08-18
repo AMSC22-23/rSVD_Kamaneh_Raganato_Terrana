@@ -418,6 +418,7 @@ protected:
 
   // Reduced mesh.
   parallel::fullydistributed::Triangulation<dim> mesh_r;
+  // Triangulation<dim> mesh_r;
 
   // Finite element space.
   std::unique_ptr<FiniteElement<dim>> fe;

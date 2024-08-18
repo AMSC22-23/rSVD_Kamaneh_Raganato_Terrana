@@ -165,13 +165,13 @@ main(int argc, char * argv[])
     //PROVA a farti la classe per farti dare rhs e prenderlo e usarlo di qui
     // const unsigned int sample_every_pod = 166;
 
-    snapshot_matrix_aux.resize(snapshots.rows());
-    for(auto &row : snapshot_matrix_aux)
-      row.resize(snapshots.cols(), 0.0);
-    for (size_t j=0; j<snapshots.rows(); j++) // magari cambiare con iteratori? o esiste una copy_from?
-      for (size_t k=0; k<snapshots.cols(); k++)
-        snapshot_matrix_aux[j][k] = snapshots(j, k);
-    AdvDiffPOD problemPOD(N, r, T, deltat, theta, snapshot_matrix_aux, modes); // qui sample every non serve
+    // snapshot_matrix_aux.resize(snapshots.rows());
+    // for(auto &row : snapshot_matrix_aux)
+    //   row.resize(snapshots.cols(), 0.0);
+    // for (size_t j=0; j<snapshots.rows(); j++) // magari cambiare con iteratori? o esiste una copy_from?
+    //   for (size_t k=0; k<snapshots.cols(); k++)
+    //     snapshot_matrix_aux[j][k] = snapshots(j, k);
+    AdvDiffPOD problemPOD(N, r, T, deltat, theta, modes); // qui sample every non serve
     
     problemPOD.setup();
     problemPOD.solve_reduced();
