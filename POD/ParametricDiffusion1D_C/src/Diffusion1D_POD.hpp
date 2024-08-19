@@ -1,8 +1,7 @@
-#ifndef ADV_DIFF_1D_HPP
-#define ADV_DIFF_1D_HPP
-
+#ifndef DIFFUSION1D_POD_HPP
+#define DIFFUSION1D_POD_HPP
 /**
- * The aim of this class is to solve the advection diffusion full order problem in 1D in order to collect the snapshot matrix.
+ * The aim of this class is to solve the diffusion reduced order problem in 1D.
  */
 
 #include <deal.II/base/conditional_ostream.h>
@@ -25,9 +24,13 @@
 #include <deal.II/grid/grid_in.h>
 
 #include <deal.II/lac/dynamic_sparsity_pattern.h>
+#include <deal.II/lac/precondition.h>
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/trilinos_precondition.h>
 #include <deal.II/lac/trilinos_sparse_matrix.h>
+#include <deal.II/lac/full_matrix.h>
+#include <deal.II/lac/sparse_matrix.h>
+#include <deal.II/lac/vector.h>
 
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/matrix_tools.h>
@@ -42,8 +45,8 @@
 
 using namespace dealii;
 
-// Class representing the linear diffusion advection problem.
-class AdvDiff
+// Class representing the linear diffusion problem.
+class DiffusionPOD
 {
 public:
   // Physical dimension (1D, 2D, 3D)
@@ -57,45 +60,65 @@ public:
     DiffusionCoefficient()
     {}
 
+    DiffusionCoefficient(const double prm_diffusion_coefficient) : prm(prm_diffusion_coefficient)
+    {}
+
     // Evaluation.
     virtual double
     value(const Point<dim> & /*p*/,
           const unsigned int /*component*/ = 0) const override
     {
-      // return std::pow(p[0], 4);
-      // return p[0];
-      return 0.01;
+      return prm;
     }
+  
+  private:
+    double prm;
   };
+
+  // Reaction coefficient.
+  // class ReactionCoefficient : public Function<dim>
+  // {
+  // public:
+  //   // Constructor.
+  //   ReactionCoefficient()
+  //   {}
+
+  //   // Evaluation.
+  //   virtual double
+  //   value(const Point<dim> & /*p*/,
+  //         const unsigned int /*component*/ = 0) const override
+  //   {
+  //     return 1.0;
+  //   }
+  // };
 
   // Transport coefficient.
-  class TransportCoefficient : public Function<dim>
-  {
-  public:
-    // Constructor.
-    TransportCoefficient()
-    {}
+  // class TransportCoefficient : public Function<dim>
+  // {
+  // public:
+  //   // Constructor.
+  //   TransportCoefficient()
+  //   {}
 
-    // Evaluation.
-    virtual void
-    vector_value(const Point<dim> & /*p*/,
-                 Vector<double> &values) const override
-    {
-      // values[0] = 2.0;
-      values[0] = 0.2;
-    }
+  //   // Evaluation.
+  //   virtual void
+  //   vector_value(const Point<dim> & /*p*/,
+  //                Vector<double> &values) const override
+  //   {
+  //     values[0] = 1.0;
+  //     values[1] = 1.0;
+  //   }
 
-    virtual double
-    value(const Point<dim> & /*p*/,
-          const unsigned int component = 0) const override
-    {
-      if (component == 0)
-        // return 2.0;
-        return 0.2;
-      else
-        return 0.0;
-    }
-  };
+  //   virtual double
+  //   value(const Point<dim> & /*p*/,
+  //         const unsigned int component = 0) const override
+  //   {
+  //     if (component == 0)
+  //       return 1.0;
+  //     else
+  //       return 1.0;
+  //   }
+  // };
 
   // Forcing term.
   class ForcingTerm : public Function<dim>
@@ -131,6 +154,23 @@ public:
     }
   };
 
+  // Neumann boundary conditions.
+  // class FunctionH : public Function<dim>
+  // {
+  // public:
+  //   // Constructor.
+  //   FunctionH()
+  //   {}
+
+  //   // Evaluation:
+  //   virtual double
+  //   value(const Point<dim> &/*p*/,
+  //         const unsigned int /*component*/ = 0) const override
+  //   {
+  //     return 0.0;
+  //   }
+  // };
+
   // Function for the initial condition.
   class FunctionU0 : public Function<dim>
   {
@@ -139,35 +179,15 @@ public:
     FunctionU0()
     {}
 
-    // CAPIRE SE UTILE  CON PARAMETER HANDLER
-    // FunctionU0(const std::vector<double> initial_state) : u0(initial_state)
-    // {}
-
     // Evaluation.
     virtual double
-    value(const Point<dim> & p,
+    value(const Point<dim> &p,
           const unsigned int /*component*/ = 0) const override
     {
       return std::sin(M_PI*p[0]);
     }
-
-    // CAPIRE SE UTILE  CON PARAMETER HANDLER
-    // private:
-    //   std::vector<double> u0;
-
-    // // Evaluation.
-    // virtual double
-    // value(const Point<dim> &p,
-    //       const unsigned int /*component*/ = 0) const override
-    // {
-    //   if (initial_state.empty())
-    //     return std::sin(M_PI*p[0]);
-    //   else
-    //     return initial_state;
-    // }
   };
 
-  // CAPIRE SE UTILE PER CONVERGENZA
   // Exact solution.
   // class ExactSolution : public Function<dim>
   // {
@@ -201,13 +221,17 @@ public:
   //   }
   // };
 
-  // Default constructor.
-  AdvDiff(const unsigned int N_,
-          const unsigned int &r_,
-          const double       &T_,
-          const double       &deltat_,
-          const double       &theta_,
-          const unsigned int &sample_every_)
+  // Constructor. We provide the final time, time step Delta t and theta method
+  // parameter as constructor arguments.
+  DiffusionPOD(const unsigned int N_,
+               const unsigned int &r_,
+               const double       &T_,
+               const double       &deltat_,
+               const double       &theta_,
+               /*std::vector<unsigned int> &boundary_dofs_idx_int_,*/
+               // std::vector<double> &snapshot_array_,
+               const std::vector<std::vector<double>> &modes_,
+               const double &prm_diffusion_coefficient_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
@@ -216,7 +240,10 @@ public:
     , r(r_)
     , deltat(deltat_)
     , theta(theta_)
-    , sample_every(sample_every_)
+    , modes(modes_)
+    /*, boundary_dofs_idx_int(boundary_dofs_idx_int_)*/
+    // , snapshot_array(snapshot_array_)
+    , mu(prm_diffusion_coefficient_)
     , mesh(MPI_COMM_WORLD)
   {}
 
@@ -226,20 +253,28 @@ public:
 
   // Solve the problem.
   void
-  solve();
+  solve_reduced();
 
   // Compute the error for convergence analysis.
   // double
   // compute_error(const VectorTools::NormType &norm_type);
 
-  // Snapshot matrix. It collects the solution at each time step. It contains the snapshots computed for a single parameter, 
-  // in other words, the time evolution for a single parameter.
-  std::vector<std::vector<double>> snapshot_matrix;
+  // Boundary DOFs indices.
+  // std::vector<unsigned int> boundary_dofs_idx_int;
 
-  // System solution (including ghost elements). 
-  TrilinosWrappers::MPI::Vector solution;
+  // Snapshot matrix.
+  // std::vector<std::vector<double>> snapshot_matrix;
+
+  // System solution (including ghost elements). SPOSTATO QUI PER CONTROLLO STAMPA
+  // TrilinosWrappers::MPI::Vector solution;
+  Vector<double> reduced_solution;
+
 
 protected:
+  // Setup the reduced system.
+  void
+  setup_reduced();
+
   // Assemble the mass and stiffness matrices.
   void
   assemble_matrices();
@@ -248,19 +283,35 @@ protected:
   void
   assemble_rhs(const double &time);
 
+  // Assemble the right-hand side of the problem.  ..... altrimenti serve solution_owned
+  void
+  assemble_reduced_rhs(const double &time);
+
+  // Project the full order system to the reduced order system thanks to the transformation matrix.
+  void
+  convert_modes(FullMatrix<double> &transformation_matrix);
+
+  void
+  project_u0(FullMatrix<double> &transformation_matrix);
+
+  void
+  project_lhs(FullMatrix<double> &transformation_matrix);
+
+  void
+  project_rhs(FullMatrix<double> &transformation_matrix);
+
+  void
+  project_rhs_matrix(FullMatrix<double> &transformation_matrix);
+
   // Solve the problem for one time step.
   void
-  solve_time_step();
-
-  // Assemble the snapshot matrix.
-  void
-  assemble_snapshot_matrix(const unsigned int &time_step);
+  solve_time_step_reduced();
 
   // Output.
   void
   output(const unsigned int &time_step) const;
 
-  // MPI parallel. //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // MPI parallel. /////////////////////////////////////////////////////////////
 
   // Number of MPI processes.
   const unsigned int mpi_size;
@@ -271,13 +322,16 @@ protected:
   // Parallel output stream.
   ConditionalOStream pcout;
 
-  // Problem definition. ////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Problem definition. ///////////////////////////////////////////////////////
 
   // Diffusion coefficient.
   DiffusionCoefficient mu;
 
+  // Reaction coefficient.
+  // ReactionCoefficient reaction_coefficient;
+
   // Transport coefficient.
-  TransportCoefficient beta;
+  // TransportCoefficient transport_coefficient;
 
   // Forcing term.
   ForcingTerm forcing_term;
@@ -287,6 +341,9 @@ protected:
 
   // Initial condition.
   FunctionU0 u_0;
+
+  // h(x).
+  // FunctionH function_h;
 
   // Exact solution.
   // ExactSolution exact_solution;
@@ -300,10 +357,7 @@ protected:
   // Number of elements.
   const unsigned int N;
 
-  // Sample_every parameter for selecting time steps which solution has to be collected in the snapshot matrix.
-  const unsigned int sample_every;
-
-  // Discretization. ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Discretization. ///////////////////////////////////////////////////////////
 
   // Polynomial degree.
   const unsigned int r;
@@ -314,26 +368,48 @@ protected:
   // Theta parameter of the theta method.
   const double theta;
 
+  // Projection. ///////////////////////////////////////////////////////////////
+
+
+  // Transformation matrix.
+  const std::vector<std::vector<double>> modes;
+  // FullMatrix<double> transformation_matrix;
+
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;
+
+  // Reduced mesh.
+  // parallel::fullydistributed::Triangulation<dim> mesh_r;
+  Triangulation<dim> mesh_r;
 
   // Finite element space.
   std::unique_ptr<FiniteElement<dim>> fe;
 
+  // Finite element space for reduced system.
+  std::unique_ptr<FiniteElement<dim>> fe_r;
+
   // Quadrature formula.
   std::unique_ptr<Quadrature<dim>> quadrature;
+
+  // Quadrature formula for reduced system.
+  std::unique_ptr<Quadrature<dim>> quadrature_r;
 
   // Quadrature formula used on boundary lines.
   std::unique_ptr<Quadrature<dim - 1>> quadrature_boundary;
 
   // DoF handler.
   DoFHandler<dim> dof_handler;
+  // DoF handler for reduced system.
+  DoFHandler<dim> dof_handler_r;
 
   // DoFs owned by current process.
   IndexSet locally_owned_dofs;
 
   // DoFs relevant to the current process (including ghost DoFs).
   IndexSet locally_relevant_dofs;
+
+  // Sparsity pattern.
+  SparsityPattern sparsity_pattern_r; // per ridotta non distribuita
 
   // Mass matrix M / deltat.
   TrilinosWrappers::SparseMatrix mass_matrix;
@@ -343,16 +419,29 @@ protected:
 
   // Matrix on the left-hand side (M / deltat + theta A).
   TrilinosWrappers::SparseMatrix lhs_matrix;
+  // SparseMatrix<double> lhs_matrix;
+  SparseMatrix<double> reduced_system_lhs;
 
   // Matrix on the right-hand side (M / deltat - (1 - theta) A).
   TrilinosWrappers::SparseMatrix rhs_matrix;
+  // SparseMatrix<double> rhs_matrix;
+  SparseMatrix<double> reduced_rhs_matrix;
 
   // Right-hand side vector in the linear system.
   TrilinosWrappers::MPI::Vector system_rhs;
+  // Vector<double> system_rhs;
+  Vector<double> reduced_system_rhs;
+
+    // System solution (without ghost elements).
+  TrilinosWrappers::MPI::Vector solution_owned;
+  TrilinosWrappers::MPI::Vector fom_solution;
+
 
   // System solution (without ghost elements).
-  TrilinosWrappers::MPI::Vector solution_owned;
+  // TrilinosWrappers::MPI::Vector solution_owned;
 
+  // System solution (including ghost elements).
+  // TrilinosWrappers::MPI::Vector solution;
 };
 
 #endif

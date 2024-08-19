@@ -1,7 +1,7 @@
-#include "AdvDiff1D.hpp"
+#include "Diffusion1D.hpp"
 
 void
-AdvDiff::setup()
+Diffusion::setup()
 {
   // Create the mesh.
   {
@@ -28,7 +28,7 @@ AdvDiff::setup()
           << std::endl;
   }
 
-  pcout << "-------------------------------------------------------------------" << std::endl;
+  pcout << "-----------------------------------------------" << std::endl;
 
   // Initialize the finite element space.
   {
@@ -44,9 +44,14 @@ AdvDiff::setup()
 
     pcout << "  Quadrature points per cell = " << quadrature->size()
           << std::endl;
+
+    // quadrature_boundary = std::make_unique<QGauss<dim - 1>>(r + 1);
+
+    // std::cout << "  Quadrature points per boundary cell = "
+    //           << quadrature_boundary->size() << std::endl;
   }
 
-  pcout << "-------------------------------------------------------------------" << std::endl;
+  pcout << "-----------------------------------------------" << std::endl;
 
   // Initialize the DoF handler.
   {
@@ -59,9 +64,37 @@ AdvDiff::setup()
     DoFTools::extract_locally_relevant_dofs(dof_handler, locally_relevant_dofs);
 
     pcout << "  Number of DoFs = " << dof_handler.n_dofs() << std::endl;
+
+    // MODIFIED FROM HERE
+    // // Count the number of boundary DoFs.
+    // dof_handler.n_boundary_dofs();
+    // std::cout << "  Number of boundary Dofs = " << dof_handler.n_boundary_dofs() << std::endl;
+
+    // // Count the number of internal DoFs that will be Nh.
+    // unsigned int n_internal_dofs = dof_handler.n_dofs() - dof_handler.n_boundary_dofs();
+    // std::cout << "  Number of internal Dofs = " << n_internal_dofs << std::endl;
+
+    // // Try to extract the boundary DoFs.
+    // // https://www.dealii.org/current/doxygen/deal.II/namespaceDoFTools.html#a06b3c33925c1a1f15de20deda20b4d21
+    // const ComponentMask component_mask = ComponentMask();
+    // const std::set<types::boundary_id> boundary_ids = {0, 1, 2, 3}; // #include <set>
+    // const IndexSet boundary_dofs = DoFTools::extract_boundary_dofs(dof_handler, component_mask, boundary_ids);
+    // std::vector<types::global_dof_index> boundary_dofs_idx;
+
+    // for (auto it = boundary_dofs.begin(); it != boundary_dofs.end(); it++)
+    //   boundary_dofs_idx.push_back(*it);
+
+    // std::cout << "  Check boundary_dofs_idx.size()    = " << boundary_dofs_idx.size() << std::endl;
+    // for (const auto& dof : boundary_dofs_idx)
+    //   std::cout << "    " << dof << std::endl;
+    // std::cout << std::endl;
+
+    // boundary_dofs_idx_int.assign(boundary_dofs_idx.begin(), boundary_dofs_idx.end());
+    // std::cout << "  Check boundary_dofs_idx_int.size() = " << boundary_dofs_idx_int.size() << std::endl;
+    // TO HERE
   }
 
-  pcout << "-------------------------------------------------------------------" << std::endl;
+  pcout << "-----------------------------------------------" << std::endl;
 
   // Initialize the linear system.
   {
@@ -89,9 +122,9 @@ AdvDiff::setup()
 }
 
 void
-AdvDiff::assemble_matrices()
+Diffusion::assemble_matrices()
 {
-  pcout << "===================================================================" << std::endl;
+  pcout << "===============================================" << std::endl;
   pcout << "Assembling the system matrices" << std::endl;
 
   const unsigned int dofs_per_cell = fe->dofs_per_cell;
@@ -102,13 +135,24 @@ AdvDiff::assemble_matrices()
                           update_values | update_gradients |
                             update_quadrature_points | update_JxW_values);
 
+  // FEFaceValues<dim> fe_values_boundary(*fe,
+  //                                      *quadrature_boundary,
+  //                                      update_values |
+  //                                        update_quadrature_points |
+  //                                        update_JxW_values);
+
   FullMatrix<double> cell_mass_matrix(dofs_per_cell, dofs_per_cell);
   FullMatrix<double> cell_stiffness_matrix(dofs_per_cell, dofs_per_cell);
 
+  // FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
+  // Vector<double>     cell_rhs(dofs_per_cell);
   std::vector<types::global_dof_index> dof_indices(dofs_per_cell);
 
   mass_matrix      = 0.0;
   stiffness_matrix = 0.0;
+
+  // system_matrix = 0.0;
+  // system_rhs    = 0.0;
 
   for (const auto &cell : dof_handler.active_cell_iterators())
     {
@@ -120,20 +164,14 @@ AdvDiff::assemble_matrices()
       cell_mass_matrix      = 0.0;
       cell_stiffness_matrix = 0.0;
 
+      // cell_matrix = 0.0;
+      // cell_rhs    = 0.0;
+
       for (unsigned int q = 0; q < n_q; ++q)
         {
           // Evaluate coefficients on this quadrature node.
-          const double mu_loc   = mu.value(fe_values.quadrature_point(q));
+          const double mu_loc = mu.value(fe_values.quadrature_point(q));
 
-          // Evaluate the transport term on this quadrature node.
-          Vector<double> beta_vector(dim);
-          beta.vector_value(fe_values.quadrature_point(q), beta_vector);
-
-          // Convert the transport term to a tensor to use it with scalar_product.
-          Tensor<1, dim> beta_tensor;
-          for (unsigned int i = 0; i < dim; ++i)
-            beta_tensor[i] = beta_vector[i];
-          
           for (unsigned int i = 0; i < dofs_per_cell; ++i)
             {
               for (unsigned int j = 0; j < dofs_per_cell; ++j)
@@ -142,16 +180,9 @@ AdvDiff::assemble_matrices()
                                             fe_values.shape_value(j, q) /
                                             deltat * fe_values.JxW(q);
 
-                  // Diffusion term.
                   cell_stiffness_matrix(i, j) +=
                     mu_loc * fe_values.shape_grad(i, q) *
                     fe_values.shape_grad(j, q) * fe_values.JxW(q);
-
-                  // Transport term.
-                  cell_stiffness_matrix(i, j) += 
-                    scalar_product(beta_tensor, fe_values.shape_grad(j, q)) *
-                    fe_values.shape_value(i, q) * fe_values.JxW(q);
-                    
                 }
             }
         }
@@ -165,17 +196,19 @@ AdvDiff::assemble_matrices()
   mass_matrix.compress(VectorOperation::add);
   stiffness_matrix.compress(VectorOperation::add);
 
-  // Matrix on the left-hand side of the algebraic problem.
+  // We build the matrix on the left-hand side of the algebraic problem (the one
+  // that we'll invert at each timestep).
   lhs_matrix.copy_from(mass_matrix);
   lhs_matrix.add(theta, stiffness_matrix);
 
-  // Matrix on the right-hand side.
+  // We build the matrix on the right-hand side (the one that multiplies the old
+  // solution un).
   rhs_matrix.copy_from(mass_matrix);
   rhs_matrix.add(-(1.0 - theta), stiffness_matrix);
 }
 
 void
-AdvDiff::assemble_rhs(const double &time)
+Diffusion::assemble_rhs(const double &time)
 {
   const unsigned int dofs_per_cell = fe->dofs_per_cell;
   const unsigned int n_q           = quadrature->size();
@@ -202,6 +235,10 @@ AdvDiff::assemble_rhs(const double &time)
 
       for (unsigned int q = 0; q < n_q; ++q)
         {
+          // We need to compute the forcing term at the current time (tn+1) and
+          // at the old time (tn). deal.II Functions can be computed at a
+          // specific time by calling their set_time method.
+
           // Compute f(tn+1)
           forcing_term.set_time(time);
           const double f_new_loc =
@@ -247,7 +284,7 @@ AdvDiff::assemble_rhs(const double &time)
 }
 
 void
-AdvDiff::solve_time_step()
+Diffusion::solve_time_step()
 {
   SolverControl solver_control(1000, 1e-6 * system_rhs.l2_norm());
 
@@ -260,17 +297,22 @@ AdvDiff::solve_time_step()
   pcout << "  " << solver_control.last_step() << " CG iterations" << std::endl;
 
   solution = solution_owned;
+
+  // MODIFIED HERE
+  // snapshot_array.assign(solution.begin(), solution.end());
+  // std::cout << "  Check solution.size()       = " << solution.size() << std::endl;
+  // std::cout << "  Check snapshot_array.size() = " << snapshot_array.size() << std::endl;
 }
 
 void
-AdvDiff::assemble_snapshot_matrix(const unsigned int &time_step)
+Diffusion::assemble_snapshot_matrix(const unsigned int &time_step)
 {
   // At the first call, it is useful to resize the snapshot matrix so that it can be easily filled. It has as many rows as the
   // solution size and as many columns as the number of time steps.
   if(time_step == 0) {
     snapshot_matrix.resize(solution.size());
     for(auto &row : snapshot_matrix)
-      row.resize(T/(deltat*sample_every)+1, 0.0); // COSI SAREBBE INIZIALE + 25 SNAPSHOTS OGNI 200 ISTANTI TEMPORALI – CAPIRE E SISTEMARE
+      row.resize(T/deltat+1, 0.0); // COSI SAREBBE INIZIALE + 25 SNAPSHOTS OGNI 200 ISTANTI TEMPORALI
   }
 
   // It is not necessarily to build a snapshot_array, since snapshot_matrix can be directly filled with solution.
@@ -283,11 +325,11 @@ AdvDiff::assemble_snapshot_matrix(const unsigned int &time_step)
   // pcout << "  Check snapshot_array.size() = " << snapshot_array.size() << std::endl;
 
   for (unsigned int i=0; i<solution.size(); i++)
-    snapshot_matrix[i][time_step/sample_every] = solution[i];
+    snapshot_matrix[i][time_step] = solution[i];
 }
 
 void
-AdvDiff::output(const unsigned int &time_step) const
+Diffusion::output(const unsigned int &time_step) const
 {
   DataOut<dim> data_out;
   data_out.add_data_vector(dof_handler, solution, "u");
@@ -304,11 +346,11 @@ AdvDiff::output(const unsigned int &time_step) const
 }
 
 void
-AdvDiff::solve()
+Diffusion::solve()
 {
   assemble_matrices();
 
-  pcout << "===================================================================" << std::endl;
+  pcout << "===============================================" << std::endl;
 
   // Apply the initial condition.
   {
@@ -320,13 +362,13 @@ AdvDiff::solve()
     // Output the initial solution.
     output(0);
     assemble_snapshot_matrix(0);
-
-  pcout << "-------------------------------------------------------------------" << std::endl;
+    pcout << "-----------------------------------------------" << std::endl;
   }
 
   unsigned int time_step = 0;
   double       time      = 0;
 
+  // while (time < T)
   while (time < T && time_step < floor(T/deltat))
     {
       time += deltat;
@@ -337,16 +379,14 @@ AdvDiff::solve()
 
       assemble_rhs(time);
       solve_time_step();
-
-      if (time_step % sample_every == 0)
-        assemble_snapshot_matrix(time_step);
+      assemble_snapshot_matrix(time_step);
 
       output(time_step);
     }
 }
 
 // double
-// AdvDiff::compute_error(const VectorTools::NormType &norm_type)
+// Diffusion::compute_error(const VectorTools::NormType &norm_type)
 // {
 //   FE_Q<dim> fe_linear(1);
 //   MappingFE mapping(fe_linear);

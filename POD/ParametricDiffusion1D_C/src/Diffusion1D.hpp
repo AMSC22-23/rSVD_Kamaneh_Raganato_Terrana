@@ -1,9 +1,5 @@
-#ifndef ADV_DIFF_1D_HPP
-#define ADV_DIFF_1D_HPP
-
-/**
- * The aim of this class is to solve the advection diffusion full order problem in 1D in order to collect the snapshot matrix.
- */
+#ifndef DIFFUSION1D_HPP
+#define DIFFUSION1D_HPP
 
 #include <deal.II/base/conditional_ostream.h>
 #include <deal.II/base/quadrature_lib.h>
@@ -28,6 +24,8 @@
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/trilinos_precondition.h>
 #include <deal.II/lac/trilinos_sparse_matrix.h>
+#include <deal.II/lac/full_matrix.h>
+
 
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/matrix_tools.h>
@@ -42,8 +40,8 @@
 
 using namespace dealii;
 
-// Class representing the linear diffusion advection problem.
-class AdvDiff
+// Class representing the linear diffusion problem.
+class Diffusion
 {
 public:
   // Physical dimension (1D, 2D, 3D)
@@ -57,45 +55,65 @@ public:
     DiffusionCoefficient()
     {}
 
+    DiffusionCoefficient(const double prm_diffusion_coefficient) : prm(prm_diffusion_coefficient)
+    {}
+
     // Evaluation.
     virtual double
     value(const Point<dim> & /*p*/,
           const unsigned int /*component*/ = 0) const override
     {
-      // return std::pow(p[0], 4);
-      // return p[0];
-      return 0.01;
+      return prm;
     }
+  
+  private:
+    double prm;
   };
+
+  // Reaction coefficient.
+  // class ReactionCoefficient : public Function<dim>
+  // {
+  // public:
+  //   // Constructor.
+  //   ReactionCoefficient()
+  //   {}
+
+  //   // Evaluation.
+  //   virtual double
+  //   value(const Point<dim> & /*p*/,
+  //         const unsigned int /*component*/ = 0) const override
+  //   {
+  //     return 1.0;
+  //   }
+  // };
 
   // Transport coefficient.
-  class TransportCoefficient : public Function<dim>
-  {
-  public:
-    // Constructor.
-    TransportCoefficient()
-    {}
+  // class TransportCoefficient : public Function<dim>
+  // {
+  // public:
+  //   // Constructor.
+  //   TransportCoefficient()
+  //   {}
 
-    // Evaluation.
-    virtual void
-    vector_value(const Point<dim> & /*p*/,
-                 Vector<double> &values) const override
-    {
-      // values[0] = 2.0;
-      values[0] = 0.2;
-    }
+  //   // Evaluation.
+  //   virtual void
+  //   vector_value(const Point<dim> & /*p*/,
+  //                Vector<double> &values) const override
+  //   {
+  //     values[0] = 1.0;
+  //     values[1] = 1.0;
+  //   }
 
-    virtual double
-    value(const Point<dim> & /*p*/,
-          const unsigned int component = 0) const override
-    {
-      if (component == 0)
-        // return 2.0;
-        return 0.2;
-      else
-        return 0.0;
-    }
-  };
+  //   virtual double
+  //   value(const Point<dim> & /*p*/,
+  //         const unsigned int component = 0) const override
+  //   {
+  //     if (component == 0)
+  //       return 1.0;
+  //     else
+  //       return 1.0;
+  //   }
+  // };
 
   // Forcing term.
   class ForcingTerm : public Function<dim>
@@ -131,6 +149,23 @@ public:
     }
   };
 
+  // Neumann boundary conditions.
+  // class FunctionH : public Function<dim>
+  // {
+  // public:
+  //   // Constructor.
+  //   FunctionH()
+  //   {}
+
+  //   // Evaluation:
+  //   virtual double
+  //   value(const Point<dim> &/*p*/,
+  //         const unsigned int /*component*/ = 0) const override
+  //   {
+  //     return 0.0;
+  //   }
+  // };
+
   // Function for the initial condition.
   class FunctionU0 : public Function<dim>
   {
@@ -139,35 +174,15 @@ public:
     FunctionU0()
     {}
 
-    // CAPIRE SE UTILE  CON PARAMETER HANDLER
-    // FunctionU0(const std::vector<double> initial_state) : u0(initial_state)
-    // {}
-
     // Evaluation.
     virtual double
-    value(const Point<dim> & p,
+    value(const Point<dim> &p,
           const unsigned int /*component*/ = 0) const override
     {
       return std::sin(M_PI*p[0]);
     }
-
-    // CAPIRE SE UTILE  CON PARAMETER HANDLER
-    // private:
-    //   std::vector<double> u0;
-
-    // // Evaluation.
-    // virtual double
-    // value(const Point<dim> &p,
-    //       const unsigned int /*component*/ = 0) const override
-    // {
-    //   if (initial_state.empty())
-    //     return std::sin(M_PI*p[0]);
-    //   else
-    //     return initial_state;
-    // }
   };
 
-  // CAPIRE SE UTILE PER CONVERGENZA
   // Exact solution.
   // class ExactSolution : public Function<dim>
   // {
@@ -201,13 +216,16 @@ public:
   //   }
   // };
 
-  // Default constructor.
-  AdvDiff(const unsigned int N_,
-          const unsigned int &r_,
-          const double       &T_,
-          const double       &deltat_,
-          const double       &theta_,
-          const unsigned int &sample_every_)
+  // Constructor. We provide the final time, time step Delta t and theta method
+  // parameter as constructor arguments.
+  Diffusion(const unsigned int N_,
+            const unsigned int &r_,
+            const double       &T_,
+            const double       &deltat_,
+            const double       &theta_,
+            /*std::vector<unsigned int> &boundary_dofs_idx_int_,*/
+            // std::vector<double> &snapshot_array_,
+            const double &prm_diffusion_coefficient_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
@@ -216,7 +234,9 @@ public:
     , r(r_)
     , deltat(deltat_)
     , theta(theta_)
-    , sample_every(sample_every_)
+    /*, boundary_dofs_idx_int(boundary_dofs_idx_int_)*/
+    // , snapshot_array(snapshot_array_)
+    , mu(prm_diffusion_coefficient_)
     , mesh(MPI_COMM_WORLD)
   {}
 
@@ -232,12 +252,15 @@ public:
   // double
   // compute_error(const VectorTools::NormType &norm_type);
 
-  // Snapshot matrix. It collects the solution at each time step. It contains the snapshots computed for a single parameter, 
-  // in other words, the time evolution for a single parameter.
+  // Boundary DOFs indices.
+  // std::vector<unsigned int> boundary_dofs_idx_int;
+
+  // Snapshot matrix.
   std::vector<std::vector<double>> snapshot_matrix;
 
-  // System solution (including ghost elements). 
+  // System solution (including ghost elements). SPOSTATO QUI PER CONTROLLO STAMPA
   TrilinosWrappers::MPI::Vector solution;
+
 
 protected:
   // Assemble the mass and stiffness matrices.
@@ -260,7 +283,7 @@ protected:
   void
   output(const unsigned int &time_step) const;
 
-  // MPI parallel. //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // MPI parallel. /////////////////////////////////////////////////////////////
 
   // Number of MPI processes.
   const unsigned int mpi_size;
@@ -271,13 +294,16 @@ protected:
   // Parallel output stream.
   ConditionalOStream pcout;
 
-  // Problem definition. ////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Problem definition. ///////////////////////////////////////////////////////
 
   // Diffusion coefficient.
   DiffusionCoefficient mu;
 
+  // Reaction coefficient.
+  // ReactionCoefficient reaction_coefficient;
+
   // Transport coefficient.
-  TransportCoefficient beta;
+  // TransportCoefficient transport_coefficient;
 
   // Forcing term.
   ForcingTerm forcing_term;
@@ -287,6 +313,9 @@ protected:
 
   // Initial condition.
   FunctionU0 u_0;
+
+  // h(x).
+  // FunctionH function_h;
 
   // Exact solution.
   // ExactSolution exact_solution;
@@ -300,10 +329,7 @@ protected:
   // Number of elements.
   const unsigned int N;
 
-  // Sample_every parameter for selecting time steps which solution has to be collected in the snapshot matrix.
-  const unsigned int sample_every;
-
-  // Discretization. ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Discretization. ///////////////////////////////////////////////////////////
 
   // Polynomial degree.
   const unsigned int r;
@@ -353,6 +379,8 @@ protected:
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
 
+  // System solution (including ghost elements).
+  // TrilinosWrappers::MPI::Vector solution;
 };
 
 #endif
