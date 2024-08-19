@@ -163,8 +163,6 @@ main(int argc, char * argv[])
   // The approximations matrix stores the final fom_state for each rom size. 
   // Mat_m approximations = Mat_m::Zero(snapshots.rows(), rom_size ma non ha senso);
 
-  std::vector<std::vector<double>> snapshot_matrix_aux;
-
   // for (size_t i=0; i<rom_sizes.size(); i++) {
   // for (size_t i=0; i<1; i++) {
   for (unsigned int i=0; i<n; i++)
