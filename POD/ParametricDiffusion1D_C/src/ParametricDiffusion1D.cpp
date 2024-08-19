@@ -38,29 +38,57 @@ main(int argc, char * argv[])
   pcout << "===================================================================" << std::endl;
   pcout << "Run FOM and collect snapshots" << std::endl;
 
-  AdvDiff problem(N, r, T, deltat, theta, sample_every);    
+  const unsigned int n = 5; // Number of parameters
+  double prm_diffusion_coefficient_min = 0.0001;
+  double prm_diffusion_coefficient_max = 0.0005;
+  std::vector<double> prm_diffusion_coefficient;
+  prm_diffusion_coefficient.resize(n); 
 
-  problem.setup();
-  problem.solve();
+  size_t snapshot_length;
+  size_t time_steps;
+  Mat_m snapshots;
 
-  // Now the snapshot_matrix, defined with standard library, is required to fit in snapshots, defined in Eigen, since the SVD
-  // method is implemented in Eigen.
-  size_t snapshot_length = problem.snapshot_matrix.size();
-  size_t time_steps = problem.snapshot_matrix[0].size();
-  Mat_m snapshots = Mat_m::Zero(snapshot_length, time_steps);
-  for (size_t i=0; i<snapshots.rows(); i++)
-    for (size_t j=0; j<snapshots.cols(); j++)
-      snapshots(i, j) = problem.snapshot_matrix[i][j];
+  for (unsigned int i=0; i<n; i++)
+  {
+    if (n == 1)
+      prm_diffusion_coefficient[i] = prm_diffusion_coefficient_min;
+    else
+      prm_diffusion_coefficient[i] = (prm_diffusion_coefficient_min +
+                                      i*(prm_diffusion_coefficient_max - prm_diffusion_coefficient_min)/(n-1));
+    std::cout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;
+  }
+    
+  for (unsigned int i=0; i<n; i++)
+  {
+    std::cout << "  Computing snapshot matrix stripe " << i+1 << " out of " << n << std::endl;
 
-  pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
+    AdvDiff problem(N, r, T, deltat, theta, sample_every, prm_diffusion_coefficient[i]);    
 
-  pcout << "  Check snapshots and problem solution values:" << std::endl;
-  pcout << "    snapshots(0, time_steps-1)  = " << snapshots(0, time_steps-1) << std::endl;
-  pcout << "    problem.solution(0)         = " << problem.solution(0) << std::endl;
-  pcout << "    snapshots(1, time_steps-1)  = " << snapshots(1, time_steps-1) << std::endl;
-  pcout << "    problem.solution(1)         = " << problem.solution(1) << std::endl;
-  pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, time_steps-1) << std::endl;
-  pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl;
+    problem.setup();
+    problem.solve();
+
+    // Now the snapshot_matrix, defined with standard library, is required to fit in snapshots, defined in Eigen, since the SVD
+    // method is implemented in Eigen.
+    if (i == 0) { // At the first iteration it is useful to resize snapshots.
+      snapshot_length = problem.snapshot_matrix.size();
+      time_steps = problem.snapshot_matrix[0].size();
+      snapshots.resize(snapshot_length, n*time_steps);
+      // Mat_m snapshots = Mat_m::Zero(snapshot_length, time_steps);
+    }
+    for (size_t j=0; j<snapshots.rows(); j++)
+      for (size_t k=0; k<time_steps; k++) // controlla e commenta per stripe
+        snapshots(j, (i*time_steps)+k) = problem.snapshot_matrix[j][k];
+
+    pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
+
+    pcout << "  Check snapshots and problem solution values:" << std::endl;
+    pcout << "    snapshots(0, time_steps-1)  = " << snapshots(0, (i*time_steps)+time_steps-1) << std::endl;
+    pcout << "    problem.solution(0)         = " << problem.solution(0) << std::endl;
+    pcout << "    snapshots(1, time_steps-1)  = " << snapshots(1, (i*time_steps)+time_steps-1) << std::endl;
+    pcout << "    problem.solution(1)         = " << problem.solution(1) << std::endl;
+    pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, (i*time_steps)+time_steps-1) << std::endl;
+    pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl;
+  }
 
   // Compute U by applying SVD or one POD algorithm to snapshots.
   pcout << "===================================================================" << std::endl;
@@ -126,14 +154,30 @@ main(int argc, char * argv[])
 
 
 
+  // size_t rom_size = 6; // Number of modes
   std::vector<size_t> rom_sizes = {2, 4, 6}; // CAMBIA
   // std::vector<size_t> rom_sizes = {5, 10, 25, 50, 75, 100}; // comportamento strano con 10 modes CAMBIA
 
   std::vector<std::vector<double>> modes;
 
   // The approximations matrix stores the final fom_state for each rom size. 
-  Mat_m approximations = Mat_m::Zero(snapshots.rows(), rom_sizes.size());
+  // Mat_m approximations = Mat_m::Zero(snapshots.rows(), rom_size ma non ha senso);
 
+
+  // fai magari altri commentini
+  double new_diffusion_coefficient = 0.00025;
+
+  // commenta
+  AdvDiff problem_new_parameter(N, r, T, deltat, theta, sample_every, new_diffusion_coefficient);    
+
+  problem_new_parameter.setup();
+  problem_new_parameter.solve();
+
+  Vec_v solution_new_parameter = Vec_v ::Zero(problem_new_parameter.solution.size());
+  for (size_t i=0; i<problem_new_parameter.solution.size(); i++)
+    solution_new_parameter(i) = problem_new_parameter.solution(i);
+  
+  // qui ha senso farlo per le diverse rom_sizes
   for (size_t i=0; i<rom_sizes.size(); i++) {
   // for (size_t i=0; i<1; i++) {
     pcout << "-------------------------------------------------------------------" << std::endl;
@@ -154,7 +198,7 @@ main(int argc, char * argv[])
       for (size_t k=0; k<rom_sizes[i]; k++)
         modes[j][k] = compute_modes.W(j, k);
 
-    AdvDiffPOD problemPOD(N, r, T, deltat, theta, modes);
+    AdvDiffPOD problemPOD(N, r, T, deltat, theta, modes, new_diffusion_coefficient);
     
     problemPOD.setup();
     problemPOD.solve_reduced();
@@ -166,19 +210,19 @@ main(int argc, char * argv[])
       fom_state(j) = problemPOD.fom_solution[j];
     
     // The current fom_state is stored in approximations matrix.
-    approximations.col(i) = fom_state;
+    // approximations.col(i) = fom_state;
 
     // Compute the relative l2 error.
-    double fom_solution_norm = (snapshots.col(time_steps-1)).norm();
-    double err = (snapshots.col(time_steps-1) - fom_state).norm();
+    double fom_solution_norm = solution_new_parameter.norm();
+    double err = (solution_new_parameter - fom_state).norm();
 
     // POI EVENTUALMENTE COMMENTARE
     pcout << "  Check fom_state values:" << std::endl;
-    pcout << "    fom solution(0)              = " << snapshots(0, time_steps-1) << std::endl;
+    pcout << "    fom solution(0)              = " << solution_new_parameter(0) << std::endl;
     pcout << "    fom approximated solution(0) = " << fom_state(0) << std::endl;
-    pcout << "    fom solution(1)              = " << snapshots(1, time_steps-1) << std::endl;
+    pcout << "    fom solution(1)              = " << solution_new_parameter(1) << std::endl;
     pcout << "    fom approximated solution(1) = " << fom_state(1) << std::endl;
-    pcout << "    fom solution(2)              = " << snapshots(2, time_steps-1) << std::endl;
+    pcout << "    fom solution(2)              = " << solution_new_parameter(2) << std::endl;
     pcout << "    fom approximated solution(2) = " << fom_state(2) << std::endl;
 
     pcout << "\n  With " << rom_sizes[i] << " modes, final relative l2 error: " << err/fom_solution_norm << std::endl;

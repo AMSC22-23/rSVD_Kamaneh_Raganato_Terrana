@@ -1,5 +1,9 @@
-#ifndef DIFFUSION1D_HPP
-#define DIFFUSION1D_HPP
+#ifndef ADV_DIFF_1D_HPP
+#define ADV_DIFF_1D_HPP
+
+/**
+ * The aim of this class is to solve the advection diffusion full order problem in 1D in order to collect the snapshot matrix.
+ */
 
 #include <deal.II/base/conditional_ostream.h>
 #include <deal.II/base/quadrature_lib.h>
@@ -24,8 +28,6 @@
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/trilinos_precondition.h>
 #include <deal.II/lac/trilinos_sparse_matrix.h>
-#include <deal.II/lac/full_matrix.h>
-
 
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/matrix_tools.h>
@@ -41,7 +43,7 @@
 using namespace dealii;
 
 // Class representing the linear diffusion problem.
-class Diffusion
+class AdvDiff
 {
 public:
   // Physical dimension (1D, 2D, 3D)
@@ -55,65 +57,45 @@ public:
     DiffusionCoefficient()
     {}
 
-    DiffusionCoefficient(const double prm_diffusion_coefficient) : prm(prm_diffusion_coefficient)
+    // Evaluation.
+    virtual double
+    value(const Point<dim> & p,
+          const unsigned int /*component*/ = 0) const override
+    {
+      // return std::pow(p[0], 4);
+      // return p[0];
+      return 0.01;
+    }
+  };
+
+  // Transport coefficient.
+  class TransportCoefficient : public Function<dim>
+  {
+  public:
+    // Constructor.
+    TransportCoefficient()
     {}
 
     // Evaluation.
+    virtual void
+    vector_value(const Point<dim> & /*p*/,
+                 Vector<double> &values) const override
+    {
+      // values[0] = 2.0;
+      values[0] = 1.0;
+    }
+
     virtual double
     value(const Point<dim> & /*p*/,
-          const unsigned int /*component*/ = 0) const override
+          const unsigned int component = 0) const override
     {
-      return prm;
+      if (component == 0)
+        // return 2.0;
+        return 1.0;
+      else
+        return 0.0;
     }
-  
-  private:
-    double prm;
   };
-
-  // Reaction coefficient.
-  // class ReactionCoefficient : public Function<dim>
-  // {
-  // public:
-  //   // Constructor.
-  //   ReactionCoefficient()
-  //   {}
-
-  //   // Evaluation.
-  //   virtual double
-  //   value(const Point<dim> & /*p*/,
-  //         const unsigned int /*component*/ = 0) const override
-  //   {
-  //     return 1.0;
-  //   }
-  // };
-
-  // Transport coefficient.
-  // class TransportCoefficient : public Function<dim>
-  // {
-  // public:
-  //   // Constructor.
-  //   TransportCoefficient()
-  //   {}
-
-  //   // Evaluation.
-  //   virtual void
-  //   vector_value(const Point<dim> & /*p*/,
-  //                Vector<double> &values) const override
-  //   {
-  //     values[0] = 1.0;
-  //     values[1] = 1.0;
-  //   }
-
-  //   virtual double
-  //   value(const Point<dim> & /*p*/,
-  //         const unsigned int component = 0) const override
-  //   {
-  //     if (component == 0)
-  //       return 1.0;
-  //     else
-  //       return 1.0;
-  //   }
-  // };
 
   // Forcing term.
   class ForcingTerm : public Function<dim>
@@ -174,13 +156,38 @@ public:
     FunctionU0()
     {}
 
+    // FunctionU0(const std::vector<double> initial_state) : u0(initial_state)
+    // {}
+
     // Evaluation.
     virtual double
-    value(const Point<dim> &p,
+    value(const Point<dim> & p,
           const unsigned int /*component*/ = 0) const override
     {
-      return std::sin(M_PI*p[0]);
+      // if (u0.empty())
+        return 2*std::sin(M_PI*p[0]);
+        // return 2.0*std::sin(9.0*M_PI*p[0]) - std::sin(4.0*M_PI*p[0]);
+      // else
+      // { // QUESTO SICURAMENTE NON CORRETTO
+      //   for (unsigned int i = 0; i < u0.size(); ++i)
+      //     return u0[i];
+      // }
+        // return u0 * p[0];
     }
+
+    // private:
+    //   std::vector<double> u0;
+
+    // // Evaluation.
+    // virtual double
+    // value(const Point<dim> &p,
+    //       const unsigned int /*component*/ = 0) const override
+    // {
+    //   if (initial_state.empty())
+    //     return std::sin(M_PI*p[0]);
+    //   else
+    //     return initial_state;
+    // }
   };
 
   // Exact solution.
@@ -216,16 +223,13 @@ public:
   //   }
   // };
 
-  // Constructor. We provide the final time, time step Delta t and theta method
-  // parameter as constructor arguments.
-  Diffusion(const unsigned int N_,
-            const unsigned int &r_,
-            const double       &T_,
-            const double       &deltat_,
-            const double       &theta_,
-            /*std::vector<unsigned int> &boundary_dofs_idx_int_,*/
-            // std::vector<double> &snapshot_array_,
-            const double &prm_diffusion_coefficient_)
+  // Default constructor.
+  AdvDiff(const unsigned int N_,
+          const unsigned int &r_,
+          const double       &T_,
+          const double       &deltat_,
+          const double       &theta_,
+          const unsigned int &sample_every_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
@@ -234,9 +238,7 @@ public:
     , r(r_)
     , deltat(deltat_)
     , theta(theta_)
-    /*, boundary_dofs_idx_int(boundary_dofs_idx_int_)*/
-    // , snapshot_array(snapshot_array_)
-    , mu(prm_diffusion_coefficient_)
+    , sample_every(sample_every_)
     , mesh(MPI_COMM_WORLD)
   {}
 
@@ -258,9 +260,11 @@ public:
   // Snapshot matrix.
   std::vector<std::vector<double>> snapshot_matrix;
 
+  // System rhs.
+  // std::vector<std::vector<double>> system_rhs_matrix;
+
   // System solution (including ghost elements). SPOSTATO QUI PER CONTROLLO STAMPA
   TrilinosWrappers::MPI::Vector solution;
-
 
 protected:
   // Assemble the mass and stiffness matrices.
@@ -278,6 +282,9 @@ protected:
   // Assemble the snapshot matrix.
   void
   assemble_snapshot_matrix(const unsigned int &time_step);
+
+  // void
+  // assemble_system_rhs_matrix(const unsigned int &time_step);
 
   // Output.
   void
@@ -303,7 +310,7 @@ protected:
   // ReactionCoefficient reaction_coefficient;
 
   // Transport coefficient.
-  // TransportCoefficient transport_coefficient;
+  TransportCoefficient beta;
 
   // Forcing term.
   ForcingTerm forcing_term;
@@ -313,6 +320,9 @@ protected:
 
   // Initial condition.
   FunctionU0 u_0;
+
+  // Initial ROM state.
+  // const std::vector<double> initial_state;
 
   // h(x).
   // FunctionH function_h;
@@ -339,6 +349,9 @@ protected:
 
   // Theta parameter of the theta method.
   const double theta;
+
+  // .. 
+  const unsigned int sample_every;
 
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;
@@ -379,8 +392,6 @@ protected:
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
 
-  // System solution (including ghost elements).
-  // TrilinosWrappers::MPI::Vector solution;
 };
 
 #endif
