@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 
+// #include "SVD.hpp"
 #include "POD.hpp"
 #include "AdvDiff1D.hpp"
 #include "AdvDiff1D_POD.hpp"
@@ -18,8 +19,8 @@ main(int argc, char * argv[])
   const unsigned int               mpi_rank = Utilities::MPI::this_mpi_process(MPI_COMM_WORLD);
   dealii::ConditionalOStream pcout(std::cout, mpi_rank == 0);
 
-  const unsigned int N = 119;
-  // const unsigned int N = 49;
+  // const unsigned int N = 119;
+  const unsigned int N = 99;
   const unsigned int r = 1;
 
   const double T         = 0.05;
@@ -27,6 +28,7 @@ main(int argc, char * argv[])
   // const double deltat    = 1e-4; // 500 steps
   // const double deltat    = 5e-4; // 100 steps
   const double deltat    = 1e-3; // 50 steps
+  // const double deltat    = 2.5e-3;
 
   // const double theta  = 1.0; // Implicit Euler
   const double theta  = 0.0; // Explicit Euler
@@ -34,15 +36,30 @@ main(int argc, char * argv[])
   const unsigned int sample_every = 1;
 
 
-  // Solve the advection diffusion problem on the full order model and collect snapshots in the snapshot matrix.
-  pcout << "===================================================================" << std::endl;
+
+  // RISOLUZIONE DEL PROBLEMA DI DIFFUSIONE E TRASPORTO
+  pcout << "===============================================" << std::endl;
   pcout << "Run FOM and collect snapshots" << std::endl;
 
-  AdvDiff problem(N, r, T, deltat, theta, sample_every);    
+  AdvDiff problem(N, r, T, deltat, theta, sample_every); 
+
+  // AGGIUNGERE
+  // double prm_diffusion_coefficient_min = 0.0;
+  // double prm_diffusion_coefficient_max = 1.0;
+  // std::vector<double> prm_diffusion_coefficient;
+  // prm_diffusion_coefficient.resize(ns);    
+
+    // for (unsigned int i=0; i<ns; i++) {
+
+    // pcout << "  Computing snapshot " << i+1 << " out of " << ns << std::endl;
+    // prm_diffusion_coefficient[i] = (prm_diffusion_coefficient_min +
+    //                                 i*(prm_diffusion_coefficient_max - prm_diffusion_coefficient_min)/(ns-1));
+    // pcout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl; 
 
   problem.setup();
   problem.solve();
 
+  // COSTRUZIONE SNAPSHOT MATRIX IN EIGEN IN MODO DA POTER APPLICARE SVD
   // Now the snapshot_matrix, defined with standard library, is required to fit in snapshots, defined in Eigen, since the SVD
   // method is implemented in Eigen.
   size_t snapshot_length = problem.snapshot_matrix.size();
@@ -52,50 +69,45 @@ main(int argc, char * argv[])
     for (size_t j=0; j<snapshots.cols(); j++)
       snapshots(i, j) = problem.snapshot_matrix[i][j];
 
-  pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
+  pcout << "\nCheck dimensions of snapshots: "
+            << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
 
-  pcout << "  Check snapshots and problem solution values:" << std::endl;
-  pcout << "    snapshots(0, time_steps-1)  = " << snapshots(0, time_steps-1) << std::endl;
-  pcout << "    problem.solution(0)         = " << problem.solution(0) << std::endl;
-  pcout << "    snapshots(1, time_steps-1)  = " << snapshots(1, time_steps-1) << std::endl;
-  pcout << "    problem.solution(1)         = " << problem.solution(1) << std::endl;
-  pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, time_steps-1) << std::endl;
-  pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl;
+  pcout << "  Check snapshots + sol coincidente:" << std::endl;
+  pcout << snapshots(0, time_steps-1) << std::endl;
+  pcout << problem.solution(0) << std::endl;
+  pcout << snapshots(1, time_steps-1) << std::endl;
+  pcout << problem.solution(1) << std::endl;
+  pcout << snapshots(17, time_steps-1) << std::endl;
+  pcout << problem.solution(17) << std::endl;
 
-  // Compute U by applying SVD or one POD algorithm to snapshots.
-  pcout << "===================================================================" << std::endl;
+  // CALCOLO DI U APPLICANDO SVD A SNAPSHOT MATRIX
+  pcout << "===============================================" << std::endl;
   pcout << "Compute POD modes" << std::endl;
-
-  const int rank = std::min(snapshots.rows(), snapshots.cols()); // Maximum rank
-
-  // VERSIONE CON SVD //////
+  // Initialize the vector sigma to store the singular values
+  const int rank = std::min(snapshots.rows(), snapshots.cols()); // rank così cioè su tutto
   // Vec_v sigma = Vec_v::Zero(rank);
 
   // Initialize the other inputs required by the SVD method, Note that the SVD method returns sigma as a vector, then it has
   // to be converted into a diagonal matrix
   // Mat_m U = Mat_m::Zero(snapshots.rows(), snapshots.rows());
   // Mat_m V = Mat_m::Zero(snapshots.cols(), snapshots.cols());
-  /////////
 
   const double tol = 1e-12;
   // const double tol = 1e-9;
-  // POD compute_modes(snapshots, rank, tol); ///////versione
+  // POD compute_modes(snapshots, rank, tol);
 
 
-  // PROVA CON ENERGY ma devi capire significato e costruzione Xh///////////
-
-
-
+  // PROVA CON ENERGY ma devi capire significato e costruzione Xh
   Mat_m Xh = Mat_m::Zero(snapshots.rows(), snapshots.rows());
   for (int i=0; i<snapshots.rows(); i++) {
       Xh.coeffRef(i, i) = 2.0;
     if(i>0) Xh.coeffRef(i, i-1) = -1.0;
       if(i<snapshots.rows()-1) Xh.coeffRef(i, i+1) = -1.0;	
   }
-  POD compute_modes(snapshots, Xh, rank, tol);
+  POD compute_modes(snapshots, Xh, rank, tol); // With 6 modes, final relative l2 error: 4.35277e-06 =)
 
 
-  // PROVA CON WEIGHT ///// versione
+  // PROVA CON WEIGHT
   // Mat_m D = Mat_m::Zero(snapshots.cols(), snapshots.cols());
   // for (int i=0; i<snapshots.cols(); i++) {
   //     D.coeffRef(i, i) = 1.0;
@@ -110,39 +122,28 @@ main(int argc, char * argv[])
 
   // pcout << " Check U" << U << std::endl;
 
-  /// SISTEMARE
-
-
-
-
-
-  // Create the modes matrix containing the first rom_sizes columns of U.
-  pcout << "===================================================================" << std::endl;
+  // COSTRUZIONE DELLA MATRICE DI TRASFORMAZIONE A PARTIRE DA U E ROM_SIZES
+  // POI EVENTUALMENTE CHIAMA V -> Z e modes -> V
+  pcout << "===============================================" << std::endl;
   pcout << "Construct and run ROM" << std::endl;
 
   // const double deltat_rom = 1e-3; // CAMBIA
   // const double deltat_rom = 3.01204e-4; // CAMBIA
   // ORA PROVA A TENERE STESSA deltat
-
-
-
-  std::vector<size_t> rom_sizes = {2, 4, 6}; // CAMBIA
-  // std::vector<size_t> rom_sizes = {5, 10, 25, 50, 75, 100}; // comportamento strano con 10 modes CAMBIA
-
+  // std::vector<size_t> rom_sizes = {2, 4, 6}; // CAMBIA
+  std::vector<size_t> rom_sizes = {5, 10, 25, 50, 75, 100}; // comportamento strano con 10 modes
   std::vector<std::vector<double>> modes;
-
-  // The approximations matrix stores the final fom_state for each rom size. 
+  // Mat_m modes;
   Mat_m approximations = Mat_m::Zero(snapshots.rows(), rom_sizes.size());
 
   std::vector<std::vector<double>> snapshot_matrix_aux;
 
   for (size_t i=0; i<rom_sizes.size(); i++) {
   // for (size_t i=0; i<1; i++) {
-    pcout << "-------------------------------------------------------------------" << std::endl;
-    pcout << "Creating ROM for " << rom_sizes[i] << " modes\n" << std::endl;
+    pcout << "  Creating ROM for " << rom_sizes[i] << " modes" << std::endl;
 
-    //VERSIONE PER SVD MI SA
-    // modes.resize(U.rows());
+    // POD hpp vuole versione modes std, non Eigen
+    // modes.resize(U.rows()); questo usato prima
     // for(auto &row : modes)
     //   row.resize(rom_sizes[i], 0.0);
     // for (size_t j=0; j<U.rows(); j++)
@@ -155,37 +156,106 @@ main(int argc, char * argv[])
     for (size_t j=0; j<compute_modes.W.rows(); j++)
       for (size_t k=0; k<rom_sizes[i]; k++)
         modes[j][k] = compute_modes.W(j, k);
+    // modes.resize(U.rows(), rom_sizes[i]);
+    // for (unsigned int j=0; j<rom_sizes[i]; j++)
+    //   modes.col(j) = U.col(j);
+    // modes = U.leftCols(rom_sizes[i]);
 
-    AdvDiffPOD problemPOD(N, r, T, deltat, theta, modes);
+    // pcout << "  Check modes" << modes << std::endl;
+
+    // PROIEZIONE DELLO STATO FOM INIZIALE SULLA BASE ROM
+    // Projection of the initial FOM state on the ROM basis
+    // Vec_v rom_state = modes.transpose() * snapshots.col(0);
+
+    // pcout << "  Check rom_state" << rom_state(0) << std::endl;
+    // if (rom_state.size() == rom_sizes[i])
+    //   pcout << "  Check dimensions of rom_state: " << rom_state.size() << std::endl;
+    // else
+    //   std::cerr << "  Error in computing rom_state" << std::endl;
+    
+  
+    // DEFINIZIONE DELLO STESSO PROBLEMA CON deltat_rom IN MODO DA OTTENERE system_rhs –> PEZZO SICURAMENTE DA SISTEMARE,
+    // PER ORA HO RIUTILIZZATO LA STESSA CLASSE AdvDiff IN MODO IMPROPRIO PERCHÉ IL PROBLEMA COSÌ VIENE NUOVAMENTE RISOLTO
+    //PROVA a farti la classe per farti dare rhs e prenderlo e usarlo di qui
+    // const unsigned int sample_every_pod = 166;
+
+    // snapshot_matrix_aux.resize(snapshots.rows());
+    // for(auto &row : snapshot_matrix_aux)
+    //   row.resize(snapshots.cols(), 0.0);
+    // for (size_t j=0; j<snapshots.rows(); j++) // magari cambiare con iteratori? o esiste una copy_from?
+    //   for (size_t k=0; k<snapshots.cols(); k++)
+    //     snapshot_matrix_aux[j][k] = snapshots(j, k);
+    AdvDiffPOD problemPOD(N, r, T, deltat, theta, modes); // qui sample every non serve
     
     problemPOD.setup();
     problemPOD.solve_reduced();
 
-    // The final fom_solution is copied in an Eigen vector fom_state in order to easily compare it with snapshots and compute 
-    // the relative error.
-    Vec_v fom_state = Vec_v::Zero(compute_modes.W.rows()); // SISTEMA DIMENSIONI CAMBIARE
+    // PASSAGGIO NON ANCORA CAPITO
+    // INITIAL CONDITION rom_initial_state
+    // ho time steps e delta_t_rom
+    // unsigned int rom_time_steps = floor(T/deltat_rom);
+    // double       time = 0.0;
+    // for(unsigned int time_step=1; time_step<=rom_time_steps; time_step++) // FAI PARTIRE DA 1 ? perchè zero già fuori ??? O FARE <= rom_time_steps???
+    // {
+    //   // time += deltat_rom;
+    //   // pcout << "  Check time" << time << std::endl;
+    //   // pcout << "  Check romstate initial" << rom_state(0) << std::endl;
+    //   // pcout << "  Check rhs" << problemPOD.system_rhs_matrix[time_step][2] << std::endl;
+
+    //   if (problemPOD.system_rhs_matrix.size() == 0)
+    //   {
+    //     pcout << "Error: system_rhs_matrix is empty." << std::endl;
+    //     MPI_Abort(MPI_COMM_WORLD, 1);
+    //   }
+    //   Vec_v fom_rhs = Vec_v::Zero(problemPOD.system_rhs_matrix.size()); // SISTEMA DIMENSIONI
+    //   for(unsigned int j=0; j<problemPOD.system_rhs_matrix.size(); j++)
+    //     fom_rhs(j) = problemPOD.system_rhs_matrix[time_step][j];
+    //   Vec_v rom_rhs = Vec_v::Zero(rom_sizes[i]);
+    //   rom_rhs = modes.transpose() * fom_rhs;
+    //   // rom_rhs = -rom_state;
+    //   rom_state += deltat_rom * rom_rhs;
+    //   pcout << "  Check romstate final" << rom_state(0) << std::endl;
+    // }
+
+
+    // The final ROM state corresponds to the solution of the ROM problem.
+    // Vec_v rom_final_state = Vec_v::Zero(rom_sizes[i]);
+    // for(size_t j=0; j<rom_sizes[i]; j++)
+    //   rom_final_state(j) = 0.0;
+
+    // RICOSTRUZIONE FOM E CALCOLO DELL'ERRORE
+    // Reconstruction of the FOM state from the final ROM state
+    // Vec_v fom_state = modes * rom_state; // (U.rows() * rom_sizes[i]) * (rom_sizes[i] * 1)
+
+    // IDEM QUI POD hpp VUOLE VERSIONE SENZA EIGEN
+    // Vec_v rom_state = Vec_v::Zero(rom_sizes[i]);
+    // for(size_t j=0; j<rom_sizes[i]; j++)
+    //   rom_state(j) = problemPOD.solution[j]; // CONTROLLA
+    // Vec_v fom_state = modes * rom_state; // (U.rows() * rom_sizes[i]) * (rom_sizes[i] * 1)
+    std::vector<double> rom_state;
+    rom_state.resize(rom_sizes[i]);
+      for(size_t j=0; j<rom_sizes[i]; j++)
+        rom_state[j] = problemPOD.reduced_solution[j]; // CONTROLLA
+    Vec_v fom_state = Vec_v::Zero(compute_modes.W.rows()); // SISTEMA DIMENSIONI
     for (size_t j=0; j<compute_modes.W.rows(); j++)
-      fom_state(j) = problemPOD.fom_solution[j];
-    
+      for (size_t k=0; k<rom_sizes[i]; k++)
+        fom_state(j) += modes[j][k] * rom_state[k]; // PRODOTTO MATRICE VETTORE MAGARI ESISTE
+
     // The current fom_state is stored in approximations matrix.
     approximations.col(i) = fom_state;
 
-    // Compute the relative l2 error.
-    double fom_solution_norm = (snapshots.col(time_steps-1)).norm();
+    // Compute the relative l2 error
+    double fom_solution_norm = (snapshots.col(time_steps-1)).norm(); // HAI TOLTO time_steps -1
     double err = (snapshots.col(time_steps-1) - fom_state).norm();
+    pcout << " fom_solution" << snapshots(0, time_steps-1) << std::endl;
+    pcout << " rom_solution riproiettata" << fom_state(0) << std::endl;
+    pcout << " fom_solution" << snapshots(1, time_steps-1) << std::endl;
+    pcout << " rom_solution riproiettata" << fom_state(1) << std::endl;
+    pcout << " fom_solution" << snapshots(2, time_steps-1) << std::endl;
+    pcout << " rom_solution riproiettata" << fom_state(2) << std::endl;
+    pcout << "  With " << rom_sizes[i] << " modes, final relative l2 error: " << err/fom_solution_norm << std::endl;
 
-    // POI EVENTUALMENTE COMMENTARE
-    pcout << "  Check fom_state values:" << std::endl;
-    pcout << "    fom solution(0)              = " << snapshots(0, time_steps-1) << std::endl;
-    pcout << "    fom approximated solution(0) = " << fom_state(0) << std::endl;
-    pcout << "    fom solution(1)              = " << snapshots(1, time_steps-1) << std::endl;
-    pcout << "    fom approximated solution(1) = " << fom_state(1) << std::endl;
-    pcout << "    fom solution(2)              = " << snapshots(2, time_steps-1) << std::endl;
-    pcout << "    fom approximated solution(2) = " << fom_state(2) << std::endl;
-
-    pcout << "\n  With " << rom_sizes[i] << " modes, final relative l2 error: " << err/fom_solution_norm << std::endl;
-
-    // Clear the modes matrix for the next iteration.
+    // Clear the modes matrix for the next iteration
     modes.resize(0);
     modes[0].resize(0, 0.0);
   }

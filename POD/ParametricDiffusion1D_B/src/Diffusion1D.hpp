@@ -24,6 +24,8 @@
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/trilinos_precondition.h>
 #include <deal.II/lac/trilinos_sparse_matrix.h>
+#include <deal.II/lac/full_matrix.h>
+
 
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/matrix_tools.h>
@@ -222,7 +224,7 @@ public:
             const double       &deltat_,
             const double       &theta_,
             /*std::vector<unsigned int> &boundary_dofs_idx_int_,*/
-            std::vector<double> &snapshot_array_,
+            // std::vector<double> &snapshot_array_,
             const double &prm_diffusion_coefficient_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
@@ -233,7 +235,7 @@ public:
     , deltat(deltat_)
     , theta(theta_)
     /*, boundary_dofs_idx_int(boundary_dofs_idx_int_)*/
-    , snapshot_array(snapshot_array_)
+    // , snapshot_array(snapshot_array_)
     , mu(prm_diffusion_coefficient_)
     , mesh(MPI_COMM_WORLD)
   {}
@@ -253,8 +255,12 @@ public:
   // Boundary DOFs indices.
   // std::vector<unsigned int> boundary_dofs_idx_int;
 
-  // Snapshot array.
-  std::vector<double> snapshot_array;
+  // Snapshot matrix.
+  std::vector<std::vector<double>> snapshot_matrix;
+
+  // System solution (including ghost elements). SPOSTATO QUI PER CONTROLLO STAMPA
+  TrilinosWrappers::MPI::Vector solution;
+
 
 protected:
   // Assemble the mass and stiffness matrices.
@@ -268,6 +274,10 @@ protected:
   // Solve the problem for one time step.
   void
   solve_time_step();
+
+  // Assemble the snapshot matrix.
+  void
+  assemble_snapshot_matrix(const unsigned int &time_step);
 
   // Output.
   void
@@ -370,7 +380,7 @@ protected:
   TrilinosWrappers::MPI::Vector solution_owned;
 
   // System solution (including ghost elements).
-  TrilinosWrappers::MPI::Vector solution;
+  // TrilinosWrappers::MPI::Vector solution;
 };
 
 #endif

@@ -1,8 +1,8 @@
-#ifndef ADV_DIFF_1D_POD_HPP
-#define ADV_DIFF_1D_POD_HPP
+#ifndef ADV_DIFF_1D_HPP
+#define ADV_DIFF_1D_HPP
 
 /**
- * The aim of this class is to solve the advection diffusion reduced order problem in 1D.
+ * The aim of this class is to solve the advection diffusion full order problem in 1D in order to collect the snapshot matrix.
  */
 
 #include <deal.II/base/conditional_ostream.h>
@@ -28,7 +28,6 @@
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/trilinos_precondition.h>
 #include <deal.II/lac/trilinos_sparse_matrix.h>
-#include <deal.II/lac/full_matrix.h>
 
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/matrix_tools.h>
@@ -41,18 +40,10 @@
 #include <iostream>
 #include <set>
 
-// #include <Eigen/Dense>
-// #include <unsupported/Eigen/MatrixFunctions>
-// #include <Eigen/Sparse>
-// #include <unsupported/Eigen/SparseExtra>
-
-// using Mat_m = Eigen::MatrixXd;
-// using Vec_v = Eigen::VectorXd;
-
 using namespace dealii;
 
-// Class representing the linear diffusion problem.
-class AdvDiffPOD
+// Class representing the linear diffusion advection problem.
+class AdvDiff
 {
 public:
   // Physical dimension (1D, 2D, 3D)
@@ -68,7 +59,7 @@ public:
 
     // Evaluation.
     virtual double
-    value(const Point<dim> & p,
+    value(const Point<dim> & /*p*/,
           const unsigned int /*component*/ = 0) const override
     {
       // return std::pow(p[0], 4);
@@ -76,23 +67,6 @@ public:
       return 0.01;
     }
   };
-
-  // Reaction coefficient.
-  // class ReactionCoefficient : public Function<dim>
-  // {
-  // public:
-  //   // Constructor.
-  //   ReactionCoefficient()
-  //   {}
-
-  //   // Evaluation.
-  //   virtual double
-  //   value(const Point<dim> & /*p*/,
-  //         const unsigned int /*component*/ = 0) const override
-  //   {
-  //     return 1.0;
-  //   }
-  // };
 
   // Transport coefficient.
   class TransportCoefficient : public Function<dim>
@@ -157,23 +131,6 @@ public:
     }
   };
 
-  // Neumann boundary conditions.
-  // class FunctionH : public Function<dim>
-  // {
-  // public:
-  //   // Constructor.
-  //   FunctionH()
-  //   {}
-
-  //   // Evaluation:
-  //   virtual double
-  //   value(const Point<dim> &/*p*/,
-  //         const unsigned int /*component*/ = 0) const override
-  //   {
-  //     return 0.0;
-  //   }
-  // };
-
   // Function for the initial condition.
   class FunctionU0 : public Function<dim>
   {
@@ -182,6 +139,7 @@ public:
     FunctionU0()
     {}
 
+    // CAPIRE SE UTILE  CON PARAMETER HANDLER
     // FunctionU0(const std::vector<double> initial_state) : u0(initial_state)
     // {}
 
@@ -190,17 +148,10 @@ public:
     value(const Point<dim> & p,
           const unsigned int /*component*/ = 0) const override
     {
-      // if (u0.empty())
-        return std::sin(M_PI*p[0]);
-        // return 2.0*std::sin(9.0*M_PI*p[0]) - std::sin(4.0*M_PI*p[0]);
-      // else
-      // { // QUESTO SICURAMENTE NON CORRETTO
-      //   for (unsigned int i = 0; i < u0.size(); ++i)
-      //     return u0[i];
-      // }
-      //   // return u0 * p[0];
+      return std::sin(M_PI*p[0]);
     }
 
+    // CAPIRE SE UTILE  CON PARAMETER HANDLER
     // private:
     //   std::vector<double> u0;
 
@@ -216,6 +167,7 @@ public:
     // }
   };
 
+  // CAPIRE SE UTILE PER CONVERGENZA
   // Exact solution.
   // class ExactSolution : public Function<dim>
   // {
@@ -250,13 +202,12 @@ public:
   // };
 
   // Default constructor.
-  AdvDiffPOD(const unsigned int N_,
-             const unsigned int &r_,
-             const double       &T_,
-             const double       &deltat_,
-             const double       &theta_,
-             const std::vector<std::vector<double>> &snapshot_matrix_,
-             const std::vector<std::vector<double>> &modes_)
+  AdvDiff(const unsigned int N_,
+          const unsigned int &r_,
+          const double       &T_,
+          const double       &deltat_,
+          const double       &theta_,
+          const unsigned int &sample_every_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
@@ -265,10 +216,8 @@ public:
     , r(r_)
     , deltat(deltat_)
     , theta(theta_)
-    , modes(modes_)
-    , snapshot_matrix(snapshot_matrix_)
+    , sample_every(sample_every_)
     , mesh(MPI_COMM_WORLD)
-    , mesh_r(MPI_COMM_WORLD)
   {}
 
   // Initialization.
@@ -277,62 +226,41 @@ public:
 
   // Solve the problem.
   void
-  solve_reduced();
+  solve();
 
   // Compute the error for convergence analysis.
   // double
   // compute_error(const VectorTools::NormType &norm_type);
 
-  // Boundary DOFs indices.
-  // std::vector<unsigned int> boundary_dofs_idx_int;
+  // Snapshot matrix. It collects the solution at each time step. It contains the snapshots computed for a single parameter, 
+  // in other words, the time evolution for a single parameter.
+  std::vector<std::vector<double>> snapshot_matrix;
 
-  // HAI SPOSTATO TU PER RIPROIEZIONE IN MAIN poi eventualmente sposta poiezione di qui
-  // System solution (including ghost elements).
-  // TrilinosWrappers::MPI::Vector solution; 
-  TrilinosWrappers::MPI::Vector reduced_solution; 
+  // System solution (including ghost elements). 
+  TrilinosWrappers::MPI::Vector solution;
 
 protected:
-  // Setup the reduced system.
-  void
-  setup_reduced();
-
   // Assemble the mass and stiffness matrices.
   void
   assemble_matrices();
 
   // Assemble the right-hand side of the problem.
   void
-  assemble_rhs(const double &time, TrilinosWrappers::SparseMatrix &snapshot_matrix_trilinos);
-
-  // Assemble the right-hand side of the problem.  ..... altrimenti serve solution_owned
-  void
-  assemble_reduced_rhs(const double &time);
-
-  // Project the full order system to the reduced order system thanks to the transformation matrix.
-  void
-  convert_modes(FullMatrix<double> &transformation_matrix);
-
-  void
-  project_u0(FullMatrix<double> &transformation_matrix);
-
-  void
-  project_lhs(FullMatrix<double> &transformation_matrix);
-
-  void
-  project_rhs(FullMatrix<double> &transformation_matrix);
-
-  void
-  project_rhs_matrix(FullMatrix<double> &transformation_matrix);
+  assemble_rhs(const double &time);
 
   // Solve the problem for one time step.
   void
-  solve_time_step_reduced();
+  solve_time_step();
+
+  // Assemble the snapshot matrix.
+  void
+  assemble_snapshot_matrix(const unsigned int &time_step);
 
   // Output.
   void
   output(const unsigned int &time_step) const;
 
-  // MPI parallel. /////////////////////////////////////////////////////////////
+  // MPI parallel. //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Number of MPI processes.
   const unsigned int mpi_size;
@@ -343,13 +271,10 @@ protected:
   // Parallel output stream.
   ConditionalOStream pcout;
 
-  // Problem definition. ///////////////////////////////////////////////////////
+  // Problem definition. ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Diffusion coefficient.
   DiffusionCoefficient mu;
-
-  // Reaction coefficient.
-  // ReactionCoefficient reaction_coefficient;
 
   // Transport coefficient.
   TransportCoefficient beta;
@@ -363,12 +288,6 @@ protected:
   // Initial condition.
   FunctionU0 u_0;
 
-  // Initial ROM state.
-  // const std::vector<double> initial_state;
-
-  // h(x).
-  // FunctionH function_h;
-
   // Exact solution.
   // ExactSolution exact_solution;
 
@@ -381,7 +300,10 @@ protected:
   // Number of elements.
   const unsigned int N;
 
-  // Discretization. ///////////////////////////////////////////////////////////
+  // Sample_every parameter for selecting time steps which solution has to be collected in the snapshot matrix.
+  const unsigned int sample_every;
+
+  // Discretization. ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Polynomial degree.
   const unsigned int r;
@@ -392,45 +314,14 @@ protected:
   // Theta parameter of the theta method.
   const double theta;
 
-  // Projection. ///////////////////////////////////////////////////////////
-
-  // La metti qui per proiezione nel senso che serve solution_owned, ma è okay? ha senso? rende il codice riproducibile?
-  const std::vector<std::vector<double>> snapshot_matrix; 
-  // TrilinosWrappers::SparseMatrix snapshot_matrix_trilinos;
-
-  // Transformation matrix.
-  const std::vector<std::vector<double>> modes;
-  // TrilinosWrappers::SparseMatrix transformation_matrix;
-  // FullMatrix<double> transformation_matrix; // (modes.size(), modes[0].size());
-
-// for (unsigned int i = 0; i < modesT.m(); ++i)
-//     for (unsigned int j = 0; j < modesT.n(); ++j)
-//         modesT(i, j) = modesT_vec[i][j];
-
-// dealii::FullMatrix<double> modes(modes_vec.size(), modes_vec[0].size());
-// for (unsigned int i = 0; i < modes.m(); ++i)
-//     for (unsigned int j = 0; j < modes.n(); ++j)
-//         modes(i, j) = modes_vec[i][j];
-
-
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;
-
-  // Reduced mesh.
-  // parallel::fullydistributed::Triangulation<dim> mesh_r;
-  Triangulation<dim> mesh_r;
 
   // Finite element space.
   std::unique_ptr<FiniteElement<dim>> fe;
 
-  // Finite element space for reduced system.
-  std::unique_ptr<FiniteElement<dim>> fe_r;
-
   // Quadrature formula.
   std::unique_ptr<Quadrature<dim>> quadrature;
-
-  // Quadrature formula for reduced system.
-  std::unique_ptr<Quadrature<dim>> quadrature_r;
 
   // Quadrature formula used on boundary lines.
   std::unique_ptr<Quadrature<dim - 1>> quadrature_boundary;
@@ -438,23 +329,11 @@ protected:
   // DoF handler.
   DoFHandler<dim> dof_handler;
 
-  // DoF handler for reduced system.
-  DoFHandler<dim> dof_handler_r;
-
   // DoFs owned by current process.
   IndexSet locally_owned_dofs;
 
-  // DoFs owned by current process. .........
-  IndexSet locally_owned_dofs_r;
-
   // DoFs relevant to the current process (including ghost DoFs).
   IndexSet locally_relevant_dofs;
-
-  // DoFs relevant to the current process (including ghost DoFs). ........
-  IndexSet locally_relevant_dofs_r;
-
-  // ...
-  // IndexSet modes_idx;
 
   // Mass matrix M / deltat.
   TrilinosWrappers::SparseMatrix mass_matrix;
@@ -464,25 +343,15 @@ protected:
 
   // Matrix on the left-hand side (M / deltat + theta A).
   TrilinosWrappers::SparseMatrix lhs_matrix;
-  TrilinosWrappers::SparseMatrix reduced_system_lhs;
 
   // Matrix on the right-hand side (M / deltat - (1 - theta) A).
   TrilinosWrappers::SparseMatrix rhs_matrix;
-  TrilinosWrappers::SparseMatrix reduced_rhs_matrix;
 
   // Right-hand side vector in the linear system.
   TrilinosWrappers::MPI::Vector system_rhs;
-  TrilinosWrappers::MPI::Vector reduced_system_rhs;
-
-  // ... qui eventualmente togli se puoi evitare u_0
-  // però mi sa che devi moltiplicare per V la condizione iniziale e allora potresti fare project_solutionowned
-  TrilinosWrappers::SparseMatrix reduced_u_0;
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
-
-  // System solution (without ghost elements).
-  TrilinosWrappers::MPI::Vector reduced_solution_owned; // che è praticamente usata per condizione iniziale ridotta
 
 };
 
