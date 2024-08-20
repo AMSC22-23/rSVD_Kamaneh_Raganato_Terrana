@@ -308,9 +308,6 @@ protected:
   // Number of elements.
   const unsigned int N;
 
-  // Sample_every parameter for selecting time steps which solution has to be collected in the snapshot matrix.
-  const unsigned int sample_every;
-
   // Discretization. ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Polynomial degree.
@@ -321,6 +318,9 @@ protected:
 
   // Theta parameter of the theta method.
   const double theta;
+
+  // Sample_every parameter for selecting time steps which solution has to be collected in the snapshot matrix.
+  const unsigned int sample_every;
 
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;

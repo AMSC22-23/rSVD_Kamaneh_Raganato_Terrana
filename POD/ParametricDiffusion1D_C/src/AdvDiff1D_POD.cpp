@@ -95,14 +95,14 @@ AdvDiffPOD::setup_reduced()
     pcout << "Initializing the reduced mesh" << std::endl;
 
     Triangulation<dim> mesh_serial_r;
-    GridGenerator::subdivided_hyper_cube(mesh_serial_r, modes[0].size()-1, 0.0, 1.0, true);
+    GridGenerator::subdivided_hyper_cube(mesh_serial_r, modes[0].size(), 0.0, 1.0, true);
     // CAPIRE
         // QUI HAI CAMBIATO IN MODO CHE LA MATRICE NON ABBIA UN ELEMENTO IN PIU
     pcout << "  Number of elements = " << mesh_r.n_active_cells()
               << std::endl;
 
     // Write the mesh to file.
-    const std::string mesh_file_name_r = "mesh_r-" + std::to_string(modes[0].size()-1) + ".vtk";
+    const std::string mesh_file_name_r = "mesh_r-" + std::to_string(modes[0].size()) + ".vtk";
     GridOut           grid_out_r;
     std::ofstream     grid_out_file_r(mesh_file_name_r);
     grid_out_r.write_vtk(mesh_serial_r, grid_out_file_r);
