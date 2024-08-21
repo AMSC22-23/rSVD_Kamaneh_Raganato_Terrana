@@ -71,13 +71,14 @@ main(int argc, char * argv[])
   }
   
   auto start_snapshot = high_resolution_clock::now();
-  #pragma omp parallel for ordered
+  // #pragma omp parallel for ordered
+  #pragma omp parallel for 
   for (unsigned int i=0; i<n; i++)
   {
-    #pragma omp ordered
-    {
-      pcout << "  Computing snapshot matrix stripe " << i+1 << " out of " << n << std::endl;
-    }
+    // #pragma omp ordered
+    // {
+    //   pcout << "  Computing snapshot matrix stripe " << i+1 << " out of " << n << std::endl;
+    // }
 
     AdvDiff problem(N, r, T, deltat, theta, sample_every, prm_diffusion_coefficient[i]);    
 
@@ -96,18 +97,18 @@ main(int argc, char * argv[])
       for (Eigen::Index k=0; k<time_steps; k++) // controlla e commenta per stripe
         snapshots(j, (i*time_steps)+k) = problem.snapshot_matrix[j][k];
 
-    #pragma omp ordered
-    {
-      pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
+    // #pragma omp ordered
+    // {
+    //   pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
 
-      pcout << "  Check snapshots and problem solution values:" << std::endl;
-      pcout << "    snapshots(0, time_steps-1)  = " << snapshots(0, (i*time_steps)+time_steps-1) << std::endl;
-      pcout << "    problem.solution(0)         = " << problem.solution(0) << std::endl;
-      pcout << "    snapshots(1, time_steps-1)  = " << snapshots(1, (i*time_steps)+time_steps-1) << std::endl;
-      pcout << "    problem.solution(1)         = " << problem.solution(1) << std::endl;
-      pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, (i*time_steps)+time_steps-1) << std::endl;
-      pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl;
-    }
+    //   pcout << "  Check snapshots and problem solution values:" << std::endl;
+    //   pcout << "    snapshots(0, time_steps-1)  = " << snapshots(0, (i*time_steps)+time_steps-1) << std::endl;
+    //   pcout << "    problem.solution(0)         = " << problem.solution(0) << std::endl;
+    //   pcout << "    snapshots(1, time_steps-1)  = " << snapshots(1, (i*time_steps)+time_steps-1) << std::endl;
+    //   pcout << "    problem.solution(1)         = " << problem.solution(1) << std::endl;
+    //   pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, (i*time_steps)+time_steps-1) << std::endl;
+    //   pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl;
+    // }
   }
   auto stop_snapshot = high_resolution_clock::now();
   auto duration_snapshot = duration_cast<milliseconds>(stop_snapshot - start_snapshot);
