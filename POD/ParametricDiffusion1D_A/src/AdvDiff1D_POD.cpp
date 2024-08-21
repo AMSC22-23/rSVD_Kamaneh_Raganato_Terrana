@@ -1,5 +1,8 @@
 #include "AdvDiff1D_POD.hpp"
 
+template class AdvDiff<1>;
+// template class AdvDiff<2>; per questo ti servono altri elementi finiti
+// template class AdvDiff<3>;
 void
 AdvDiffPOD::setup()
 {
@@ -8,6 +11,8 @@ AdvDiffPOD::setup()
     pcout << "Initializing the mesh" << std::endl;
 
     Triangulation<dim> mesh_serial;
+
+    const unsigned int N = parameters.get_integer("N");
     GridGenerator::subdivided_hyper_cube(mesh_serial, N + 1, 0.0, 1.0, true);
     pcout << "  Number of elements = " << mesh.n_active_cells()
               << std::endl;
@@ -34,6 +39,7 @@ AdvDiffPOD::setup()
   {
     pcout << "Initializing the finite element space" << std::endl;
 
+    const unsigned int r = parameters.get_integer("degree");
     fe = std::make_unique<FE_Q<dim>>(r);
 
     pcout << "  Degree                     = " << fe->degree << std::endl;
@@ -198,6 +204,10 @@ AdvDiffPOD::assemble_matrices()
   mass_matrix      = 0.0;
   stiffness_matrix = 0.0;
 
+  const double mu = parameters.get_double("mu");
+  const double beta = parameters.get_double("beta");
+  const double deltat = parameters.get_double("deltat");
+
   for (const auto &cell : dof_handler.active_cell_iterators())
     {
       if (!cell->is_locally_owned())
@@ -278,6 +288,9 @@ AdvDiffPOD::assemble_rhs(const double &time)
   std::vector<types::global_dof_index> dof_indices(dofs_per_cell);
 
   system_rhs = 0.0;
+
+  const double theta = parameters.get_double("theta");
+  const double deltat = parameters.get_double("deltat");
 
   for (const auto &cell : dof_handler.active_cell_iterators())
     {
@@ -527,6 +540,9 @@ AdvDiffPOD::solve_reduced()
   unsigned int time_step = 0;
   double       time      = 0;
 
+  const double T = parameters.get_double("T");
+  const double deltat = parameters.get_double("deltat");
+  
   while (time < T)
     {
       time += deltat;
@@ -551,6 +567,7 @@ AdvDiffPOD::solve_reduced()
 //   FE_Q<dim> fe_linear(1);
 //   MappingFE mapping(fe_linear);
 
+//   const unsigned int r = parameters.get_integer("degree");
 //   const QGauss<dim> quadrature_error = QGauss<dim>(r + 2);
 
 //   exact_solution.set_time(time);

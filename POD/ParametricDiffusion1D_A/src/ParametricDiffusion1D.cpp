@@ -18,29 +18,45 @@ main(int argc, char * argv[])
   const unsigned int               mpi_rank = Utilities::MPI::this_mpi_process(MPI_COMM_WORLD);
   dealii::ConditionalOStream pcout(std::cout, mpi_rank == 0);
 
-  const unsigned int N = 119;
-  // const unsigned int N = 49;
-  const unsigned int r = 1;
+  if (argc < 1)
+  {
+    std::cerr << "Usage: " << argv[0] << " [parameter_file]" << std::endl;
+    return 1;
+  }
 
-  const double T         = 0.05;
+  std::string parameter_file;
+  if (argc >= 2)
+  {
+    parameter_file = argv[1];
+  }
+  else
+  {
+    parameter_file = "../input/test.prm"; // Default parameter file
+  }
+
+  // const unsigned int N = 119;
+  // const unsigned int N = 49;
+  // const unsigned int r = 1;
+
+  // const double T         = 0.05;
   // const double deltat    = 1e-5; // 5000 steps
   // const double deltat    = 1e-4; // 500 steps
   // const double deltat    = 5e-4; // 100 steps
-  const double deltat    = 1e-3; // 50 steps
+  // const double deltat    = 1e-3; // 50 steps
 
   // const double theta  = 1.0; // Implicit Euler
-  const double theta  = 0.0; // Explicit Euler
+  // const double theta  = 0.0; // Explicit Euler
 
   // This parameter establishes how much frequently the snapshots are collected in the snapshot matrix. The default value 1 means
   // that all the snapshots are collected.
-  const unsigned int sample_every = 1;
+  // const unsigned int sample_every = 1;
   // const unsigned int sample_every = 5;
 
   // Solve the advection diffusion problem on the full order model and collect snapshots in the snapshot matrix.
   pcout << "===================================================================" << std::endl;
   pcout << "Run FOM and collect snapshots" << std::endl;
 
-  AdvDiff problem(N, r, T, deltat, theta, sample_every);    
+  AdvDiff<1> problem(parameter_file);    
 
   problem.setup();
   problem.solve();
@@ -158,7 +174,7 @@ main(int argc, char * argv[])
       for (Eigen::Index k=0; k<rom_sizes[i]; k++)
         modes[j][k] = compute_modes.W(j, k);
 
-    AdvDiffPOD problemPOD(N, r, T, deltat, theta, modes);
+    AdvDiffPOD<1> problemPOD(modes, parameter_file);
     
     problemPOD.setup();
     problemPOD.solve_reduced();

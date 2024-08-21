@@ -43,59 +43,60 @@
 using namespace dealii;
 
 // Class representing the linear diffusion advection problem.
+template <int dim>
 class AdvDiff
 {
 public:
   // Physical dimension (1D, 2D, 3D)
-  static constexpr unsigned int dim = 1;
+  // static constexpr unsigned int dim = 1;
 
   // Diffusion coefficient.
-  class DiffusionCoefficient : public Function<dim>
-  {
-  public:
-    // Constructor.
-    DiffusionCoefficient()
-    {}
+  // class DiffusionCoefficient : public Function<dim>
+  // {
+  // public:
+  //   // Constructor.
+  //   DiffusionCoefficient()
+  //   {}
 
-    // Evaluation.
-    virtual double
-    value(const Point<dim> & /*p*/,
-          const unsigned int /*component*/ = 0) const override
-    {
-      // return std::pow(p[0], 4);
-      // return p[0];
-      return 0.01;
-    }
-  };
+  //   // Evaluation.
+  //   virtual double
+  //   value(const Point<dim> & /*p*/,
+  //         const unsigned int /*component*/ = 0) const override
+  //   {
+  //     // return std::pow(p[0], 4);
+  //     // return p[0];
+  //     return 0.01;
+  //   }
+  // };
 
   // Transport coefficient.
-  class TransportCoefficient : public Function<dim>
-  {
-  public:
-    // Constructor.
-    TransportCoefficient()
-    {}
+  // class TransportCoefficient : public Function<dim>
+  // {
+  // public:
+  //   // Constructor.
+  //   TransportCoefficient()
+  //   {}
 
-    // Evaluation.
-    virtual void
-    vector_value(const Point<dim> & /*p*/,
-                 Vector<double> &values) const override
-    {
-      // values[0] = 2.0;
-      values[0] = 0.2;
-    }
+  //   // Evaluation.
+  //   virtual void
+  //   vector_value(const Point<dim> & /*p*/,
+  //                Vector<double> &values) const override
+  //   {
+  //     // values[0] = 2.0;
+  //     values[0] = 0.2;
+  //   }
 
-    virtual double
-    value(const Point<dim> & /*p*/,
-          const unsigned int component = 0) const override
-    {
-      if (component == 0)
-        // return 2.0;
-        return 0.2;
-      else
-        return 0.0;
-    }
-  };
+    // virtual double
+    // value(const Point<dim> & /*p*/,
+    //       const unsigned int component = 0) const override
+    // {
+    //   if (component == 0)
+    //     // return 2.0;
+    //     return 0.2;
+  //     else
+  //       return 0.0;
+  //   }
+  // };
 
   // Forcing term.
   class ForcingTerm : public Function<dim>
@@ -136,35 +137,24 @@ public:
   {
   public:
     // Constructor.
-    FunctionU0()
-    {}
-
-    // CAPIRE SE UTILE  CON PARAMETER HANDLER
-    // FunctionU0(const std::vector<double> initial_state) : u0(initial_state)
+    // FunctionU0()
     // {}
+
+    FunctionU0(const AdvDiff<dim> &advdiff) : advdiff(advdiff)
+    {}
 
     // Evaluation.
     virtual double
     value(const Point<dim> & p,
           const unsigned int /*component*/ = 0) const override
     {
-      return std::sin(M_PI*p[0]);
+      const double amplitude = advdiff.parameters.get_double("amplitude");
+      return amplitude*std::sin(M_PI*p[0]);
     }
 
-    // CAPIRE SE UTILE  CON PARAMETER HANDLER
-    // private:
-    //   std::vector<double> u0;
-
-    // // Evaluation.
-    // virtual double
-    // value(const Point<dim> &p,
-    //       const unsigned int /*component*/ = 0) const override
-    // {
-    //   if (initial_state.empty())
-    //     return std::sin(M_PI*p[0]);
-    //   else
-    //     return initial_state;
-    // }
+    private:
+      const AdvDiff<dim> &advdiff;
+  
   };
 
   // CAPIRE SE UTILE PER CONVERGENZA
@@ -202,23 +192,39 @@ public:
   // };
 
   // Default constructor.
-  AdvDiff(const unsigned int N_,
+  AdvDiff(/*const unsigned int N_,
           const unsigned int &r_,
           const double       &T_,
           const double       &deltat_,
           const double       &theta_,
-          const unsigned int &sample_every_)
+          const unsigned int &sample_every_,*/
+          const std::string  &prm_file_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
-    , T(T_)
-    , N(N_)
-    , r(r_)
-    , deltat(deltat_)
-    , theta(theta_)
-    , sample_every(sample_every_)
+    // , N(N_)
+    // , r(r_)
+    // , T(T_)
+    // , deltat(deltat_)
+    // , theta(theta_)
+    // , sample_every(sample_every_)
+    , prm_file(prm_file_)
     , mesh(MPI_COMM_WORLD)
-  {}
+    , u_0(*this)
+  {
+      parameters.declare_entry("mu", "1.0", Patterns::Double(), "dummy");
+      parameters.declare_entry("beta", "1.0", Patterns::Double(), "dummy");
+      parameters.declare_entry("amplitude", "1.0", Patterns::Double(), "dummy");
+
+      parameters.declare_entry("N", "0", Patterns::Integer(), "dummy");
+      parameters.declare_entry("degree", "0", Patterns::Integer(), "dummy");
+      parameters.declare_entry("T", "0.0", Patterns::Double(), "dummy");
+      parameters.declare_entry("deltat", "0.0", Patterns::Double(), "dummy");
+      parameters.declare_entry("theta", "0.0", Patterns::Double(), "dummy");
+      parameters.declare_entry("sample_every", "0.0", Patterns::Integer(), "dummy");
+
+      parameters.parse_input(prm_file);
+  }
 
   // Initialization.
   void
@@ -274,10 +280,10 @@ protected:
   // Problem definition. ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Diffusion coefficient.
-  DiffusionCoefficient mu;
+  // DiffusionCoefficient mu;
 
   // Transport coefficient.
-  TransportCoefficient beta;
+  // TransportCoefficient beta;
 
   // Forcing term.
   ForcingTerm forcing_term;
@@ -295,24 +301,28 @@ protected:
   double time;
   
   // Final time.
-  const double T;
+  // const double T;
 
   // Number of elements.
-  const unsigned int N;
+  // const unsigned int N;
 
   // Discretization. ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Polynomial degree.
-  const unsigned int r;
+  // const unsigned int r;
 
   // Time step.
-  const double deltat;
+  // const double deltat;
 
   // Theta parameter of the theta method.
-  const double theta;
+  // const double theta;
 
   // Sample_every parameter for selecting time steps which solution has to be collected in the snapshot matrix.
-  const unsigned int sample_every;
+  // const unsigned int sample_every;
+
+  const std::string prm_file;
+
+  ParameterHandler parameters;
 
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;
