@@ -49,8 +49,8 @@ main(int argc, char * argv[])
   std::vector<double> prm_diffusion_coefficient;
   prm_diffusion_coefficient.resize(n); 
 
-  size_t snapshot_length;
-  size_t time_steps;
+  Eigen::Index snapshot_length = 0;
+  Eigen::Index time_steps = 0;
   Mat_m snapshots;
 
   for (unsigned int i=0; i<n; i++)
@@ -122,7 +122,7 @@ main(int argc, char * argv[])
 
 
   Mat_m Xh = Mat_m::Zero(snapshot_length, snapshot_length);
-  for (int i=0; i<snapshot_length; i++) {
+  for (Eigen::Index i=0; i<snapshot_length; i++) {
       Xh.coeffRef(i, i) = 2.0;
     if(i>0) Xh.coeffRef(i, i-1) = -1.0;
       if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
@@ -162,7 +162,7 @@ main(int argc, char * argv[])
 
 
   // size_t rom_size = 6; // Number of modes
-  std::vector<Eigen::Index> rom_sizes = {2, 4, 6}; // CAMBIA
+  std::vector<Eigen::Index> rom_sizes = {2, 4, 6, 8, 10, 20}; // CAMBIA
   // std::vector<size_t> rom_sizes = {5, 10, 25, 50, 75, 100}; // comportamento strano con 10 modes CAMBIA
 
   std::vector<std::vector<double>> modes;
@@ -184,13 +184,14 @@ main(int argc, char * argv[])
 
   auto stop_full = high_resolution_clock::now();
   auto duration_full = duration_cast<milliseconds>(stop_full - start_full);
+  auto duration_full_step = problem_new_parameter.duration_full_avg.count();
 
-  Vec_v solution_new_parameter = Vec_v ::Zero(problem_new_parameter.solution.size());
+  Vec_v solution_new_parameter = Vec_v::Zero(problem_new_parameter.solution.size());
   for (size_t i=0; i<problem_new_parameter.solution.size(); i++)
     solution_new_parameter(i) = problem_new_parameter.solution(i);
   
   // qui ha senso farlo per le diverse rom_sizes
-  for (Eigen::Index i=0; i<rom_sizes.size(); i++) {
+  for (size_t i=0; i<rom_sizes.size(); i++) {
   // for (size_t i=0; i<1; i++) {
     pcout << "-------------------------------------------------------------------" << std::endl;
     pcout << "Creating ROM for " << rom_sizes[i] << " modes\n" << std::endl;
@@ -243,8 +244,10 @@ main(int argc, char * argv[])
     pcout << "    fom approximated solution(2) = " << fom_state(2) << std::endl;
 
     pcout << "\n  With " << rom_sizes[i] << " modes, final relative l2 error: " << err/fom_solution_norm << std::endl;
-    pcout << "  Time for solving the full order problem:    " << duration_full.count() << " ms" << endl;
-    pcout << "  Time for solving the reduced order problem: " << duration_reduced.count() << " ms" << endl;
+    pcout << "  Time for solving the full order problem:          " << duration_full.count() << " ms" << std::endl;
+    pcout << "  Time for solving the reduced order problem:       " << duration_reduced.count() << " ms" << std::endl;
+    pcout << "  Average time for solving one step of fom problem: " << duration_full_step << " ms" << std::endl;
+    pcout << "  Average time for solving one step of rom problem: " << problemPOD.duration_reduced_avg.count() << " ms" << std::endl;
 
     // Clear the modes matrix for the next iteration.
     modes.resize(0);

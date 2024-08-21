@@ -539,10 +539,21 @@ AdvDiffPOD::solve_reduced()
       assemble_rhs(time);
       project_rhs(transformation_matrix);
 
+      auto start_reduced = high_resolution_clock::now();
       solve_time_step_reduced();
+      auto stop_reduced = high_resolution_clock::now();
+      auto duration_reduced = duration_cast<milliseconds>(stop_reduced - start_reduced);
+      duration_reduced_vec.push_back(duration_reduced);
+
       expand_solution(transformation_matrix);
+
       output(time_step);
     }
+
+  // Compute the average duration of solving a single time step.
+  duration_reduced_avg = std::reduce(duration_reduced_vec.begin(), duration_reduced_vec.end())/static_cast<double>(duration_reduced_vec.size());
+
+  // duration_reduced_avg = duration_reduced_vec.accumulate() / duration_reduced_vec.size();
 }
 
 // double

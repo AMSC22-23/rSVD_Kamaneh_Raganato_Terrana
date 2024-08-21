@@ -40,6 +40,9 @@
 #include <iostream>
 #include <set>
 
+#include <chrono>
+using namespace std::chrono;
+
 using namespace dealii;
 
 // Class representing the linear diffusion advection problem.
@@ -218,13 +221,13 @@ public:
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
+    , mu(prm_diffusion_coefficient_)
     , T(T_)
     , N(N_)
     , r(r_)
     , deltat(deltat_)
     , theta(theta_)
     , modes(modes_)
-    , mu(prm_diffusion_coefficient_)
     , mesh(MPI_COMM_WORLD)
     , mesh_r(MPI_COMM_WORLD)
   {}
@@ -244,6 +247,9 @@ public:
   // System solution (including ghost elements). It collects the full order approximated solution that is obtained by projecting
   // (expanding) the reduced order solution.
   TrilinosWrappers::MPI::Vector fom_solution;
+
+  // Average duration of solving a single time step.
+  std::chrono::duration<double> duration_reduced_avg;
 
 protected:
   // Setup the reduced system.
@@ -397,6 +403,9 @@ protected:
   TrilinosWrappers::MPI::Vector reduced_solution_owned;
   TrilinosWrappers::MPI::Vector reduced_solution;
   
+  // Vector collecting the durations of solving a single time step.
+  std::vector<std::chrono::duration<double>> duration_reduced_vec;
+
 };
 
 #endif

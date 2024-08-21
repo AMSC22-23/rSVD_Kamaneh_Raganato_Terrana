@@ -40,6 +40,9 @@
 #include <iostream>
 #include <set>
 
+#include <chrono>
+using namespace std::chrono;
+
 using namespace dealii;
 
 // Class representing the linear diffusion advection problem.
@@ -218,13 +221,13 @@ public:
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
+    , mu(prm_diffusion_coefficient_)
     , T(T_)
     , N(N_)
     , r(r_)
     , deltat(deltat_)
     , theta(theta_)
     , sample_every(sample_every_)
-    , mu(prm_diffusion_coefficient_)
     , mesh(MPI_COMM_WORLD)
   {}
 
@@ -246,6 +249,9 @@ public:
 
   // System solution (including ghost elements). 
   TrilinosWrappers::MPI::Vector solution;
+
+  // Average duration of solving a single time step.
+  std::chrono::duration<double> duration_full_avg;
 
 protected:
   // Assemble the mass and stiffness matrices.
@@ -360,6 +366,9 @@ protected:
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
+
+  // Vector collecting the durations of solving a single time step.
+  std::vector<std::chrono::duration<double>> duration_full_vec;
 
 };
 
