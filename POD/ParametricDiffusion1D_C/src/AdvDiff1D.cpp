@@ -270,7 +270,7 @@ AdvDiff::assemble_snapshot_matrix(const unsigned int &time_step)
   if(time_step == 0) {
     snapshot_matrix.resize(solution.size());
     for(auto &row : snapshot_matrix)
-      row.resize(T/(deltat*sample_every)+1, 0.0); // COSI SAREBBE INIZIALE + 25 SNAPSHOTS OGNI 200 ISTANTI TEMPORALI – CAPIRE E SISTEMARE
+      row.resize(static_cast<std::vector<double>::size_type>(T/(deltat*sample_every)+1), 0.0); // COSI SAREBBE INIZIALE + 25 SNAPSHOTS OGNI 200 ISTANTI TEMPORALI – CAPIRE E SISTEMARE
   }
 
   // It is not necessarily to build a snapshot_array, since snapshot_matrix can be directly filled with solution.
@@ -336,13 +336,23 @@ AdvDiff::solve()
             << time << ":" << std::flush;
 
       assemble_rhs(time);
+
+      auto start_full = high_resolution_clock::now();
       solve_time_step();
+      auto stop_full = high_resolution_clock::now();
+      auto duration_full = duration_cast<milliseconds>(stop_full - start_full);
+      duration_full_vec.push_back(duration_full);
 
       if (time_step % sample_every == 0)
         assemble_snapshot_matrix(time_step);
 
       output(time_step);
     }
+
+  // Compute the average duration of solving a single time step.
+  duration_full_avg = std::reduce(duration_full_vec.begin(), duration_full_vec.end())/static_cast<double>(duration_full_vec.size());
+  
+  // duration_full_vec.accumulate() / duration_full_vec.size();
 }
 
 // double

@@ -218,13 +218,13 @@ public:
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
+    , mu(prm_diffusion_coefficient_)
     , T(T_)
     , N(N_)
     , r(r_)
     , deltat(deltat_)
     , theta(theta_)
     , modes(modes_)
-    , mu(prm_diffusion_coefficient_)
     , mesh(MPI_COMM_WORLD)
     , mesh_r(MPI_COMM_WORLD)
   {}
@@ -322,12 +322,6 @@ protected:
   // Number of elements.
   const unsigned int N;
 
-  // Projection. ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  // Modes matrix. It is the matrix that contains the POD modes, which will be the columns of the transformation matrix used as
-  // projector from full order to reduced order model.
-  const std::vector<std::vector<double>> modes;
-
   // Discretization. ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Polynomial degree.
@@ -338,6 +332,12 @@ protected:
 
   // Theta parameter of the theta method.
   const double theta;
+
+  // Projection. ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // Modes matrix. It is the matrix that contains the POD modes, which will be the columns of the transformation matrix used as
+  // projector from full order to reduced order model.
+  const std::vector<std::vector<double>> modes;
 
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;

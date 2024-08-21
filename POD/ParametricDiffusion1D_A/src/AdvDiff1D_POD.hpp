@@ -314,12 +314,6 @@ protected:
   // Number of elements.
   const unsigned int N;
 
-  // Projection. ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  // Modes matrix. It is the matrix that contains the POD modes, which will be the columns of the transformation matrix used as
-  // projector from full order to reduced order model.
-  const std::vector<std::vector<double>> modes;
-
   // Discretization. ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Polynomial degree.
@@ -330,6 +324,12 @@ protected:
 
   // Theta parameter of the theta method.
   const double theta;
+
+  // Projection. ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // Modes matrix. It is the matrix that contains the POD modes, which will be the columns of the transformation matrix used as
+  // projector from full order to reduced order model.
+  const std::vector<std::vector<double>> modes;
 
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;

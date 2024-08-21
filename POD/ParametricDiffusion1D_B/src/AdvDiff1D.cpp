@@ -270,7 +270,7 @@ AdvDiff::assemble_snapshot_matrix(const unsigned int &time_step)
   if(time_step == 0) {
     snapshot_matrix.resize(solution.size());
     for(auto &row : snapshot_matrix)
-      row.resize(T/(deltat*sample_every)+1, 0.0); // COSI SAREBBE INIZIALE + 25 SNAPSHOTS OGNI 200 ISTANTI TEMPORALI – CAPIRE E SISTEMARE
+      row.resize(static_cast<std::vector<double>::size_type>(T/(deltat*sample_every)+1), 0.0); // COSI SAREBBE INIZIALE + 25 SNAPSHOTS OGNI 200 ISTANTI TEMPORALI – CAPIRE E SISTEMARE
   }
 
   // It is not necessarily to build a snapshot_array, since snapshot_matrix can be directly filled with solution.

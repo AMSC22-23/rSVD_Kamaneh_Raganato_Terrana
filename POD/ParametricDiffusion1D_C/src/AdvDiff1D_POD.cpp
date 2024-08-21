@@ -95,14 +95,14 @@ AdvDiffPOD::setup_reduced()
     pcout << "Initializing the reduced mesh" << std::endl;
 
     Triangulation<dim> mesh_serial_r;
-    GridGenerator::subdivided_hyper_cube(mesh_serial_r, modes[0].size()-1, 0.0, 1.0, true);
+    GridGenerator::subdivided_hyper_cube(mesh_serial_r, modes[0].size(), 0.0, 1.0, true);
     // CAPIRE
         // QUI HAI CAMBIATO IN MODO CHE LA MATRICE NON ABBIA UN ELEMENTO IN PIU
     pcout << "  Number of elements = " << mesh_r.n_active_cells()
               << std::endl;
 
     // Write the mesh to file.
-    const std::string mesh_file_name_r = "mesh_r-" + std::to_string(modes[0].size()-1) + ".vtk";
+    const std::string mesh_file_name_r = "mesh_r-" + std::to_string(modes[0].size()) + ".vtk";
     GridOut           grid_out_r;
     std::ofstream     grid_out_file_r(mesh_file_name_r);
     grid_out_r.write_vtk(mesh_serial_r, grid_out_file_r);
@@ -539,10 +539,21 @@ AdvDiffPOD::solve_reduced()
       assemble_rhs(time);
       project_rhs(transformation_matrix);
 
+      auto start_reduced = high_resolution_clock::now();
       solve_time_step_reduced();
+      auto stop_reduced = high_resolution_clock::now();
+      auto duration_reduced = duration_cast<milliseconds>(stop_reduced - start_reduced);
+      duration_reduced_vec.push_back(duration_reduced);
+
       expand_solution(transformation_matrix);
+
       output(time_step);
     }
+
+  // Compute the average duration of solving a single time step.
+  duration_reduced_avg = std::reduce(duration_reduced_vec.begin(), duration_reduced_vec.end())/static_cast<double>(duration_reduced_vec.size());
+
+  // duration_reduced_avg = duration_reduced_vec.accumulate() / duration_reduced_vec.size();
 }
 
 // double

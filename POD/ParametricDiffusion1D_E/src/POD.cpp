@@ -3,7 +3,7 @@
 // Default constructor for standard POD
 POD::POD(Mat_m &S, const int r, const double tol)
 {
-    cout << "===================================================================" << endl;
+    cout << "======================================================================================" << endl;
     cout << "Default constructor for POD" << endl << endl;
     W = standard_POD(S, r, tol);
 }
@@ -11,7 +11,7 @@ POD::POD(Mat_m &S, const int r, const double tol)
 // Constructor for energy POD
 POD::POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
 {
-    cout << "===================================================================" << endl;
+    cout << "======================================================================================" << endl;
     cout << "Constructor for energy_POD" << endl << endl;
     W = energy_POD(S, Xh, r, tol);
 }
@@ -19,7 +19,7 @@ POD::POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
 // Constructor for weight POD
 POD::POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol)
 {
-    cout << "===================================================================" << endl;
+    cout << "======================================================================================" << endl;
     cout << "Constructor for weight_POD" << endl << endl;
     W = weight_POD(S, Xh, D, r, tol);
 }
@@ -27,7 +27,7 @@ POD::POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol)
 // Constructor for online POD through incremental SVD: starting from A it computes U, Sigma, V
 POD::POD(Mat_m &A, Mat_m &U, Mat_m &Sigma, Mat_m &V, const int dim, const Vec_v c, const int M, const int r, const double tol, const double tol_sv)
 {   
-    cout << "===================================================================" << endl;
+    cout << "======================================================================================" << endl;
     cout << "Constructor for online POD" << endl << endl;
     Vec_v sigma = Vec_v::Zero(dim);
     SVD(A, sigma, U, V, dim);
@@ -53,7 +53,7 @@ void POD::PM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v)
     double epsilon = 1.e-10;
     double delta = 0.05;
     double lambda = 0.1;
-    unsigned int s = static_cast<unsigned int>(ceil( log(4*log(2*A.cols()/delta)/(epsilon*delta)) /(2*lambda)));
+    int s = ceil( log(4*log(2*A.cols()/delta)/(epsilon*delta)) /(2*lambda));
     // cout << "Check the number of iterations: " << s << endl;
 
     for (unsigned int i=1; i<=s; i++) {
@@ -84,7 +84,7 @@ void POD::SVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim)
     Vec_v u = Vec_v::Zero(A.rows());
     Vec_v v = Vec_v::Zero(A.cols());
     
-    for (int i=0; i<dim; i++) {
+    for (unsigned int i=0; i<dim; i++) {
         PM(A, B, sigma(i), u, v);
         A -= sigma(i)*u*v.transpose();
         B = A.transpose()*A;
@@ -98,7 +98,7 @@ void POD::SVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim)
 // Algorithm 6.1 page 126 – POD Algorithm
 Mat_m POD::standard_POD(Mat_m &S, const int r, const double tol)
 {
-    cout << "===================================================================" << endl;
+    cout << "======================================================================================" << endl;
     cout << "Standard POD" << endl << endl;
     // NOTE: in the book, W is called V, V is called Z
     // NOTE: it can be proved that solving an eigenvalue problem is equivalent to computing the SVD
@@ -196,7 +196,7 @@ Mat_m POD::standard_POD(Mat_m &S, const int r, const double tol)
 // Algorithm 6.2 page 128 – POD Algorithm with energy norm
 Mat_m POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
 {
-    cout << "===================================================================" << endl;
+    cout << "======================================================================================" << endl;
     cout << "POD with energy norm" << endl << endl;
     // NOTE: in the book, W is called V, V is called Z
     // NOTE: it can be proved that solving an eigenvalue problem is equivalent to computing the SVD
@@ -315,7 +315,7 @@ Mat_m POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
 // Algorithm 6.3 page 134 – POD Algorithm with energy norm and quadrature weights
 Mat_m POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol)
 {
-    cout << "===================================================================" << endl;
+    cout << "======================================================================================" << endl;
     cout << "POD with energy norm and quadrature weights" << endl << endl;
     // NOTE: in the book, W is called V, V is called Z
     // NOTE: it can be proved that solving an eigenvalue problem is equivalent to computing the SVD
@@ -448,7 +448,7 @@ Mat_m POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double t
 // Standard incremental SVD for building POD – Algorithm 1
 void POD::standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const double tol, const double tol_sv)
 {
-    cout << "===================================================================" << endl;
+    cout << "======================================================================================" << endl;
     cout << "Standard incremental SVD" << endl << endl;
     // NOTE: in the paper, U is called V and V is called W
     // NOTE: in the paper, the starting index is 1, here it is 0
@@ -610,7 +610,7 @@ void POD::standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const d
 // Enhanced incremental SVD for building POD – Algorithm 2
 void POD::enhanced_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const int M, const double tol, const double tol_sv)
 {
-    cout << "===================================================================" << endl;
+    cout << "======================================================================================" << endl;
     cout << "Enhanced incremental SVD" << endl << endl;
     // NOTE: in the paper, U is called V and V is called W
     // NOTE: in the paper, the starting index is 1, here it is 0

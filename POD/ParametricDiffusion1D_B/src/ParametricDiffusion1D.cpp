@@ -6,6 +6,9 @@
 #include <vector>
 #include <map>
 
+#include <chrono>
+using namespace std::chrono;
+
 #include "POD.hpp"
 #include "AdvDiff1D.hpp"
 #include "AdvDiff1D_POD.hpp"
@@ -31,8 +34,10 @@ main(int argc, char * argv[])
   // const double theta  = 1.0; // Implicit Euler
   const double theta  = 0.0; // Explicit Euler
 
+  // This parameter establishes how much frequently the snapshots are collected in the snapshot matrix. The default value 1 means
+  // that all the snapshots are collected.
   const unsigned int sample_every = 1;
-
+  // const unsigned int sample_every = 5;
 
   // Solve the advection diffusion problem on the full order model and collect snapshots in the snapshot matrix.
   pcout << "===================================================================" << std::endl;
@@ -44,8 +49,8 @@ main(int argc, char * argv[])
   std::vector<double> prm_diffusion_coefficient;
   prm_diffusion_coefficient.resize(n); 
 
-  size_t snapshot_length;
-  size_t time_steps;
+  Eigen::Index snapshot_length = 0;
+  Eigen::Index time_steps = 0;
   Mat_m snapshots;
 
   for (unsigned int i=0; i<n; i++)
@@ -55,12 +60,13 @@ main(int argc, char * argv[])
     else
       prm_diffusion_coefficient[i] = (prm_diffusion_coefficient_min +
                                       i*(prm_diffusion_coefficient_max - prm_diffusion_coefficient_min)/(n-1));
-    std::cout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;
+    pcout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;
   }
     
+  auto start_snapshot = high_resolution_clock::now();
   for (unsigned int i=0; i<n; i++)
   {
-    std::cout << "  Computing snapshot matrix stripe " << i+1 << " out of " << n << std::endl;
+    pcout << "  Computing snapshot matrix stripe " << i+1 << " out of " << n << std::endl;
 
     AdvDiff problem(N, r, T, deltat, theta, sample_every, prm_diffusion_coefficient[i]);    
 
@@ -75,8 +81,8 @@ main(int argc, char * argv[])
       snapshots.resize(snapshot_length, n*time_steps);
       // Mat_m snapshots = Mat_m::Zero(snapshot_length, time_steps);
     }
-    for (size_t j=0; j<snapshots.rows(); j++)
-      for (size_t k=0; k<time_steps; k++) // controlla e commenta per stripe
+    for (Eigen::Index j=0; j<snapshots.rows(); j++)
+      for (Eigen::Index k=0; k<time_steps; k++) // controlla e commenta per stripe
         snapshots(j, (i*time_steps)+k) = problem.snapshot_matrix[j][k];
 
     pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
@@ -89,12 +95,17 @@ main(int argc, char * argv[])
     pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, (i*time_steps)+time_steps-1) << std::endl;
     pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl;
   }
+  auto stop_snapshot = high_resolution_clock::now();
+  auto duration_snapshot = duration_cast<milliseconds>(stop_snapshot - start_snapshot);
+  pcout << "\n  Time for building the snapshot matrix sequentially: " << duration_snapshot.count() << " ms" << std::endl;
 
   // Compute U by applying SVD or one POD algorithm to snapshots.
   pcout << "===================================================================" << std::endl;
   pcout << "Compute POD modes" << std::endl;
 
   const int rank = std::min(snapshots.rows(), snapshots.cols()); // Maximum rank
+  // const int rank = 15;
+  pcout << "  Check rank = " << rank << std::endl;
 
   // VERSIONE CON SVD //////
   // Vec_v sigma = Vec_v::Zero(rank);
@@ -114,11 +125,11 @@ main(int argc, char * argv[])
 
 
 
-  Mat_m Xh = Mat_m::Zero(snapshots.rows(), snapshots.rows());
-  for (int i=0; i<snapshots.rows(); i++) {
+  Mat_m Xh = Mat_m::Zero(snapshot_length, snapshot_length);
+  for (Eigen::Index i=0; i<snapshot_length; i++) {
       Xh.coeffRef(i, i) = 2.0;
     if(i>0) Xh.coeffRef(i, i-1) = -1.0;
-      if(i<snapshots.rows()-1) Xh.coeffRef(i, i+1) = -1.0;	
+      if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
   }
   POD compute_modes(snapshots, Xh, rank, tol);
 
@@ -154,14 +165,14 @@ main(int argc, char * argv[])
 
 
 
-  size_t rom_size = 6; // Number of modes
-  // std::vector<size_t> rom_sizes = {2, 4, 6}; // CAMBIA
+  Eigen::Index rom_size = 6; // Number of modes
+  // std::vector<Eigen::Index> rom_sizes = {2, 4, 6}; // CAMBIA
   // std::vector<size_t> rom_sizes = {5, 10, 25, 50, 75, 100}; // comportamento strano con 10 modes CAMBIA
 
   std::vector<std::vector<double>> modes;
 
   // The approximations matrix stores the final fom_state for each rom size. 
-  // Mat_m approximations = Mat_m::Zero(snapshots.rows(), rom_size ma non ha senso);
+  // Mat_m approximations = Mat_m::Zero(snapshot_length, rom_size ma non ha senso);
 
   // for (size_t i=0; i<rom_sizes.size(); i++) {
   // for (size_t i=0; i<1; i++) {
@@ -181,8 +192,8 @@ main(int argc, char * argv[])
     modes.resize(compute_modes.W.rows());
     for(auto &row : modes)
       row.resize(rom_size, 0.0);
-    for (size_t j=0; j<compute_modes.W.rows(); j++)
-      for (size_t k=0; k<rom_size; k++)
+    for (Eigen::Index j=0; j<compute_modes.W.rows(); j++)
+      for (Eigen::Index k=0; k<rom_size; k++)
         modes[j][k] = compute_modes.W(j, k);
 
     AdvDiffPOD problemPOD(N, r, T, deltat, theta, modes, prm_diffusion_coefficient[i]);
@@ -191,9 +202,9 @@ main(int argc, char * argv[])
     problemPOD.solve_reduced();
 
     // The final fom_solution is copied in an Eigen vector fom_state in order to easily compare it with snapshots and compute 
-    // the relative error.
-    Vec_v fom_state = Vec_v::Zero(compute_modes.W.rows()); // SISTEMA DIMENSIONI CAMBIARE
-    for (size_t j=0; j<compute_modes.W.rows(); j++)
+    // the relative error. For the same reason, we can initialize the fom_state with the snapshot_length.
+    Vec_v fom_state = Vec_v::Zero(snapshot_length);
+    for (Eigen::Index j=0; j<snapshot_length; j++)
       fom_state(j) = problemPOD.fom_solution[j];
     
     // The current fom_state is stored in approximations matrix.

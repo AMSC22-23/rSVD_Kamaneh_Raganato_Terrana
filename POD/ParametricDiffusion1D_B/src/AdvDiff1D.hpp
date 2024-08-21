@@ -218,13 +218,13 @@ public:
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
+    , mu(prm_diffusion_coefficient_)
     , T(T_)
     , N(N_)
     , r(r_)
     , deltat(deltat_)
     , theta(theta_)
     , sample_every(sample_every_)
-    , mu(prm_diffusion_coefficient_)
     , mesh(MPI_COMM_WORLD)
   {}
 
@@ -308,9 +308,6 @@ protected:
   // Number of elements.
   const unsigned int N;
 
-  // Sample_every parameter for selecting time steps which solution has to be collected in the snapshot matrix.
-  const unsigned int sample_every;
-
   // Discretization. ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   // Polynomial degree.
@@ -321,6 +318,9 @@ protected:
 
   // Theta parameter of the theta method.
   const double theta;
+
+  // Sample_every parameter for selecting time steps which solution has to be collected in the snapshot matrix.
+  const unsigned int sample_every;
 
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;
