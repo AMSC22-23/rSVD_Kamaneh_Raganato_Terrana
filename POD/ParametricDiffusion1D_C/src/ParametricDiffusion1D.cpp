@@ -170,11 +170,12 @@ main(int argc, char * argv[])
   // The approximations matrix stores the final fom_state for each rom size. 
   // Mat_m approximations = Mat_m::Zero(snapshots.rows(), rom_size ma non ha senso);
 
-
-  // fai magari altri commentini
+  // Now we want to use the class AdvDiffPOD to solve a reduced problem in which the diffusion parameter wasn't used for the
+  // construction of the snapshot matrix. The aim is to save time and space thanks to this prediction.
+  // At first, we solve the full order problem with the new parameter through the AdvDiff class, its solution will be used for 
+  // computing the relative error. Then we solve the reduced order problem changing the number of reduced order size.
   double new_diffusion_coefficient = 0.00025;
 
-  // commenta
   AdvDiff problem_new_parameter(N, r, T, deltat, theta, sample_every, new_diffusion_coefficient);    
 
   auto start_full = high_resolution_clock::now();

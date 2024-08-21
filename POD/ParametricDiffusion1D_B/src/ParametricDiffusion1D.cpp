@@ -6,6 +6,9 @@
 #include <vector>
 #include <map>
 
+#include <chrono>
+using namespace std::chrono;
+
 #include "POD.hpp"
 #include "AdvDiff1D.hpp"
 #include "AdvDiff1D_POD.hpp"
@@ -46,8 +49,8 @@ main(int argc, char * argv[])
   std::vector<double> prm_diffusion_coefficient;
   prm_diffusion_coefficient.resize(n); 
 
-  size_t snapshot_length;
-  size_t time_steps;
+  Eigen::Index snapshot_length = 0;
+  Eigen::Index time_steps = 0;
   Mat_m snapshots;
 
   for (unsigned int i=0; i<n; i++)
@@ -60,6 +63,7 @@ main(int argc, char * argv[])
     pcout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;
   }
     
+  auto start_snapshot = high_resolution_clock::now();
   for (unsigned int i=0; i<n; i++)
   {
     pcout << "  Computing snapshot matrix stripe " << i+1 << " out of " << n << std::endl;
@@ -91,13 +95,16 @@ main(int argc, char * argv[])
     pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, (i*time_steps)+time_steps-1) << std::endl;
     pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl;
   }
+  auto stop_snapshot = high_resolution_clock::now();
+  auto duration_snapshot = duration_cast<milliseconds>(stop_snapshot - start_snapshot);
+  pcout << "\n  Time for building the snapshot matrix sequentially: " << duration_snapshot.count() << " ms" << std::endl;
 
   // Compute U by applying SVD or one POD algorithm to snapshots.
   pcout << "===================================================================" << std::endl;
   pcout << "Compute POD modes" << std::endl;
 
-  // const int rank = std::min(snapshots.rows(), snapshots.cols()); // Maximum rank
-  const int rank = 15;
+  const int rank = std::min(snapshots.rows(), snapshots.cols()); // Maximum rank
+  // const int rank = 15;
   pcout << "  Check rank = " << rank << std::endl;
 
   // VERSIONE CON SVD //////
@@ -119,7 +126,7 @@ main(int argc, char * argv[])
 
 
   Mat_m Xh = Mat_m::Zero(snapshot_length, snapshot_length);
-  for (int i=0; i<snapshot_length; i++) {
+  for (Eigen::Index i=0; i<snapshot_length; i++) {
       Xh.coeffRef(i, i) = 2.0;
     if(i>0) Xh.coeffRef(i, i-1) = -1.0;
       if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
