@@ -16,6 +16,12 @@ endif()
 find_package(MPI REQUIRED)
 set(CMAKE_CXX_COMPILER "${MPI_CXX_COMPILER}")
 
+# Locate OpenMP compiler.
+find_package(OpenMP REQUIRED)
+if(OpenMP_CXX_FOUND)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+endif()
+
 # Locate Boost.
 find_package(Boost 1.72.0 REQUIRED
   COMPONENTS filesystem iostreams serialization

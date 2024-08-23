@@ -1,0 +1,60 @@
+name: Parametric Diffusion 1D
+
+on:
+  push:
+    paths: 
+      - 'POD/ParametricDiffusion1D/**'
+      - '!POD/ParametricDiffusion/**'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # - name: Setup MPI
+    #   uses: mpi4py/setup-mpi@v1
+
+    - name: Cache APT packages
+      id: cache-apt
+      uses: actions/cache@v3
+      with:
+        path: /var/cache/apt/archives
+        key: ${{ runner.os }}-apt-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          libboost-all-dev \
+          libopenmpi-dev \
+          libdeal.ii-dev \
+          libeigen3-dev
+        sudo ln -sf eigen3/Eigen Eigen
+        sudo ln -sf eigen3/unsupported unsupported
+
+    - name: Cache CMake build
+      id: cache-cmake
+      uses: actions/cache@v3
+      with:
+        path: build
+        key: ${{ runner.os }}-cmake-${{ hashFiles('**/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-cmake-
+
+    - name: Configure CMake
+      working-directory: ./POD/ParametricDiffusion1D
+      run: cmake -B ./build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      working-directory: ./POD/ParametricDiffusion1D
+      run: cmake --build ./build
+
+    - name: Run test on parametric diffusion
+      run: mpirun -n 4 ./build/ParametricDiffusion1D
