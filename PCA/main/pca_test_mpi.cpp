@@ -1,6 +1,6 @@
 #include <iostream>
 #include <chrono>
-#include "class_pca_mpi.hpp"
+#include "../include/class_pca_mpi.hpp"
 #include <mpi.h>
 
 int main(int argc, char** argv) {

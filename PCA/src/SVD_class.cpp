@@ -1,10 +1,5 @@
 #include "../include/SVD_class.hpp"
-//#include <Eigen/SVD>
 
-
-
-/*SVD::SVD(const Eigen::MatrixXd& data, bool full_matrices)
-    : my_data(data), full_matrices_(full_matrices) {}*/
 
 Eigen::MatrixXd SVD::getU() const {
     return U;

@@ -1,10 +1,6 @@
-#include <cmath>
-#include <limits>
-#include <Eigen/Dense>
-#include <iostream>
-#include "Jacobi_Class.hpp"
-using Mat=Eigen::MatrixXd;
-using Vec=Eigen::VectorXd;
+
+#include "../include/JacobiSVD.hpp"
+#include "../include/Jacobi_Class.hpp"
 
 
 void applyOnTheLeft(Mat &matrix, int p, int q, double c, double s) {
@@ -195,23 +191,3 @@ else
     }
   }
 
-
-
-
-  int main(){
-      int n = 200;
-      Mat A(n, n);
-      /*A<<1,17,15.234,
-        42,0.15,6,
-        7,0.9,9;*/
-      Mat B = Mat::Random(n, n);
-      A = B;
-      Mat m_matrixU(n, n);
-      Mat m_matrixV(n, n);
-      Vec Sigma(n);
-      JacobiRotationSVD(B, m_matrixU, m_matrixV, Sigma);
-      std::cout<<"U: "<<m_matrixU<<std::endl;
-      std::cout<<"V: "<<m_matrixV<<std::endl;
-      std::cout<<"Sigma: "<<Sigma<<std::endl;
-      return 0;
-  }
