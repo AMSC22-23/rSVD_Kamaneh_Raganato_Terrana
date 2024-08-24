@@ -4,8 +4,8 @@
 #include <Eigen/Dense>
 #include <iostream>
 
-#include "jacobi_operations.hpp"
-#include "power_method_operations.hpp"
+#include "JacobiOperations.hpp"
+#include "PM.hpp"
 
 // Alias to simplify matrix and vector declarations
 using Mat = Eigen::MatrixXd;
