@@ -162,7 +162,7 @@ main(int argc, char * argv[])
 
 
   // size_t rom_size = 6; // Number of modes
-  std::vector<Eigen::Index> rom_sizes = {2, 4, 6, 8, 10, 20}; // CAMBIA
+  std::vector<Eigen::Index> rom_sizes = {2, 4, 6, 8}; // , 10, 20}; // CAMBIA
   // std::vector<size_t> rom_sizes = {5, 10, 25, 50, 75, 100}; // comportamento strano con 10 modes CAMBIA
 
   std::vector<std::vector<double>> modes;

@@ -92,29 +92,41 @@ AdvDiffPOD::setup_reduced()
 {
   // Create the mesh.
   {
-    pcout << "Initializing the reduced mesh" << std::endl;
+    // pcout << "Initializing the reduced mesh" << std::endl;
 
-    Triangulation<dim> mesh_serial_r;
-    GridGenerator::subdivided_hyper_cube(mesh_serial_r, modes[0].size(), 0.0, 1.0, true);
-    // CAPIRE
-        // QUI HAI CAMBIATO IN MODO CHE LA MATRICE NON ABBIA UN ELEMENTO IN PIU
+    // Triangulation<dim> mesh_serial_r;
+    // GridGenerator::subdivided_hyper_cube(mesh_serial_r, modes[0].size(), 0.0, 1.0, true);
+    // // CAPIRE
+    //     // QUI HAI CAMBIATO IN MODO CHE LA MATRICE NON ABBIA UN ELEMENTO IN PIU
+    // pcout << "  Number of elements = " << mesh_r.n_active_cells()
+    //           << std::endl;
+
+    // // Write the mesh to file.
+    // const std::string mesh_file_name_r = "mesh_r-" + std::to_string(modes[0].size()) + ".vtk";
+    // GridOut           grid_out_r;
+    // std::ofstream     grid_out_file_r(mesh_file_name_r);
+    // grid_out_r.write_vtk(mesh_serial_r, grid_out_file_r);
+    // pcout << "  Mesh saved to " << mesh_file_name_r << std::endl;
+
+    // GridTools::partition_triangulation(mpi_size, mesh_serial_r);
+    // const auto construction_data_r = TriangulationDescription::Utilities::
+    //   create_description_from_triangulation(mesh_serial_r, MPI_COMM_WORLD);
+    // mesh_r.create_triangulation(construction_data_r);
+
+    // pcout << "  Number of elements = " << mesh_r.n_global_active_cells()
+    //       << std::endl;
+
+    pcout << "Initializing the reduced mesh" << std::endl;
+    GridGenerator::subdivided_hyper_cube(mesh_r, modes[0].size()-1, 0.0, 1.0, true);
     pcout << "  Number of elements = " << mesh_r.n_active_cells()
               << std::endl;
 
     // Write the mesh to file.
-    const std::string mesh_file_name_r = "mesh_r-" + std::to_string(modes[0].size()) + ".vtk";
+    const std::string mesh_file_name_r = "mesh_r-" + std::to_string(modes[0].size()-1) + ".vtk";
     GridOut           grid_out_r;
     std::ofstream     grid_out_file_r(mesh_file_name_r);
-    grid_out_r.write_vtk(mesh_serial_r, grid_out_file_r);
+    grid_out_r.write_vtk(mesh_r, grid_out_file_r);
     pcout << "  Mesh saved to " << mesh_file_name_r << std::endl;
-
-    GridTools::partition_triangulation(mpi_size, mesh_serial_r);
-    const auto construction_data_r = TriangulationDescription::Utilities::
-      create_description_from_triangulation(mesh_serial_r, MPI_COMM_WORLD);
-    mesh_r.create_triangulation(construction_data_r);
-
-    pcout << "  Number of elements = " << mesh_r.n_global_active_cells()
-          << std::endl;
   }
 
   pcout << "-------------------------------------------------------------------" << std::endl;
@@ -144,8 +156,8 @@ AdvDiffPOD::setup_reduced()
     dof_handler_r.reinit(mesh_r);
     dof_handler_r.distribute_dofs(*fe_r);
 
-    locally_owned_dofs_r = dof_handler_r.locally_owned_dofs();
-    DoFTools::extract_locally_relevant_dofs(dof_handler_r, locally_relevant_dofs_r);
+    // locally_owned_dofs_r = dof_handler_r.locally_owned_dofs();
+    // DoFTools::extract_locally_relevant_dofs(dof_handler_r, locally_relevant_dofs_r);
 
     pcout << "  Number of DoFs = " << dof_handler_r.n_dofs() << std::endl;
   }
@@ -158,21 +170,32 @@ AdvDiffPOD::setup_reduced()
 
     pcout << "  Initializing the sparsity pattern" << std::endl;
 
-    TrilinosWrappers::SparsityPattern sparsity_r(locally_owned_dofs_r,
-                                                 MPI_COMM_WORLD);
-    DoFTools::make_sparsity_pattern(dof_handler_r, sparsity_r);
-    sparsity_r.compress();
+    // TrilinosWrappers::SparsityPattern sparsity_r(locally_owned_dofs_r,
+    //                                              MPI_COMM_WORLD);
+    // DoFTools::make_sparsity_pattern(dof_handler_r, sparsity_r);
+    // sparsity_r.compress();
+
+    DynamicSparsityPattern dsp(dof_handler_r.n_dofs());
+    DoFTools::make_sparsity_pattern(dof_handler_r, dsp);
+    sparsity_pattern_r.copy_from(dsp);
 
     // Note that in the reduced order system there's no need to assemble the mass matrix, stiffness matrix and right-hand side
     // matrix. Since the reduced left-hand side matrix and the reduced right-hand side vector are obtained by projection.
     pcout << "  Initializing the matrices" << std::endl;
-    reduced_system_lhs.reinit(sparsity_r);
+    // reduced_system_lhs.reinit(sparsity_r);
+    reduced_system_lhs_aux.reinit(sparsity_pattern_r);
+    // reduced_system_lhs.copy_from(reduced_system_lhs_aux);
+
+
 
     pcout << "  Initializing the system right-hand side" << std::endl;
-    reduced_system_rhs.reinit(locally_owned_dofs_r, MPI_COMM_WORLD);
+    // reduced_system_rhs.reinit(locally_owned_dofs_r, MPI_COMM_WORLD);
+    reduced_system_rhs.reinit(dof_handler_r.n_dofs());
     pcout << "  Initializing the solution vector" << std::endl;
-    reduced_solution_owned.reinit(locally_owned_dofs_r, MPI_COMM_WORLD);
-    reduced_solution.reinit(locally_owned_dofs_r, locally_relevant_dofs_r, MPI_COMM_WORLD);
+    // reduced_solution_owned.reinit(locally_owned_dofs_r, MPI_COMM_WORLD);
+    // reduced_solution.reinit(locally_owned_dofs_r, locally_relevant_dofs_r, MPI_COMM_WORLD);
+    // reduced_solution_owned.reinit(dof_handler.n_dofs());
+    reduced_solution.reinit(dof_handler_r.n_dofs());
   }
 }
 
@@ -345,26 +368,26 @@ AdvDiffPOD::convert_modes(TrilinosWrappers::SparseMatrix &transformation_matrix)
   for (unsigned int i = 0; i < modes.size(); ++i)
     for (unsigned int j = 0; j < modes[0].size(); ++j)
       transformation_matrix.set(i, j, modes[i][j]);
-  transformation_matrix.compress(VectorOperation::add);
+  transformation_matrix.compress(VectorOperation::insert);
 
   // This print is commented to save time and space in the output.
-  // pcout << "  Check transformation_matrix values:" << std::endl;
-  // pcout << "    modes[0][0] = " << modes[0][0] << std::endl;
-  // pcout << "    transformation_matrix(0, 0) = " << transformation_matrix(0, 0) << std::endl;
-  // pcout << "    modes[1][0] = " << modes[1][0] << std::endl;
-  // pcout << "    transformation_matrix(1, 0) = " << transformation_matrix(1, 0) << std::endl;
-  // pcout << "    modes[1][1] = " << modes[1][1] << std::endl;
-  // pcout << "    transformation_matrix(1, 1) = " << transformation_matrix(1, 1) << std::endl;
-  // pcout << "    modes[40][1] = " << modes[40][1] << std::endl;
-  // pcout << "    transformation_matrix(40, 1) = " << transformation_matrix(40, 1) << std::endl;
-  // pcout << "    modes[44][1] = " << modes[44][1] << std::endl;
-  // pcout << "    transformation_matrix(44, 1) = " << transformation_matrix(44, 1) << std::endl;
-  // pcout << "    modes[89][1] = " << modes[89][1] << std::endl;
-  // pcout << "    transformation_matrix(89, 1) = " << transformation_matrix(89, 1) << std::endl;
-  // pcout << "    modes[108][1] = " << modes[108][1] << std::endl;
-  // pcout << "    transformation_matrix(108, 1) = " << transformation_matrix(108, 1) << std::endl;
-  // pcout << "    modes[27][0] = " << modes[27][0] << std::endl;
-  // pcout << "    transformation_matrix(27, 0) = " << transformation_matrix(27, 0) << std::endl;
+  pcout << "  Check transformation_matrix values:" << std::endl;
+  pcout << "    modes[0][0] = " << modes[0][0] << std::endl;
+  pcout << "    transformation_matrix(0, 0) = " << transformation_matrix(0, 0) << std::endl;
+  pcout << "    modes[1][0] = " << modes[1][0] << std::endl;
+  pcout << "    transformation_matrix(1, 0) = " << transformation_matrix(1, 0) << std::endl;
+  pcout << "    modes[1][1] = " << modes[1][1] << std::endl;
+  pcout << "    transformation_matrix(1, 1) = " << transformation_matrix(1, 1) << std::endl;
+  pcout << "    modes[40][1] = " << modes[40][1] << std::endl;
+  pcout << "    transformation_matrix(40, 1) = " << transformation_matrix(40, 1) << std::endl;
+  pcout << "    modes[44][1] = " << modes[44][1] << std::endl;
+  pcout << "    transformation_matrix(44, 1) = " << transformation_matrix(44, 1) << std::endl;
+  pcout << "    modes[89][1] = " << modes[89][1] << std::endl;
+  pcout << "    transformation_matrix(89, 1) = " << transformation_matrix(89, 1) << std::endl;
+  pcout << "    modes[108][1] = " << modes[108][1] << std::endl;
+  pcout << "    transformation_matrix(108, 1) = " << transformation_matrix(108, 1) << std::endl;
+  pcout << "    modes[27][0] = " << modes[27][0] << std::endl;
+  pcout << "    transformation_matrix(27, 0) = " << transformation_matrix(27, 0) << std::endl;
 
   pcout << "\n  Check transformation_matrix size:" << std::endl;
   pcout << "    modes.size() = " << modes.size() << "\t\ttransformation_matrix.m() = " << transformation_matrix.m() << std::endl;
@@ -375,16 +398,41 @@ AdvDiffPOD::convert_modes(TrilinosWrappers::SparseMatrix &transformation_matrix)
 void
 AdvDiffPOD::project_u0(TrilinosWrappers::SparseMatrix &transformation_matrix)
 {
+  Vector<double> dst(transformation_matrix.n()); // (transformation_matrix.n());
+  Vector<double> solution_owned_copy(solution_owned.size()); // (solution_owned.size());
+  for(unsigned int i = 0; i < solution_owned.size(); ++i)
+    solution_owned_copy(i) = solution_owned(i);
+  solution_owned_copy.compress(VectorOperation::insert);
+
+  pcout << "Check solution owned" << solution_owned(8) << "  " << solution_owned_copy(8) << std::endl;
+  pcout << "Check solution owned" << solution_owned(80) << "  " << solution_owned_copy(80) << std::endl;
   // Note that at time 0 solution_owned is defined and contains the initial condition.
-  reduced_solution_owned = 0.0;
+  // reduced_solution_owned = 0.0;
+  reduced_solution = 0.0;
+
   // Projection: reduced_solution_owned = T^T * solution_owned
-  transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
-  reduced_solution_owned.compress(VectorOperation::add);
+  // transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
+  assert(transformation_matrix.m() == solution_owned_copy.size());
+  transformation_matrix.Tvmult(dst, solution_owned_copy);
+  dst.compress(VectorOperation::insert);
+
+  for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
+    // reduced_solution_owned(i) = dst(i); // riprova con questo
+    reduced_solution(i) = dst(i);
+  // reduced_solution_owned = dst; // Copy, mi sa che però bisogna fare attenzione
+
+  // reduced_solution_owned.compress(VectorOperation::insert);
+  reduced_solution.compress(VectorOperation::insert);
 
   // This print is commented to save time and space in the output.
+  // pcout << "  Check reduced_solution_owned size:\t" << reduced_solution_owned.size() << std::endl;
   // pcout << "  Check reduced_solution_owned values:" << std::endl;
   // pcout << "    reduced_solution_owned(0) = "  << reduced_solution_owned(0) << std::endl;
   // pcout << "    reduced_solution_owned(1) = "  << reduced_solution_owned(1) << std::endl;
+  pcout << "  Check reduced_solution size:\t" << reduced_solution.size() << std::endl;
+  pcout << "  Check reduced_solution values:" << std::endl;
+  pcout << "    reduced_solution(0) = "  << reduced_solution(0) << std::endl;
+  pcout << "    reduced_solution(1) = "  << reduced_solution(1) << std::endl;
 }
 
 // Projection of the left-hand side matrix.
@@ -393,7 +441,7 @@ AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
 {
   TrilinosWrappers::SparseMatrix aux;
 
-  reduced_system_lhs = 0.0;
+  reduced_system_lhs_aux = 0.0;
   assert(transformation_matrix.m() == lhs_matrix.m()); // Check on sizes
   pcout << "  Check lhs_matrix size:\t\t" << lhs_matrix.m() << " * " << lhs_matrix.n() << std::endl;
 
@@ -402,11 +450,12 @@ AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   pcout << "  Check auxiliary matrix size:\t\t" << aux.m() << " * " << aux.n() << std::endl;
 
   assert(aux.n() == transformation_matrix.m()); // Check on sizes
-  // Projection: reduced_system_lhs = aux * T = T^T * lhs_matrix * T
-  aux.mmult(reduced_system_lhs, transformation_matrix);
-  pcout << "  Check reduced_system_lhs size:\t" << reduced_system_lhs.m() << " * " << reduced_system_lhs.n() << std::endl;
+  // Projection: reduced_system_lhs_aux = aux * T = T^T * lhs_matrix * T
+  aux.mmult(reduced_system_lhs_aux, transformation_matrix);
+  pcout << "  Check reduced_system_lhs_aux size:\t" << reduced_system_lhs_aux.m() << " * " << reduced_system_lhs_aux.n() << std::endl;
 
-  reduced_system_lhs.compress(VectorOperation::add);
+  reduced_system_lhs_aux.compress(VectorOperation::insert);
+  reduced_system_lhs.copy_from(reduced_system_lhs_aux); // CAMBIATO
 
   // This print is commented to save time and space in the output.
   // pcout << "  Check reduced_system_lhs values:" << std::endl;
@@ -418,10 +467,22 @@ AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
 void
 AdvDiffPOD::project_rhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
 {
+  Vector<double> dst(transformation_matrix.n()); // (transformation_matrix.n());
+  Vector<double> system_rhs_copy(system_rhs.size()); // (system_rhs.size());
+
+  for (unsigned int i = 0; i < transformation_matrix.m(); ++i)
+    system_rhs_copy(i) = system_rhs(i);
+  system_rhs_copy.compress(VectorOperation::insert);
+
   reduced_system_rhs = 0.0;
   // Projection: reduced_system_rhs = T^T * system_rhs
-  transformation_matrix.Tvmult(reduced_system_rhs, system_rhs);
-  reduced_system_rhs.compress(VectorOperation::add);
+  assert(transformation_matrix.m() == system_rhs_copy.size());
+  // transformation_matrix.Tvmult(reduced_system_rhs, system_rhs);
+  transformation_matrix.Tvmult(dst, system_rhs_copy);
+  dst.compress(VectorOperation::insert);
+  for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
+    reduced_system_rhs(i) = dst(i);
+  reduced_system_rhs.compress(VectorOperation::insert);
 
   // This print is commented to save time and space in the output.
   // pcout << "  Check reduced_system_rhs values:" << std::endl;
@@ -433,33 +494,70 @@ AdvDiffPOD::project_rhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
 void
 AdvDiffPOD::expand_solution(TrilinosWrappers::SparseMatrix &transformation_matrix)
 {
+  Vector<double> dst(transformation_matrix.m()); 
+  Vector<double> reduced_solution_copy(reduced_solution.size()); 
+  for(unsigned int i = 0; i < reduced_solution.size(); ++i)
+    reduced_solution_copy(i) = reduced_solution(i);
+  reduced_solution_copy.compress(VectorOperation::insert);
+
+  pcout << "Check reduced solution" << reduced_solution(0) << "  " << reduced_solution_copy(0) << std::endl;
+  pcout << "Check reduced solution" << reduced_solution(1) << "  " << reduced_solution_copy(1) << std::endl;
+
+  // Note that at time 0 solution_owned is defined and contains the initial condition.
+  // reduced_solution_owned = 0.0;
+
   fom_solution = 0.0;
   // Expansion: fom_solution = T * reduced_solution
-  transformation_matrix.vmult(fom_solution, reduced_solution);
-  fom_solution.compress(VectorOperation::add);
+  assert(transformation_matrix.n() == reduced_solution_copy.size()); // cambiato in n
 
-  // pcout << "  Check fom_solution size: " << fom_solution.size() << std::endl;
-  // pcout << "  Check fom_solution values: " << std::endl;
-  // pcout << "    fom_solution(17) = " << fom_solution(17) << std::endl;
-  // pcout << "    fom_solution(80) = " << fom_solution(80) << std::endl;
+  // transformation_matrix.vmult(fom_solution, reduced_solution);
+  transformation_matrix.vmult(dst, reduced_solution_copy);
+  dst.compress(VectorOperation::insert);
+  // for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
+  //   fom_solution(i) = dst(i);
+  fom_solution = dst;
+  fom_solution.compress(VectorOperation::insert);
+
+  pcout << "  Check fom_solution size: " << fom_solution.size() << std::endl;
+  pcout << "  Check fom_solution values: " << std::endl;
+  pcout << "    fom_solution(2)  = " << fom_solution(2) << std::endl;
+  pcout << "    fom_solution(17) = " << fom_solution(17) << std::endl;
+  pcout << "    fom_solution(50) = " << fom_solution(50) << std::endl;
+  pcout << "    fom_solution(80) = " << fom_solution(80) << std::endl;
 }
 
 // Solve the reduced order system.
 void
 AdvDiffPOD::solve_time_step_reduced()
 {
+  // SolverControl solver_control(1000, 1e-6 * reduced_system_rhs.l2_norm());
+
+  // SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
+  // TrilinosWrappers::PreconditionSSOR      preconditioner;
+  // preconditioner.initialize(
+  //   reduced_system_lhs, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+
+  // solver.solve(reduced_system_lhs, reduced_solution_owned, reduced_system_rhs, preconditioner);
+  // // This print is commented to save time and space in the output.
+  // // pcout << "  " << solver_control.last_step() << " CG iterations" << std::endl;
+
+  // reduced_solution = reduced_solution_owned;
+
   SolverControl solver_control(1000, 1e-6 * reduced_system_rhs.l2_norm());
+  // SolverControl solver_control(2000, 1e-5 * reduced_system_rhs.l2_norm());
 
-  SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
-  TrilinosWrappers::PreconditionSSOR      preconditioner;
-  preconditioner.initialize(
-    reduced_system_lhs, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
+  // SolverCG<Vector<double>> solver(solver_control);
+  SolverGMRES<Vector<double>> solver(solver_control); // magari non simmetrico
 
-  solver.solve(reduced_system_lhs, reduced_solution_owned, reduced_system_rhs, preconditioner);
-  // This print is commented to save time and space in the output.
+  // PROVARE CON FULL MATRIX SENZA PRECONDITIONER E SENZA SPARSITY PATTERN
+  // PreconditionSOR preconditioner;
+  // preconditioner.initialize(
+  //   reduced_system_lhs, PreconditionSOR<SparseMatrix<double>>::AdditionalData(1.0));
+
+  // solver.solve(reduced_system_lhs, reduced_solution, reduced_system_rhs, preconditioner); // qui da sistemare owned
+  solver.solve(reduced_system_lhs, reduced_solution, reduced_system_rhs, PreconditionIdentity());
   // pcout << "  " << solver_control.last_step() << " CG iterations" << std::endl;
-
-  reduced_solution = reduced_solution_owned;
+  pcout << "  " << solver_control.last_step() << " GMRES iterations" << std::endl;
 }
 
 void
@@ -468,12 +566,17 @@ AdvDiffPOD::output(const unsigned int &time_step) const
   DataOut<dim> data_out;
   data_out.add_data_vector(dof_handler_r, reduced_solution, "u");
 
-  std::vector<unsigned int> partition_int(mesh_r.n_active_cells());
-  GridTools::get_subdomain_association(mesh_r, partition_int);
-  const Vector<double> partitioning(partition_int.begin(), partition_int.end());
-  data_out.add_data_vector(partitioning, "partitioning");
+  // std::vector<unsigned int> partition_int(mesh_r.n_active_cells());
+  // GridTools::get_subdomain_association(mesh_r, partition_int);
+  // const Vector<double> partitioning(partition_int.begin(), partition_int.end());
+  // data_out.add_data_vector(partitioning, "partitioning");
 
   data_out.build_patches();
+
+  const std::string output_file_name =
+    "output-" + std::to_string(modes[0].size()-1) + ".vtk";
+  std::ofstream output_file(output_file_name);
+  // data_out.write_vtk(output_file);
 
   data_out.write_vtu_with_pvtu_record(
     "./", "output", time_step, MPI_COMM_WORLD, 3);
@@ -516,7 +619,7 @@ AdvDiffPOD::solve_reduced()
     // pcout << "    fom_solution(100)   = " << fom_solution(100) << std::endl;
 
     project_u0(transformation_matrix);
-    reduced_solution = reduced_solution_owned;
+    // reduced_solution = reduced_solution_owned;
 
     // Output the initial solution.
     output(0);
