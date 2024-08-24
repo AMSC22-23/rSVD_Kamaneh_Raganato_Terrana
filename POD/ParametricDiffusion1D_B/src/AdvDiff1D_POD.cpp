@@ -345,7 +345,7 @@ AdvDiffPOD::convert_modes(TrilinosWrappers::SparseMatrix &transformation_matrix)
   for (unsigned int i = 0; i < modes.size(); ++i)
     for (unsigned int j = 0; j < modes[0].size(); ++j)
       transformation_matrix.set(i, j, modes[i][j]);
-  transformation_matrix.compress(VectorOperation::add);
+  transformation_matrix.compress(VectorOperation::insert);
 
   // This print is commented to save time and space in the output.
   // pcout << "  Check transformation_matrix values:" << std::endl;
@@ -397,6 +397,8 @@ AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   assert(transformation_matrix.m() == lhs_matrix.m()); // Check on sizes
   pcout << "  Check lhs_matrix size:\t\t" << lhs_matrix.m() << " * " << lhs_matrix.n() << std::endl;
 
+  pcout << "lhs_matrix " << lhs_matrix(2, 0) << std::endl;
+
   // Intermediate step of projection: aux = T^T * lhs_matrix
   transformation_matrix.Tmmult(aux, lhs_matrix);
   pcout << "  Check auxiliary matrix size:\t\t" << aux.m() << " * " << aux.n() << std::endl;
@@ -406,7 +408,7 @@ AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   aux.mmult(reduced_system_lhs, transformation_matrix);
   pcout << "  Check reduced_system_lhs size:\t" << reduced_system_lhs.m() << " * " << reduced_system_lhs.n() << std::endl;
 
-  reduced_system_lhs.compress(VectorOperation::add);
+  reduced_system_lhs.compress(VectorOperation::insert);
 
   // This print is commented to save time and space in the output.
   // pcout << "  Check reduced_system_lhs values:" << std::endl;
@@ -421,7 +423,7 @@ AdvDiffPOD::project_rhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
   reduced_system_rhs = 0.0;
   // Projection: reduced_system_rhs = T^T * system_rhs
   transformation_matrix.Tvmult(reduced_system_rhs, system_rhs);
-  reduced_system_rhs.compress(VectorOperation::add);
+  reduced_system_rhs.compress(VectorOperation::insert);
 
   // This print is commented to save time and space in the output.
   // pcout << "  Check reduced_system_rhs values:" << std::endl;
@@ -436,7 +438,7 @@ AdvDiffPOD::expand_solution(TrilinosWrappers::SparseMatrix &transformation_matri
   fom_solution = 0.0;
   // Expansion: fom_solution = T * reduced_solution
   transformation_matrix.vmult(fom_solution, reduced_solution);
-  fom_solution.compress(VectorOperation::add);
+  fom_solution.compress(VectorOperation::insert);
 
   // pcout << "  Check fom_solution size: " << fom_solution.size() << std::endl;
   // pcout << "  Check fom_solution values: " << std::endl;

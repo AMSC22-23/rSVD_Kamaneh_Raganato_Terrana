@@ -14,8 +14,7 @@
 int
 main(int argc, char * argv[])
 {
-  Utilities::MPI::MPI_InitFinalize mpi_init(argc, argv, 1); // PETSc does not support multi-threaded access, set the thread limit
-  // to 1 in MPI_InitFinalize().
+  Utilities::MPI::MPI_InitFinalize mpi_init(argc, argv);
   const unsigned int               mpi_rank = Utilities::MPI::this_mpi_process(MPI_COMM_WORLD);
   dealii::ConditionalOStream pcout(std::cout, mpi_rank == 0);
 

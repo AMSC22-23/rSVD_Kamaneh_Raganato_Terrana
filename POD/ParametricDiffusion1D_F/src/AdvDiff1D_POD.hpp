@@ -30,9 +30,9 @@
 #include <deal.II/lac/trilinos_sparse_matrix.h>
 #include <deal.II/lac/petsc_vector_base.h>
 // #include <deal.II/lac/petsc_matrix_base.h>
-#include <deal.II/lac/petsc_full_matrix.h>
-// #include <deal.II/lac/exceptions.h>
-// #include <deal.II/lac/petsc_compatibility.h>
+// #include <deal.II/lac/petsc_full_matrix.h>
+#include <deal.II/lac/exceptions.h>
+#include <deal.II/lac/petsc_compatibility.h>
 
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/matrix_tools.h>
@@ -46,6 +46,147 @@
 #include <set>
 
 using namespace dealii;
+
+// using namespace PETScWrappers;
+
+// class MyMatrixBase
+// {
+//   public:
+//     void mmult(MatrixBase &C, const MatrixBase &B, const VectorBase &V) const;
+//     void Tmmult(MatrixBase &C, const MatrixBase &B, const VectorBase &V) const;
+// };
+
+
+DEAL_II_NAMESPACE_OPEN
+namespace PETScWrappers
+{
+  namespace internals
+    {
+      inline void // inline keyword to allow multiple definitions
+      perform_mmult(const FullMatrix &inputleft,
+                    const FullMatrix &inputright,
+                    FullMatrix       &result,
+                    const VectorBase &V,
+                    const bool        transpose_left)
+      {
+        const bool use_vector = (V.size() == inputright.m() ? true : false);
+        if (transpose_left == false)
+          {
+            Assert(inputleft.n() == inputright.m(),
+                  ExcDimensionMismatch(inputleft.n(), inputright.m()));
+          }
+        else
+          {
+            Assert(inputleft.m() == inputright.m(),
+                  ExcDimensionMismatch(inputleft.m(), inputright.m()));
+          }
+  
+        result.clear();
+  
+        PetscErrorCode ierr;
+  
+        if (use_vector == false)
+          {
+            if (transpose_left)
+              {
+                ierr = MatTransposeMatMult(inputleft,
+                                          inputright,
+                                          MAT_INITIAL_MATRIX,
+                                          PETSC_DEFAULT,
+                                          &result.petsc_matrix());
+                AssertThrow(ierr == 0, ExcPETScError(ierr));
+              }
+            else
+              {
+                ierr = MatMatMult(inputleft,
+                                  inputright,
+                                  MAT_INITIAL_MATRIX,
+                                  PETSC_DEFAULT,
+                                  &result.petsc_matrix());
+                AssertThrow(ierr == 0, ExcPETScError(ierr));
+              }
+          }
+        else
+          {
+            Mat tmp;
+            ierr = MatDuplicate(inputleft, MAT_COPY_VALUES, &tmp);
+            AssertThrow(ierr == 0, ExcPETScError(ierr));
+            if (transpose_left)
+              {
+  #  if DEAL_II_PETSC_VERSION_LT(3, 8, 0)
+                ierr = MatTranspose(tmp, MAT_REUSE_MATRIX, &tmp);
+  #  else
+                ierr = MatTranspose(tmp, MAT_INPLACE_MATRIX, &tmp);
+  #  endif
+                AssertThrow(ierr == 0, ExcPETScError(ierr));
+              }
+            ierr = MatDiagonalScale(tmp, nullptr, V);
+            AssertThrow(ierr == 0, ExcPETScError(ierr));
+            ierr = MatMatMult(tmp,
+                              inputright,
+                              MAT_INITIAL_MATRIX,
+                              PETSC_DEFAULT,
+                              &result.petsc_matrix());
+            AssertThrow(ierr == 0, ExcPETScError(ierr));
+            ierr = MatDestroy(&tmp);
+            AssertThrow(ierr == 0, ExcPETScError(ierr));
+          }
+      }
+    } // namespace internals
+} // namespace PETScWrappers
+
+// Magari fare direttamente per full?
+// class NewMatrixBase : public dealii::PETScWrappers::MatrixBase
+// {
+// public:
+//   // using dealii::PETScWrappers::MatrixBase::MatrixBase;
+
+//   // void mmult(MatrixBase &C, const MatrixBase &B, const VectorBase &V) const;
+//   // void Tmmult(MatrixBase &C, const MatrixBase &B, const VectorBase &V) const;
+  
+//   void // magari questo va nel cpp con MatrixBase:: davanti
+//   mmult(PETScWrappers::MatrixBase       &C,
+//                     const PETScWrappers::MatrixBase &B,
+//                     const PETScWrappers::VectorBase &V) const
+//   {
+//     PETScWrappers::internals::perform_mmult(*this, B, C, V, false);
+//   }
+
+//   void
+//   Tmmult(PETScWrappers::MatrixBase       &C,
+//                     const PETScWrappers::MatrixBase &B,
+//                     const PETScWrappers::VectorBase &V) const
+//   {
+//     PETScWrappers::internals::perform_mmult(*this, B, C, V, true);
+//   }
+// };
+
+class NewFullMatrix : public dealii::PETScWrappers::FullMatrix
+{
+public:
+  // using dealii::PETScWrappers::MatrixBase::MatrixBase;
+
+  // void mmult(MatrixBase &C, const MatrixBase &B, const VectorBase &V) const;
+  // void Tmmult(MatrixBase &C, const MatrixBase &B, const VectorBase &V) const;
+  
+  inline void // magari questo va nel cpp con MatrixBase:: davanti
+  mmult(PETScWrappers::FullMatrix       &C,
+                    const PETScWrappers::FullMatrix &B,
+                    const PETScWrappers::VectorBase &V) const
+  {
+    PETScWrappers::internals::perform_mmult(*this, B, C, V, false);
+  }
+
+  inline void
+  Tmmult(PETScWrappers::FullMatrix       &C,
+                    const PETScWrappers::FullMatrix &B,
+                    const PETScWrappers::VectorBase &V) const
+  {
+    PETScWrappers::internals::perform_mmult(*this, B, C, V, true);
+  }
+};
+
+DEAL_II_NAMESPACE_CLOSE
 
 // Class representing the linear diffusion advection problem.
 class AdvDiffPOD
@@ -257,19 +398,19 @@ protected:
 
   // Project the full order system to the reduced order system thanks to the transformation matrix.
   void
-  convert_modes(PETScWrappers::FullMatrix &transformation_matrix);
+  convert_modes(NewFullMatrix &transformation_matrix);
 
   void
-  project_u0(PETScWrappers::FullMatrix &transformation_matrix);
+  project_u0(NewFullMatrix &transformation_matrix);
 
   void
-  project_lhs(PETScWrappers::FullMatrix &transformation_matrix);
+  project_lhs(NewFullMatrix &transformation_matrix);
 
   void
-  project_rhs(PETScWrappers::FullMatrix &transformation_matrix);
+  project_rhs(NewFullMatrix &transformation_matrix);
 
   void
-  expand_solution(PETScWrappers::FullMatrix &transformation_matrix);
+  expand_solution(NewFullMatrix &transformation_matrix);
 
   // Solve the problem for one time step.
   void
