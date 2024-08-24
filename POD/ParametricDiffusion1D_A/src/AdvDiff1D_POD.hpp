@@ -25,7 +25,9 @@
 #include <deal.II/grid/grid_in.h>
 
 #include <deal.II/lac/dynamic_sparsity_pattern.h>
+#include <deal.II/lac/precondition.h>
 #include <deal.II/lac/solver_cg.h>
+#include <deal.II/lac/solver_gmres.h>
 #include <deal.II/lac/trilinos_precondition.h>
 #include <deal.II/lac/trilinos_sparse_matrix.h>
 #include <deal.II/lac/petsc_vector_base.h>
@@ -33,6 +35,9 @@
 #include <deal.II/lac/petsc_full_matrix.h>
 // #include <deal.II/lac/exceptions.h>
 // #include <deal.II/lac/petsc_compatibility.h>
+#include <deal.II/lac/full_matrix.h>
+#include <deal.II/lac/sparse_matrix.h>
+#include <deal.II/lac/vector.h>
 
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/matrix_tools.h>
@@ -223,7 +228,7 @@ public:
     , theta(theta_)
     , modes(modes_)
     , mesh(MPI_COMM_WORLD)
-    , mesh_r(MPI_COMM_WORLD)
+    // , mesh_r(MPI_COMM_WORLD)
   {}
 
   // Initialization.
@@ -340,7 +345,8 @@ protected:
   parallel::fullydistributed::Triangulation<dim> mesh;
 
   // Reduced mesh.
-  parallel::fullydistributed::Triangulation<dim> mesh_r;
+  // parallel::fullydistributed::Triangulation<dim> mesh_r;
+  Triangulation<dim> mesh_r;
 
   // Finite element space.
   std::unique_ptr<FiniteElement<dim>> fe;
@@ -365,11 +371,14 @@ protected:
 
   // DoFs owned by current process.
   IndexSet locally_owned_dofs;
-  IndexSet locally_owned_dofs_r;
+  // IndexSet locally_owned_dofs_r;
 
   // DoFs relevant to the current process (including ghost DoFs).
   IndexSet locally_relevant_dofs;
-  IndexSet locally_relevant_dofs_r;
+  // IndexSet locally_relevant_dofs_r;
+
+  // Sparsity pattern.
+  SparsityPattern sparsity_pattern_r;
 
   // Mass matrix M / deltat.
   TrilinosWrappers::SparseMatrix mass_matrix;
@@ -379,20 +388,27 @@ protected:
 
   // Matrix on the left-hand side (M / deltat + theta A).
   TrilinosWrappers::SparseMatrix lhs_matrix;
-  TrilinosWrappers::SparseMatrix reduced_system_lhs;
+  // TrilinosWrappers::SparseMatrix reduced_system_lhs_aux;
+  SparseMatrix<double> reduced_system_lhs_aux;
+  FullMatrix<double> reduced_system_lhs;
 
   // Matrix on the right-hand side (M / deltat - (1 - theta) A).
   TrilinosWrappers::SparseMatrix rhs_matrix;
-  TrilinosWrappers::SparseMatrix reduced_rhs_matrix;
+  // TrilinosWrappers::SparseMatrix reduced_rhs_matrix;
+  SparseMatrix<double> reduced_rhs_matrix;
 
   // Right-hand side vector in the linear system.
   TrilinosWrappers::MPI::Vector system_rhs;
-  TrilinosWrappers::MPI::Vector reduced_system_rhs;
+  // TrilinosWrappers::MPI::Vector reduced_system_rhs;
+  Vector<double> reduced_system_rhs;
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
-  TrilinosWrappers::MPI::Vector reduced_solution_owned;
-  TrilinosWrappers::MPI::Vector reduced_solution;
+  // TrilinosWrappers::MPI::Vector reduced_solution_owned;
+  // Vector<double> reduced_solution_owned;
+  // TrilinosWrappers::MPI::Vector reduced_solution;
+  Vector<double> reduced_solution; // sarebbe solo reduced solution,ma cambiare anche di là
+  // PER ORA MANTIENI ENTRAMBE
   
 };
 

@@ -20,7 +20,7 @@ main(int argc, char * argv[])
   dealii::ConditionalOStream pcout(std::cout, mpi_rank == 0);
 
   const unsigned int N = 119;
-  // const unsigned int N = 49;
+  // const unsigned int N = 249;
   const unsigned int r = 1;
 
   const double T         = 0.05;
