@@ -268,7 +268,7 @@ AdvDiff::assemble_snapshot_matrix(const unsigned int &time_step)
   // At the first call, it is useful to resize the snapshot matrix so that it can be easily filled. It has as many rows as the
   // solution size and as many columns as the number of time steps.
   if(time_step == 0) {
-    snapshot_matrix.resize(solution.size());
+    snapshot_matrix.resize(solution_owned.size());
     for(auto &row : snapshot_matrix)
       row.resize(static_cast<std::vector<double>::size_type>(T/(deltat*sample_every)+1), 0.0); // COSI SAREBBE INIZIALE + 25 SNAPSHOTS OGNI 200 ISTANTI TEMPORALI – CAPIRE E SISTEMARE
   }
@@ -282,8 +282,8 @@ AdvDiff::assemble_snapshot_matrix(const unsigned int &time_step)
   // pcout << "  Check solution.size()       = " << solution.size() << std::endl;
   // pcout << "  Check snapshot_array.size() = " << snapshot_array.size() << std::endl;
 
-  for (unsigned int i=0; i<solution.size(); i++)
-    snapshot_matrix[i][time_step/sample_every] = solution[i];
+  for (unsigned int i=0; i<solution_owned.size(); i++)
+    snapshot_matrix[i][time_step/sample_every] = solution_owned[i]; // cambiato
 }
 
 void
