@@ -537,6 +537,10 @@ AdvDiffPOD::project_lhs(PETScWrappers::FullMatrix &transformation_matrix)
     pcout << "    aux_col(0)                  = " << aux_col(0) << std::endl;
     pcout << "    transformation_matrix(1, j) = " << transformation_matrix(1, j) << std::endl;
     pcout << "    aux_col(1)                  = " << aux_col(1) << std::endl;
+    pcout << "    transformation_matrix(2, j) = " << transformation_matrix(2, j) << std::endl;
+    pcout << "    aux_col(2)                  = " << aux_col(2) << std::endl;
+    pcout << "    transformation_matrix(17, j) = " << transformation_matrix(17, j) << std::endl;
+    pcout << "    aux_col(17)                  = " << aux_col(17) << std::endl;
     pcout << "    transformation_matrix(80, j) = " << transformation_matrix(0, j) << std::endl;
     pcout << "    aux_col(80)                  = " << aux_col(0) << std::endl;
 
@@ -551,7 +555,7 @@ AdvDiffPOD::project_lhs(PETScWrappers::FullMatrix &transformation_matrix)
     { 
       // if (reduced_system_lhs.el(i, j) == 0.0) // In questo modo stai andando a prendere solamente quelli che esistono e scartando gli altri
       // perchè è necessario che la matrice sia sparsa e quindi mi sa anche che rispetti dof_handler
-        reduced_system_lhs.set(i, j, dst_col(i));
+        reduced_system_lhs.set(i, j, dst_col(i)); // qui mi sa che funziona perché matrice non più sparsa
     }
     // reduced_system_lhs.compress(VectorOperation::insert);
 
@@ -667,8 +671,11 @@ AdvDiffPOD::expand_solution(PETScWrappers::FullMatrix &transformation_matrix)
   transformation_matrix.vmult(dst, reduced_solution_copy);
   dst.compress(VectorOperation::insert);
   // for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
-  //   fom_solution(i) = dst(i);
-  fom_solution = dst;
+  //   dst_aux(i) = dst(i);
+  Vector<double> dst_aux(dst); // Copy constructor 
+
+  // dst_aux.compress(VectorOperation::insert); 
+  fom_solution = dst_aux;
 
   // Projection: reduced_solution_owned = T^T * solution_owned
   // transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
@@ -785,13 +792,13 @@ AdvDiffPOD::solve_reduced()
     fom_solution = solution_owned;
 
     // This print is commented to save time and space in the output.
-    // pcout << "  Check fom_solution values:" << std::endl;
-    // pcout << "    solution_owned(0)   = " << solution_owned(0) << std::endl;
-    // pcout << "    fom_solution(0)     = " << fom_solution(0) << std::endl;
-    // pcout << "    solution_owned(17)  = " << solution_owned(17) << std::endl;
-    // pcout << "    fom_solution(17)    = " << fom_solution(17) << std::endl;
-    // pcout << "    solution_owned(100) = " << solution_owned(100) << std::endl;
-    // pcout << "    fom_solution(100)   = " << fom_solution(100) << std::endl;
+    pcout << "  Check fom_solution values:" << std::endl;
+    pcout << "    solution_owned(0)   = " << solution_owned(0) << std::endl;
+    pcout << "    fom_solution(0)     = " << fom_solution(0) << std::endl;
+    pcout << "    solution_owned(17)  = " << solution_owned(17) << std::endl;
+    pcout << "    fom_solution(17)    = " << fom_solution(17) << std::endl;
+    pcout << "    solution_owned(100) = " << solution_owned(100) << std::endl;
+    pcout << "    fom_solution(100)   = " << fom_solution(100) << std::endl;
 
     project_u0(transformation_matrix);
     // reduced_solution = reduced_solution_owned;
