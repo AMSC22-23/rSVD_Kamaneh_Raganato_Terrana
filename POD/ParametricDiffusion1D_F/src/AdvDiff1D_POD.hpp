@@ -1,8 +1,8 @@
-#ifndef ADV_DIFF_1D_HPP
-#define ADV_DIFF_1D_HPP
+#ifndef ADV_DIFF_1D_POD_HPP
+#define ADV_DIFF_1D_POD_HPP
 
 /**
- * The aim of this class is to solve the advection diffusion full order problem in 1D in order to collect the snapshot matrix.
+ * The aim of this class is to solve the advection diffusion reduced order problem in 1D.
  */
 
 #include <deal.II/base/conditional_ostream.h>
@@ -28,6 +28,11 @@
 #include <deal.II/lac/solver_cg.h>
 #include <deal.II/lac/trilinos_precondition.h>
 #include <deal.II/lac/trilinos_sparse_matrix.h>
+#include <deal.II/lac/petsc_vector_base.h>
+// #include <deal.II/lac/petsc_matrix_base.h>
+// #include <deal.II/lac/petsc_full_matrix.h>
+#include <deal.II/lac/exceptions.h>
+#include <deal.II/lac/petsc_compatibility.h>
 
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/numerics/matrix_tools.h>
@@ -42,8 +47,149 @@
 
 using namespace dealii;
 
+// using namespace PETScWrappers;
+
+// class MyMatrixBase
+// {
+//   public:
+//     void mmult(MatrixBase &C, const MatrixBase &B, const VectorBase &V) const;
+//     void Tmmult(MatrixBase &C, const MatrixBase &B, const VectorBase &V) const;
+// };
+
+
+DEAL_II_NAMESPACE_OPEN
+namespace PETScWrappers
+{
+  namespace internals
+    {
+      inline void // inline keyword to allow multiple definitions
+      perform_mmult(const FullMatrix &inputleft,
+                    const FullMatrix &inputright,
+                    FullMatrix       &result,
+                    const VectorBase &V,
+                    const bool        transpose_left)
+      {
+        const bool use_vector = (V.size() == inputright.m() ? true : false);
+        if (transpose_left == false)
+          {
+            Assert(inputleft.n() == inputright.m(),
+                  ExcDimensionMismatch(inputleft.n(), inputright.m()));
+          }
+        else
+          {
+            Assert(inputleft.m() == inputright.m(),
+                  ExcDimensionMismatch(inputleft.m(), inputright.m()));
+          }
+  
+        result.clear();
+  
+        PetscErrorCode ierr;
+  
+        if (use_vector == false)
+          {
+            if (transpose_left)
+              {
+                ierr = MatTransposeMatMult(inputleft,
+                                          inputright,
+                                          MAT_INITIAL_MATRIX,
+                                          PETSC_DEFAULT,
+                                          &result.petsc_matrix());
+                AssertThrow(ierr == 0, ExcPETScError(ierr));
+              }
+            else
+              {
+                ierr = MatMatMult(inputleft,
+                                  inputright,
+                                  MAT_INITIAL_MATRIX,
+                                  PETSC_DEFAULT,
+                                  &result.petsc_matrix());
+                AssertThrow(ierr == 0, ExcPETScError(ierr));
+              }
+          }
+        else
+          {
+            Mat tmp;
+            ierr = MatDuplicate(inputleft, MAT_COPY_VALUES, &tmp);
+            AssertThrow(ierr == 0, ExcPETScError(ierr));
+            if (transpose_left)
+              {
+  #  if DEAL_II_PETSC_VERSION_LT(3, 8, 0)
+                ierr = MatTranspose(tmp, MAT_REUSE_MATRIX, &tmp);
+  #  else
+                ierr = MatTranspose(tmp, MAT_INPLACE_MATRIX, &tmp);
+  #  endif
+                AssertThrow(ierr == 0, ExcPETScError(ierr));
+              }
+            ierr = MatDiagonalScale(tmp, nullptr, V);
+            AssertThrow(ierr == 0, ExcPETScError(ierr));
+            ierr = MatMatMult(tmp,
+                              inputright,
+                              MAT_INITIAL_MATRIX,
+                              PETSC_DEFAULT,
+                              &result.petsc_matrix());
+            AssertThrow(ierr == 0, ExcPETScError(ierr));
+            ierr = MatDestroy(&tmp);
+            AssertThrow(ierr == 0, ExcPETScError(ierr));
+          }
+      }
+    } // namespace internals
+} // namespace PETScWrappers
+
+// Magari fare direttamente per full?
+// class NewMatrixBase : public dealii::PETScWrappers::MatrixBase
+// {
+// public:
+//   // using dealii::PETScWrappers::MatrixBase::MatrixBase;
+
+//   // void mmult(MatrixBase &C, const MatrixBase &B, const VectorBase &V) const;
+//   // void Tmmult(MatrixBase &C, const MatrixBase &B, const VectorBase &V) const;
+  
+//   void // magari questo va nel cpp con MatrixBase:: davanti
+//   mmult(PETScWrappers::MatrixBase       &C,
+//                     const PETScWrappers::MatrixBase &B,
+//                     const PETScWrappers::VectorBase &V) const
+//   {
+//     PETScWrappers::internals::perform_mmult(*this, B, C, V, false);
+//   }
+
+//   void
+//   Tmmult(PETScWrappers::MatrixBase       &C,
+//                     const PETScWrappers::MatrixBase &B,
+//                     const PETScWrappers::VectorBase &V) const
+//   {
+//     PETScWrappers::internals::perform_mmult(*this, B, C, V, true);
+//   }
+// };
+
+class NewFullMatrix : public dealii::PETScWrappers::FullMatrix
+{
+public:
+  // using dealii::PETScWrappers::MatrixBase::MatrixBase;
+
+  // void mmult(MatrixBase &C, const MatrixBase &B, const VectorBase &V) const;
+  // void Tmmult(MatrixBase &C, const MatrixBase &B, const VectorBase &V) const;
+  
+  inline void // magari questo va nel cpp con MatrixBase:: davanti
+  mmult(PETScWrappers::FullMatrix       &C,
+                    const PETScWrappers::FullMatrix &B,
+                    const PETScWrappers::VectorBase &V) const
+  {
+    PETScWrappers::internals::perform_mmult(*this, B, C, V, false);
+  }
+
+  inline void
+  Tmmult(PETScWrappers::FullMatrix       &C,
+                    const PETScWrappers::FullMatrix &B,
+                    const PETScWrappers::VectorBase &V) const
+  {
+    PETScWrappers::internals::perform_mmult(*this, B, C, V, true);
+  }
+};
+
+DEAL_II_NAMESPACE_CLOSE
+
 // Class representing the linear diffusion advection problem.
-class AdvDiff
+class AdvDiffPOD
 {
 public:
   // Physical dimension (1D, 2D, 3D)
@@ -57,9 +203,6 @@ public:
     DiffusionCoefficient()
     {}
 
-    DiffusionCoefficient(const double prm_diffusion_coefficient) : prm(prm_diffusion_coefficient)
-    {}
-
     // Evaluation.
     virtual double
     value(const Point<dim> & /*p*/,
@@ -67,11 +210,8 @@ public:
     {
       // return std::pow(p[0], 4);
       // return p[0];
-      return prm;
+      return 0.01;
     }
-
-  private:
-    double prm;
   };
 
   // Transport coefficient.
@@ -208,24 +348,23 @@ public:
   // };
 
   // Default constructor.
-  AdvDiff(const unsigned int N_,
-          const unsigned int &r_,
-          const double       &T_,
-          const double       &deltat_,
-          const double       &theta_,
-          const unsigned int &sample_every_,
-          const double       &prm_diffusion_coefficient_)
+  AdvDiffPOD(const unsigned int N_,
+             const unsigned int &r_,
+             const double       &T_,
+             const double       &deltat_,
+             const double       &theta_,
+             const std::vector<std::vector<double>> &modes_)
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
-    , mu(prm_diffusion_coefficient_)
     , T(T_)
     , N(N_)
     , r(r_)
     , deltat(deltat_)
     , theta(theta_)
-    , sample_every(sample_every_)
+    , modes(modes_)
     , mesh(MPI_COMM_WORLD)
+    , mesh_r(MPI_COMM_WORLD)
   {}
 
   // Initialization.
@@ -234,20 +373,21 @@ public:
 
   // Solve the problem.
   void
-  solve();
+  solve_reduced();
 
   // Compute the error for convergence analysis.
   // double
   // compute_error(const VectorTools::NormType &norm_type);
 
-  // Snapshot matrix. It collects the solution at each time step. It contains the snapshots computed for a single parameter, 
-  // in other words, the time evolution for a single parameter.
-  std::vector<std::vector<double>> snapshot_matrix;
-
-  // System solution (including ghost elements). 
-  TrilinosWrappers::MPI::Vector solution;
+  // System solution (including ghost elements). It collects the full order approximated solution that is obtained by projecting
+  // (expanding) the reduced order solution.
+  TrilinosWrappers::MPI::Vector fom_solution;
 
 protected:
+  // Setup the reduced system.
+  void
+  setup_reduced();
+
   // Assemble the mass and stiffness matrices.
   void
   assemble_matrices();
@@ -256,13 +396,25 @@ protected:
   void
   assemble_rhs(const double &time);
 
+  // Project the full order system to the reduced order system thanks to the transformation matrix.
+  void
+  convert_modes(NewFullMatrix &transformation_matrix);
+
+  void
+  project_u0(NewFullMatrix &transformation_matrix);
+
+  void
+  project_lhs(NewFullMatrix &transformation_matrix);
+
+  void
+  project_rhs(NewFullMatrix &transformation_matrix);
+
+  void
+  expand_solution(NewFullMatrix &transformation_matrix);
+
   // Solve the problem for one time step.
   void
-  solve_time_step();
-
-  // Assemble the snapshot matrix.
-  void
-  assemble_snapshot_matrix(const unsigned int &time_step);
+  solve_time_step_reduced();
 
   // Output.
   void
@@ -319,17 +471,29 @@ protected:
   // Theta parameter of the theta method.
   const double theta;
 
-  // Sample_every parameter for selecting time steps which solution has to be collected in the snapshot matrix.
-  const unsigned int sample_every;
+  // Projection. ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  // Modes matrix. It is the matrix that contains the POD modes, which will be the columns of the transformation matrix used as
+  // projector from full order to reduced order model.
+  const std::vector<std::vector<double>> modes;
 
   // Mesh.
   parallel::fullydistributed::Triangulation<dim> mesh;
 
+  // Reduced mesh.
+  parallel::fullydistributed::Triangulation<dim> mesh_r;
+
   // Finite element space.
   std::unique_ptr<FiniteElement<dim>> fe;
 
+  // Finite element space for reduced system.
+  std::unique_ptr<FiniteElement<dim>> fe_r;
+
   // Quadrature formula.
   std::unique_ptr<Quadrature<dim>> quadrature;
+
+  // Quadrature formula for reduced system.
+  std::unique_ptr<Quadrature<dim>> quadrature_r;
 
   // Quadrature formula used on boundary lines.
   std::unique_ptr<Quadrature<dim - 1>> quadrature_boundary;
@@ -337,11 +501,16 @@ protected:
   // DoF handler.
   DoFHandler<dim> dof_handler;
 
+  // DoF handler for reduced system.
+  DoFHandler<dim> dof_handler_r;
+
   // DoFs owned by current process.
   IndexSet locally_owned_dofs;
+  IndexSet locally_owned_dofs_r;
 
   // DoFs relevant to the current process (including ghost DoFs).
   IndexSet locally_relevant_dofs;
+  IndexSet locally_relevant_dofs_r;
 
   // Mass matrix M / deltat.
   TrilinosWrappers::SparseMatrix mass_matrix;
@@ -351,16 +520,21 @@ protected:
 
   // Matrix on the left-hand side (M / deltat + theta A).
   TrilinosWrappers::SparseMatrix lhs_matrix;
+  TrilinosWrappers::SparseMatrix reduced_system_lhs;
 
   // Matrix on the right-hand side (M / deltat - (1 - theta) A).
   TrilinosWrappers::SparseMatrix rhs_matrix;
+  TrilinosWrappers::SparseMatrix reduced_rhs_matrix;
 
   // Right-hand side vector in the linear system.
   TrilinosWrappers::MPI::Vector system_rhs;
+  TrilinosWrappers::MPI::Vector reduced_system_rhs;
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
-
+  TrilinosWrappers::MPI::Vector reduced_solution_owned;
+  TrilinosWrappers::MPI::Vector reduced_solution;
+  
 };
 
 #endif
