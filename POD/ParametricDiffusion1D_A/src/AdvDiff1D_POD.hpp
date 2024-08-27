@@ -346,7 +346,7 @@ protected:
 
   // Reduced mesh.
   // parallel::fullydistributed::Triangulation<dim> mesh_r;
-  Triangulation<dim> mesh_r;
+  Triangulation<dim> mesh_r; // REDUCED MESH NO MORE DISTIBUTED, altre modifiche su sistema non più sparso e vettori normali
 
   // Finite element space.
   std::unique_ptr<FiniteElement<dim>> fe;
@@ -407,8 +407,7 @@ protected:
   // TrilinosWrappers::MPI::Vector reduced_solution_owned;
   // Vector<double> reduced_solution_owned;
   // TrilinosWrappers::MPI::Vector reduced_solution;
-  Vector<double> reduced_solution; // sarebbe solo reduced solution,ma cambiare anche di là
-  // PER ORA MANTIENI ENTRAMBE
+  Vector<double> reduced_solution;
   
 };
 

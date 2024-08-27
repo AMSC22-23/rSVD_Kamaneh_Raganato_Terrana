@@ -6,6 +6,9 @@
 #include <vector>
 #include <map>
 
+#include <chrono>
+using namespace std::chrono;
+
 #include "POD.hpp"
 #include "AdvDiff1D.hpp"
 #include "AdvDiff1D_POD.hpp"
@@ -41,7 +44,12 @@ main(int argc, char * argv[])
   pcout << "===================================================================" << std::endl;
   pcout << "Run FOM and collect snapshots" << std::endl;
 
-  AdvDiff problem(N, r, T, deltat, theta, sample_every);    
+  // Only one parameter. The snapshot matrix is composed by solving the problem only once.
+  double prm_diffusion_coefficient = 0.0001;
+
+  auto start_snapshot = high_resolution_clock::now();
+
+  AdvDiff problem(N, r, T, deltat, theta, sample_every, prm_diffusion_coefficient);    
 
   problem.setup();
   problem.solve();
@@ -54,6 +62,10 @@ main(int argc, char * argv[])
   for (Eigen::Index i=0; i<snapshots.rows(); i++) // 'Eigen::Index' {aka 'long int'}
     for (Eigen::Index j=0; j<snapshots.cols(); j++)
       snapshots(i, j) = problem.snapshot_matrix[i][j];
+  
+  auto stop_snapshot = high_resolution_clock::now();
+  auto duration_snapshot = duration_cast<milliseconds>(stop_snapshot - start_snapshot);
+  pcout << "\n  Time for building the snapshot matrix: " << duration_snapshot.count() << " ms" << std::endl;
 
   pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
 
@@ -159,7 +171,7 @@ main(int argc, char * argv[])
       for (Eigen::Index k=0; k<rom_sizes[i]; k++)
         modes[j][k] = compute_modes.W(j, k);
 
-    AdvDiffPOD problemPOD(N, r, T, deltat, theta, modes);
+    AdvDiffPOD problemPOD(N, r, T, deltat, theta, modes, prm_diffusion_coefficient);
     
     problemPOD.setup();
     problemPOD.solve_reduced();

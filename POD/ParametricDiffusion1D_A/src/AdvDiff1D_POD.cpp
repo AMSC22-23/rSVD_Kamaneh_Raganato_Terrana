@@ -92,30 +92,6 @@ AdvDiffPOD::setup_reduced()
 {
   // Create the mesh.
   {
-    // pcout << "Initializing the reduced mesh" << std::endl;
-
-    // Triangulation<dim> mesh_serial_r;
-    // GridGenerator::subdivided_hyper_cube(mesh_serial_r, modes[0].size()-1, 0.0, 1.0, true);
-    // // CAPIRE
-    //     // QUI HAI CAMBIATO IN MODO CHE LA MATRICE NON ABBIA UN ELEMENTO IN PIU
-    // pcout << "  Number of elements = " << mesh_r.n_active_cells()
-    //           << std::endl;
-
-    // // Write the mesh to file.
-    // const std::string mesh_file_name_r = "mesh_r-" + std::to_string(modes[0].size()-1) + ".vtk";
-    // GridOut           grid_out_r;
-    // std::ofstream     grid_out_file_r(mesh_file_name_r);
-    // grid_out_r.write_vtk(mesh_serial_r, grid_out_file_r);
-    // pcout << "  Mesh saved to " << mesh_file_name_r << std::endl;
-
-    // GridTools::partition_triangulation(mpi_size, mesh_serial_r);
-    // const auto construction_data_r = TriangulationDescription::Utilities::
-    //   create_description_from_triangulation(mesh_serial_r, MPI_COMM_WORLD);
-    // mesh_r.create_triangulation(construction_data_r);
-
-    // pcout << "  Number of elements = " << mesh_r.n_global_active_cells()
-    //       << std::endl;
-
     pcout << "Initializing the reduced mesh" << std::endl;
     GridGenerator::subdivided_hyper_cube(mesh_r, modes[0].size()-1, 0.0, 1.0, true);
     pcout << "  Number of elements = " << mesh_r.n_active_cells()
@@ -189,6 +165,7 @@ AdvDiffPOD::setup_reduced()
     pcout << "  Initializing the system right-hand side" << std::endl;
     // reduced_system_rhs.reinit(locally_owned_dofs_r, MPI_COMM_WORLD);
     reduced_system_rhs.reinit(dof_handler_r.n_dofs());
+    
     pcout << "  Initializing the solution vector" << std::endl;
     // reduced_solution_owned.reinit(locally_owned_dofs_r, MPI_COMM_WORLD);
     // reduced_solution.reinit(locally_owned_dofs_r, locally_relevant_dofs_r, MPI_COMM_WORLD);
@@ -267,8 +244,8 @@ AdvDiffPOD::assemble_matrices()
 
       cell->get_dof_indices(dof_indices);
 
-      mass_matrix.add(dof_indices, cell_mass_matrix); // cambiato PROVATO DI NUOVO ATOGLIERE
-      stiffness_matrix.add(dof_indices, cell_stiffness_matrix); // cambiato
+      mass_matrix.add(dof_indices, cell_mass_matrix, false); // cambiato
+      stiffness_matrix.add(dof_indices, cell_stiffness_matrix, false); // cambiato
     }
 
   mass_matrix.compress(VectorOperation::add);
@@ -420,7 +397,6 @@ AdvDiffPOD::project_u0(PETScWrappers::FullMatrix &transformation_matrix)
 
   // Projection: reduced_solution_owned = T^T * solution_owned
   // transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
-  // reduced_solution_owned.compress(VectorOperation::insert);
   reduced_solution.compress(VectorOperation::insert);
 
   // This print is commented to save time and space in the output.
@@ -471,13 +447,9 @@ AdvDiffPOD::project_lhs(PETScWrappers::FullMatrix &transformation_matrix)
   reduced_system_lhs = 0.0;
   // pcout << "BLOCCO QUI 1" << std::endl;
   pcout <<"lhs" << lhs_matrix.m() << " " << lhs_matrix.n() << std::endl;
-  pcout << lhs_matrix(0, 0) << std::endl;
-  pcout << lhs_matrix(1, 0) << std::endl;
-  // pcout << lhs_matrix(2, 0) << std::endl; // è uno zero, quindi vuol dire che non compare
-
-
-
-  // std::pair<TrilinosWrappers::SparseMatrix::size_type, TrilinosWrappers::SparseMatrix::size_type> local_range_lhs = lhs_matrix.local_range();
+  pcout << lhs_matrix.el(0, 0) << std::endl;
+  pcout << lhs_matrix.el(1, 0) << std::endl;
+  pcout << lhs_matrix.el(2, 0) << std::endl;
 
   // ciclo in cui si moltiplica la transformation trasposta per la singola colonna di lhs
   // Intermediate step of projection: aux = T^T * lhs_matrix
@@ -490,11 +462,7 @@ AdvDiffPOD::project_lhs(PETScWrappers::FullMatrix &transformation_matrix)
       assert(i < lhs_matrix.m());
       assert(j < lhs_matrix.n());
       // if (lhs_matrix(i, j))
-
-      // index = std::make_pair(i, j);
-      // if ()
-      // if (lhs_matrix.in_local_range(i) && lhs_matrix.in_local_range(j))
-        aux_col(i) = lhs_matrix.el(i, j); // DA SITO Return the value of the matrix entry (i,j). If this entry does not exist in the sparsity pattern, then zero is returned.
+      aux_col(i) = lhs_matrix.el(i, j);
       // else
       //   aux_col(i) = 0.0;
     }

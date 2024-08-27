@@ -64,6 +64,7 @@ main(int argc, char * argv[])
     pcout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;
   }
     
+  auto start_snapshot = high_resolution_clock::now();
   for (unsigned int i=0; i<n; i++)
   {
     pcout << "  Computing snapshot matrix stripe " << i+1 << " out of " << n << std::endl;
@@ -95,6 +96,9 @@ main(int argc, char * argv[])
     pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, (i*time_steps)+time_steps-1) << std::endl;
     pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl;
   }
+  auto stop_snapshot = high_resolution_clock::now();
+  auto duration_snapshot = duration_cast<milliseconds>(stop_snapshot - start_snapshot);
+  pcout << "\n  Time for building the snapshot matrix sequentially: " << duration_snapshot.count() << " ms" << std::endl;
 
   // Compute U by applying SVD or one POD algorithm to snapshots.
   pcout << "===================================================================" << std::endl;
