@@ -282,7 +282,10 @@ AdvDiff::assemble_snapshot_matrix(const unsigned int &time_step)
   // pcout << "  Check solution.size()       = " << solution.size() << std::endl;
   // pcout << "  Check snapshot_array.size() = " << snapshot_array.size() << std::endl;
 
-  for (unsigned int i=0; i<solution.size(); i++)
+  std::pair<unsigned int, unsigned int> solution_local_range = solution.local_range();
+  
+  // for (unsigned int i=0; i<solution.size(); i++)
+  for (unsigned int i=solution_local_range.first; i<solution_local_range.second; i++)
     snapshot_matrix[i][time_step/sample_every] = solution[i];
 }
 

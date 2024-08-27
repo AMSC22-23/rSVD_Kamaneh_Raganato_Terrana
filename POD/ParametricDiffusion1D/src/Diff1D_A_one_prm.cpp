@@ -81,8 +81,8 @@ main(int argc, char * argv[])
   pcout << "===================================================================" << std::endl;
   pcout << "Compute POD modes" << std::endl;
 
-  // const int rank = std::min(snapshots.rows(), snapshots.cols()); // Maximum rank
-  const int rank = 15;
+  const int rank = std::min(snapshots.rows(), snapshots.cols()); // Maximum rank
+  // const int rank = 15;
   pcout << "  Check rank = " << rank << std::endl;
 
   // VERSIONE CON SVD //////
