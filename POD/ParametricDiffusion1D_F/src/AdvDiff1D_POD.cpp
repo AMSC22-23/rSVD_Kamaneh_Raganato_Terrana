@@ -340,31 +340,31 @@ AdvDiffPOD::assemble_rhs(const double &time)
 // Copy of the standard matrix of modes in a TrilinosWrappers::SparseMatrix. The transformation matrix is the used for projecting
 // the full order space into the reduced order space.
 void
-AdvDiffPOD::convert_modes(TrilinosWrappers::SparseMatrix &transformation_matrix)
+AdvDiffPOD::convert_modes(NewFullMatrix &transformation_matrix)
 {
   for (unsigned int i = 0; i < modes.size(); ++i)
     for (unsigned int j = 0; j < modes[0].size(); ++j)
       transformation_matrix.set(i, j, modes[i][j]);
-  transformation_matrix.compress(VectorOperation::add);
+  // transformation_matrix.compress(VectorOperation::values); // Changed from add to insert
 
   // This print is commented to save time and space in the output.
-  // pcout << "  Check transformation_matrix values:" << std::endl;
-  // pcout << "    modes[0][0] = " << modes[0][0] << std::endl;
-  // pcout << "    transformation_matrix(0, 0) = " << transformation_matrix(0, 0) << std::endl;
-  // pcout << "    modes[1][0] = " << modes[1][0] << std::endl;
-  // pcout << "    transformation_matrix(1, 0) = " << transformation_matrix(1, 0) << std::endl;
-  // pcout << "    modes[1][1] = " << modes[1][1] << std::endl;
-  // pcout << "    transformation_matrix(1, 1) = " << transformation_matrix(1, 1) << std::endl;
-  // pcout << "    modes[40][1] = " << modes[40][1] << std::endl;
-  // pcout << "    transformation_matrix(40, 1) = " << transformation_matrix(40, 1) << std::endl;
-  // pcout << "    modes[44][1] = " << modes[44][1] << std::endl;
-  // pcout << "    transformation_matrix(44, 1) = " << transformation_matrix(44, 1) << std::endl;
-  // pcout << "    modes[89][1] = " << modes[89][1] << std::endl;
-  // pcout << "    transformation_matrix(89, 1) = " << transformation_matrix(89, 1) << std::endl;
-  // pcout << "    modes[108][1] = " << modes[108][1] << std::endl;
-  // pcout << "    transformation_matrix(108, 1) = " << transformation_matrix(108, 1) << std::endl;
-  // pcout << "    modes[27][0] = " << modes[27][0] << std::endl;
-  // pcout << "    transformation_matrix(27, 0) = " << transformation_matrix(27, 0) << std::endl;
+  pcout << "  Check transformation_matrix values:" << std::endl;
+  pcout << "    modes[0][0] = " << modes[0][0] << std::endl;
+  pcout << "    transformation_matrix(0, 0) = " << transformation_matrix(0, 0) << std::endl;
+  pcout << "    modes[1][0] = " << modes[1][0] << std::endl;
+  pcout << "    transformation_matrix(1, 0) = " << transformation_matrix(1, 0) << std::endl;
+  pcout << "    modes[1][1] = " << modes[1][1] << std::endl;
+  pcout << "    transformation_matrix(1, 1) = " << transformation_matrix(1, 1) << std::endl;
+  pcout << "    modes[40][1] = " << modes[40][1] << std::endl;
+  pcout << "    transformation_matrix(40, 1) = " << transformation_matrix(40, 1) << std::endl;
+  pcout << "    modes[44][1] = " << modes[44][1] << std::endl;
+  pcout << "    transformation_matrix(44, 1) = " << transformation_matrix(44, 1) << std::endl;
+  pcout << "    modes[89][1] = " << modes[89][1] << std::endl;
+  pcout << "    transformation_matrix(89, 1) = " << transformation_matrix(89, 1) << std::endl;
+  pcout << "    modes[108][1] = " << modes[108][1] << std::endl;
+  pcout << "    transformation_matrix(108, 1) = " << transformation_matrix(108, 1) << std::endl;
+  pcout << "    modes[27][0] = " << modes[27][0] << std::endl;
+  pcout << "    transformation_matrix(27, 0) = " << transformation_matrix(27, 0) << std::endl;
 
   pcout << "\n  Check transformation_matrix size:" << std::endl;
   pcout << "    modes.size() = " << modes.size() << "\t\ttransformation_matrix.m() = " << transformation_matrix.m() << std::endl;
@@ -373,13 +373,29 @@ AdvDiffPOD::convert_modes(TrilinosWrappers::SparseMatrix &transformation_matrix)
 
 // Projection of the initial condition.
 void
-AdvDiffPOD::project_u0(TrilinosWrappers::SparseMatrix &transformation_matrix)
+AdvDiffPOD::project_u0(NewFullMatrix &transformation_matrix)
 {
+
+  PETScWrappers::VectorBase dst; // (transformation_matrix.n());
+  PETScWrappers::VectorBase solution_owned_copy; // (solution_owned.size());
+  for(unsigned int i = 0; i < solution_owned.size(); ++i)
+    solution_owned_copy(i) = solution_owned(i);
+  // solution_owned_copy.compress(VectorOperation::values);
+
+  pcout << "Check solution owned" << solution_owned(8) << "  " << solution_owned_copy(8) << std::endl;
+  pcout << "Check solution owned" << solution_owned(80) << "  " << solution_owned_copy(80) << std::endl;
+
   // Note that at time 0 solution_owned is defined and contains the initial condition.
   reduced_solution_owned = 0.0;
+  transformation_matrix.Tvmult(dst, solution_owned_copy);
+  for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
+    reduced_solution_owned(i) = dst(i);
+
   // Projection: reduced_solution_owned = T^T * solution_owned
-  transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
-  reduced_solution_owned.compress(VectorOperation::add);
+  // transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
+  reduced_solution_owned.compress(VectorOperation::insert);
+  pcout << "Check reduced solution owned" << reduced_solution_owned(0) << "  " << dst(0) << std::endl;
+  pcout << "Check reduced solution owned" << reduced_solution_owned(1) << "  " << dst(1) << std::endl;
 
   // This print is commented to save time and space in the output.
   // pcout << "  Check reduced_solution_owned values:" << std::endl;
@@ -389,24 +405,71 @@ AdvDiffPOD::project_u0(TrilinosWrappers::SparseMatrix &transformation_matrix)
 
 // Projection of the left-hand side matrix.
 void
-AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
+AdvDiffPOD::project_lhs(NewFullMatrix &transformation_matrix)
 {
-  TrilinosWrappers::SparseMatrix aux;
+  NewFullMatrix aux;
+  // _row;
+  // PETScWrappers::VectorBase aux_col;
+   // (transformation_matrix.n(), lhs_matrix.n()); // (Tn * Tm) * (Lm * Ln) = Tn * Ln
+  NewFullMatrix dst; // (transformation_matrix.n(), transformation_matrix.n()); // (Tn * Ln) * (Tm * Tn) = Tn * Tn
+  NewFullMatrix lhs_matrix_copy; // (lhs_matrix.m(), lhs_matrix.n());
+  for (unsigned int i = 0; i < lhs_matrix.m(); ++i)
+    for (unsigned int j = 0; j < lhs_matrix.n(); ++j)
+      // lhs_matrix_copy(i, j) = lhs_matrix(i, j);
+      lhs_matrix_copy.set(i, j, lhs_matrix(i, j));
+  // lhs_matrix_copy.copy_from(lhs_matrix); // non mi sembra funzionare
 
-  reduced_system_lhs = 0.0;
-  assert(transformation_matrix.m() == lhs_matrix.m()); // Check on sizes
-  pcout << "  Check lhs_matrix size:\t\t" << lhs_matrix.m() << " * " << lhs_matrix.n() << std::endl;
+  pcout << "  Check lhs_matrix_copy: " << std::endl;
+  pcout << lhs_matrix(0, 0) << std::endl;
+  pcout << lhs_matrix_copy(0, 0) << std::endl;
+  pcout << lhs_matrix(1, 0) << std::endl;
+  pcout << lhs_matrix_copy(1, 0) << std::endl;
+  pcout << lhs_matrix(100, 70) << std::endl;
+  pcout << lhs_matrix_copy(100, 70) << std::endl;
+  pcout << lhs_matrix(120, 70) << std::endl;
+  pcout << lhs_matrix_copy(120, 70) << std::endl;
+
+  // for 
+  // aux_row = prima col di transformation
+  // aux_col = prima colonna di lhs
+
+
+  // reduced_system_lhs = 0.0;
+  // assert(transformation_matrix.m() == lhs_matrix_copy.m()); // Check on sizes
+  // pcout << "  Check lhs_matrix size:\t\t" << lhs_matrix_copy.m() << " * " << lhs_matrix.n() << std::endl;
 
   // Intermediate step of projection: aux = T^T * lhs_matrix
-  transformation_matrix.Tmmult(aux, lhs_matrix);
+  PETScWrappers::VectorBase v;
+  v = 1;
+  transformation_matrix.Tmmult(aux, lhs_matrix_copy, v);
+  
   pcout << "  Check auxiliary matrix size:\t\t" << aux.m() << " * " << aux.n() << std::endl;
 
   assert(aux.n() == transformation_matrix.m()); // Check on sizes
   // Projection: reduced_system_lhs = aux * T = T^T * lhs_matrix * T
-  aux.mmult(reduced_system_lhs, transformation_matrix);
+  aux.mmult(dst, transformation_matrix, v);
+  for (unsigned int i = 0; i < dst.m(); ++i)
+    for (unsigned int j = 0; j < dst.n(); ++j) // Dimensioni giuste??
+      reduced_system_lhs.set(i, j, dst(i, j));
   pcout << "  Check reduced_system_lhs size:\t" << reduced_system_lhs.m() << " * " << reduced_system_lhs.n() << std::endl;
 
-  reduced_system_lhs.compress(VectorOperation::add);
+  reduced_system_lhs.compress(VectorOperation::insert);
+
+  // PRIMADI AGGIUNGERE 
+  // reduced_system_lhs = 0.0;
+  // assert(transformation_matrix.m() == lhs_matrix_copy.m()); // Check on sizes
+  // pcout << "  Check lhs_matrix size:\t\t" << lhs_matrix_copy.m() << " * " << lhs_matrix.n() << std::endl;
+
+  // // Intermediate step of projection: aux = T^T * lhs_matrix
+  // transformation_matrix.Tmmult(aux, lhs_matrix);
+  // pcout << "  Check auxiliary matrix size:\t\t" << aux.m() << " * " << aux.n() << std::endl;
+
+  // assert(aux.n() == transformation_matrix.m()); // Check on sizes
+  // // Projection: reduced_system_lhs = aux * T = T^T * lhs_matrix * T
+  // aux.mmult(reduced_system_lhs, transformation_matrix);
+  // pcout << "  Check reduced_system_lhs size:\t" << reduced_system_lhs.m() << " * " << reduced_system_lhs.n() << std::endl;
+
+  // reduced_system_lhs.compress(VectorOperation::add);
 
   // This print is commented to save time and space in the output.
   // pcout << "  Check reduced_system_lhs values:" << std::endl;
@@ -416,12 +479,38 @@ AdvDiffPOD::project_lhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
 
 // Projection of the right-hand side vector.
 void
-AdvDiffPOD::project_rhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
+AdvDiffPOD::project_rhs(NewFullMatrix &transformation_matrix)
 {
-  reduced_system_rhs = 0.0;
-  // Projection: reduced_system_rhs = T^T * system_rhs
-  transformation_matrix.Tvmult(reduced_system_rhs, system_rhs);
-  reduced_system_rhs.compress(VectorOperation::add);
+
+  PETScWrappers::VectorBase dst; // (transformation_matrix.n());
+  // Vector<double> system_rhs_copy(system_rhs); // Copy constructor
+  PETScWrappers::VectorBase system_rhs_copy; // (system_rhs.size());
+  // Vector<double> system_rhs_copy(transformation_matrix.m());
+
+  // // FAI CHECK SU DIMENSIONI CON ERRORE
+  for (unsigned int i = 0; i < transformation_matrix.m(); ++i)
+    system_rhs_copy(i) = system_rhs(i);
+  // system_rhs_copy.compress(VectorOperation::add);
+  //   pcout << "  Check rhs_matrix_copy: " << std::endl;
+  // pcout << system_rhs(40) << std::endl;
+  // pcout << system_rhs_copy(40) << std::endl;
+  // pcout << system_rhs(41) << std::endl;
+  // pcout << system_rhs_copy(41) << std::endl;
+  // PROBLEMINO QUI
+  reduced_system_rhs = 0.0; // TENERE?
+  
+  transformation_matrix.Tvmult(dst, system_rhs_copy);
+  for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
+    reduced_system_rhs(i) = dst(i);
+  // reduced_system_rhs = dst; // Copy
+    // reduced_system_rhs.set(i, dst(i));
+  reduced_system_rhs.compress(VectorOperation::insert);
+
+  // PRIMA DI FULL
+  // reduced_system_rhs = 0.0;
+  // // Projection: reduced_system_rhs = T^T * system_rhs
+  // transformation_matrix.Tvmult(reduced_system_rhs, system_rhs);
+  // reduced_system_rhs.compress(VectorOperation::add);
 
   // This print is commented to save time and space in the output.
   // pcout << "  Check reduced_system_rhs values:" << std::endl;
@@ -431,12 +520,40 @@ AdvDiffPOD::project_rhs(TrilinosWrappers::SparseMatrix &transformation_matrix)
 
 // Expansion of the reduced order solution to the full order solution.
 void
-AdvDiffPOD::expand_solution(TrilinosWrappers::SparseMatrix &transformation_matrix)
+AdvDiffPOD::expand_solution(NewFullMatrix &transformation_matrix)
 {
+  PETScWrappers::VectorBase dst; // (transformation_matrix.n());
+  PETScWrappers::VectorBase reduced_solution_copy; // (solution_owned.size());
+  for(unsigned int i = 0; i < reduced_solution.size(); ++i)
+    reduced_solution_copy(i) = reduced_solution(i);
+  // solution_owned_copy.compress(VectorOperation::values);
+
+  pcout << "Check reduced solution" << reduced_solution(0) << "  " << reduced_solution_copy(0) << std::endl;
+  pcout << "Check reduced solution" << reduced_solution(1) << "  " << reduced_solution_copy(1) << std::endl;
+
+  // Note that at time 0 solution_owned is defined and contains the initial condition.
+  // reduced_solution_owned = 0.0;
+  // transformation_matrix.Tvmult(dst, solution_owned_copy);
   fom_solution = 0.0;
   // Expansion: fom_solution = T * reduced_solution
-  transformation_matrix.vmult(fom_solution, reduced_solution);
+  transformation_matrix.vmult(dst, reduced_solution_copy);
   fom_solution.compress(VectorOperation::add);
+  for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
+    fom_solution(i) = dst(i);
+
+  // Projection: reduced_solution_owned = T^T * solution_owned
+  // transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
+  fom_solution.compress(VectorOperation::insert);
+  pcout << "Check reduced solution owned" << reduced_solution_owned(0) << "  " << dst(0) << std::endl;
+  pcout << "Check reduced solution owned" << reduced_solution_owned(1) << "  " << dst(1) << std::endl;
+
+
+
+  // PRIMA 
+  // fom_solution = 0.0;
+  // Expansion: fom_solution = T * reduced_solution
+  // transformation_matrix.vmult(fom_solution, reduced_solution);
+  // fom_solution.compress(VectorOperation::add);
 
   // pcout << "  Check fom_solution size: " << fom_solution.size() << std::endl;
   // pcout << "  Check fom_solution values: " << std::endl;
@@ -485,7 +602,10 @@ AdvDiffPOD::solve_reduced()
   assemble_matrices();
   setup_reduced();
 
-  TrilinosWrappers::SparseMatrix transformation_matrix(modes.size(), modes[0].size(), modes[0].size());
+  // TrilinosWrappers::SparseMatrix transformation_matrix(modes.size(), modes[0].size(), modes[0].size());
+  NewFullMatrix transformation_matrix; // (modes.size(), modes[0].size());
+  transformation_matrix.reinit(modes.size(), modes[0].size());
+  // EVENTUALMENTE CAPIRE FULLMATRIX SIZETYPE PER INIZIALIZZARE CON RIGHE E COLONNE, TIPO ROW = MODES.SIZE() O MAGARI CAST?
   convert_modes(transformation_matrix);
   try
   {
@@ -539,21 +659,10 @@ AdvDiffPOD::solve_reduced()
       assemble_rhs(time);
       project_rhs(transformation_matrix);
 
-      auto start_reduced = high_resolution_clock::now();
       solve_time_step_reduced();
-      auto stop_reduced = high_resolution_clock::now();
-      auto duration_reduced = duration_cast<milliseconds>(stop_reduced - start_reduced);
-      duration_reduced_vec.push_back(duration_reduced);
-
       expand_solution(transformation_matrix);
-
       output(time_step);
     }
-
-  // Compute the average duration of solving a single time step.
-  duration_reduced_avg = std::reduce(duration_reduced_vec.begin(), duration_reduced_vec.end())/static_cast<double>(duration_reduced_vec.size());
-
-  // duration_reduced_avg = duration_reduced_vec.accumulate() / duration_reduced_vec.size();
 }
 
 // double

@@ -241,8 +241,8 @@ Mat_m POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
         Eigen::SelfAdjointEigenSolver<Mat_m> es(Xh);
         Mat_m Xh_sqrt = es.operatorSqrt();
         // cout << "Check Xh: " << endl << Xh << endl << endl;
-        // cout << "The square root of Xh is: " << endl << Xh_sqrt << endl << endl;
-        // cout << "Check if Xh = Xh_sqrt * Xh_sqrt: " << endl << Xh_sqrt*Xh_sqrt << endl << endl;
+        cout << "The square root of Xh is: " << endl << Xh_sqrt << endl << endl;
+        cout << "Check if Xh = Xh_sqrt * Xh_sqrt: " << endl << Xh_sqrt*Xh_sqrt << endl << endl;
         cout << "Norm of ||Xh - Xh_sqrt * Xh_sqrt||: " << (Xh-Xh_sqrt*Xh_sqrt).norm() << endl << endl;
 
         Mat_m Ktilde = ((Xh_sqrt*S) * S.transpose()) * Xh_sqrt; // Ktilde = (Nh*Nh) * (Nh*ns) * (ns*Nh) * (Nh*Nh) = Nh*Nh

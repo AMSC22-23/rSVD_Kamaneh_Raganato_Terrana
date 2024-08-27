@@ -30,70 +30,74 @@ POD::POD(Mat_m &A, Mat_m &U, Mat_m &Sigma, Mat_m &V, const int dim, const Vec_v 
     cout << "===================================================================" << endl;
     cout << "Constructor for online POD" << endl << endl;
     Vec_v sigma = Vec_v::Zero(dim);
-    SVD(A, sigma, U, V, dim);
+    SVD<SVDMethod::Jacobi> svd(A); // (A, sigma, U, V, dim);
+    svd.compute();
+    U = svd.getU();
+    sigma = svd.getS();
     Sigma = sigma.asDiagonal();
+    V = svd.getV();
 }
 
 // Power Method
-void POD::PM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v)
-{
-    // Generate a random initial guess x0
-    Vec_v x0 = Vec_v::Zero(A.cols());
+// void POD::PM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v)
+// {
+//     // Generate a random initial guess x0
+//     Vec_v x0 = Vec_v::Zero(A.cols());
 
-    random_device rd;
-    mt19937 gen(rd());
-    normal_distribution<double> distribution(0.0, 1.0);
+//     random_device rd;
+//     mt19937 gen(rd());
+//     normal_distribution<double> distribution(0.0, 1.0);
 
-    for (unsigned int i=0; i<x0.size(); i++) {
-        x0(i) = distribution(gen);
-    }
-    x0.normalize();
+//     for (unsigned int i=0; i<x0.size(); i++) {
+//         x0(i) = distribution(gen);
+//     }
+//     x0.normalize();
 
-    // Define the number of iterations
-    double epsilon = 1.e-10;
-    double delta = 0.05;
-    double lambda = 0.1;
-    int s = ceil( log(4*log(2*A.cols()/delta)/(epsilon*delta)) /(2*lambda));
-    // cout << "Check the number of iterations: " << s << endl;
+//     // Define the number of iterations
+//     double epsilon = 1.e-10;
+//     double delta = 0.05;
+//     double lambda = 0.1;
+//     int s = ceil( log(4*log(2*A.cols()/delta)/(epsilon*delta)) /(2*lambda));
+//     // cout << "Check the number of iterations: " << s << endl;
 
-    for (unsigned int i=1; i<=s; i++) {
-        x0 = B*x0; // B = A^T*A
-        x0.normalize();
-    }
+//     for (unsigned int i=1; i<=s; i++) {
+//         x0 = B*x0; // B = A^T*A
+//         x0.normalize();
+//     }
 
-    // Compute the left singlular vector
-    v = x0;
-    v.normalize();
+//     // Compute the left singlular vector
+//     v = x0;
+//     v.normalize();
 
-    // Compute the singular value
-    sigma = (A*v).norm();
+//     // Compute the singular value
+//     sigma = (A*v).norm();
 
-    // Compute the right singular vector
-    u = A*v/sigma;
-}
+//     // Compute the right singular vector
+//     u = A*v/sigma;
+// }
 
 // Singular Value Decomposition through Power Method
-void POD::SVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim)
-{
-    Mat_m VT = Mat_m::Zero(dim, A.cols()); // VT is the transpose of V
+// void POD::SVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim)
+// {
+//     Mat_m VT = Mat_m::Zero(dim, A.cols()); // VT is the transpose of V
 
-    // Define the matrix B = A^T*A
-    Mat_m B = A.transpose()*A; // n*n
+//     // Define the matrix B = A^T*A
+//     Mat_m B = A.transpose()*A; // n*n
 
-    // Define auxiliary vectors u and v
-    Vec_v u = Vec_v::Zero(A.rows());
-    Vec_v v = Vec_v::Zero(A.cols());
+//     // Define auxiliary vectors u and v
+//     Vec_v u = Vec_v::Zero(A.rows());
+//     Vec_v v = Vec_v::Zero(A.cols());
     
-    for (unsigned int i=0; i<dim; i++) {
-        PM(A, B, sigma(i), u, v);
-        A -= sigma(i)*u*v.transpose();
-        B = A.transpose()*A;
-        U.col(i) = u;
-        VT.row(i) = v;
-    }
+//     for (unsigned int i=0; i<dim; i++) {
+//         PM(A, B, sigma(i), u, v);
+//         A -= sigma(i)*u*v.transpose();
+//         B = A.transpose()*A;
+//         U.col(i) = u;
+//         VT.row(i) = v;
+//     }
 
-    V = VT.transpose(); // V is the transpose of VT
-}
+//     V = VT.transpose(); // V is the transpose of VT
+// }
 
 // Algorithm 6.1 page 126 – POD Algorithm
 Mat_m POD::standard_POD(Mat_m &S, const int r, const double tol)
@@ -125,7 +129,13 @@ Mat_m POD::standard_POD(Mat_m &S, const int r, const double tol)
         Mat_m U = Mat_m::Zero(ns, r);
         Mat_m V = Mat_m::Zero(ns, r);
 
-        SVD(C, sigma, U, V, r); // i = 1, ..., r
+        // SVD(C, sigma, U, V, r); // i = 1, ..., r
+        SVD<SVDMethod::Jacobi> svd(C);
+        svd.compute();
+        U = svd.getU();
+        sigma = svd.getS();
+        // Sigma = sigma.asDiagonal();
+        V = svd.getV();
         cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << endl;
         cout << "Check dimensions of sigma: " << sigma.size() << endl;
         cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << endl;
@@ -147,7 +157,13 @@ Mat_m POD::standard_POD(Mat_m &S, const int r, const double tol)
         Mat_m U = Mat_m::Zero(Nh, r);
         Mat_m V = Mat_m::Zero(Nh, r);
 
-        SVD(K, sigma, U, V, r); // i = 1, ..., r
+        // SVD(K, sigma, U, V, r); // i = 1, ..., r
+        SVD<SVDMethod::Jacobi> svd(K);
+        svd.compute();
+        U = svd.getU();
+        sigma = svd.getS();
+        // Sigma = sigma.asDiagonal();
+        V = svd.getV();
         cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << endl;
         cout << "Check dimensions of sigma: " << sigma.size() << endl;
         cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << endl;
@@ -223,7 +239,13 @@ Mat_m POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
         Mat_m Utilde = Mat_m::Zero(ns, r);
         Mat_m Vtilde = Mat_m::Zero(ns, r);
 
-        SVD(Ctilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
+        // SVD(Ctilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
+        SVD<SVDMethod::Jacobi> svd(Ctilde);
+        svd.compute();
+        Utilde = svd.getU();
+        sigma = svd.getS();
+        // Sigma = sigma.asDiagonal();
+        Vtilde = svd.getV();
         cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << endl;
         cout << "Check dimensions of sigma:  " << sigma.size() << endl;
         cout << "Check dimensions of Vtilde: " << Vtilde.rows() << " * " << Vtilde.cols() << endl;
@@ -255,7 +277,13 @@ Mat_m POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
         Mat_m Utilde = Mat_m::Zero(Nh, r);
         Mat_m Vtilde = Mat_m::Zero(Nh, r);
 
-        SVD(Ktilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
+        // SVD(Ktilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
+        SVD<SVDMethod::Jacobi> svd(Ktilde);
+        svd.compute();
+        Utilde = svd.getU();
+        sigma = svd.getS();
+        // Sigma = sigma.asDiagonal();
+        Vtilde = svd.getV();
         cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << endl;
         cout << "Check dimensions of sigma:  " << sigma.size() << endl;
         cout << "Check dimensions of Vtilde: " << Vtilde.rows() << " * " << Vtilde.cols() << endl;
@@ -355,7 +383,13 @@ Mat_m POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double t
         Mat_m Utilde = Mat_m::Zero(ns, r);
         Mat_m Vtilde = Mat_m::Zero(ns, r);
 
-        SVD(Ctilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
+        // SVD(Ctilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
+        SVD<SVDMethod::Jacobi> svd(Ctilde);
+        svd.compute();
+        Utilde = svd.getU();
+        sigma = svd.getS();
+        // Sigma = sigma.asDiagonal();
+        Vtilde = svd.getV();
         cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << endl;
         cout << "Check dimensions of sigma:  " << sigma.size() << endl;
         cout << "Check dimensions of Vtilde: " << Vtilde.rows() << " * " << Vtilde.cols() << endl;
@@ -388,7 +422,13 @@ Mat_m POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double t
         Mat_m Utilde = Mat_m::Zero(Nh, r);
         Mat_m Vtilde = Mat_m::Zero(Nh, r);
 
-        SVD(Ktilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
+        // SVD(Ktilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
+        SVD<SVDMethod::Jacobi> svd(Ktilde);
+        svd.compute();
+        Utilde = svd.getU();
+        sigma = svd.getS();
+        // Sigma = sigma.asDiagonal();
+        Vtilde = svd.getV();
         cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << endl;
         cout << "Check dimensions of sigma:  " << sigma.size() << endl;
         cout << "Check dimensions of Vtilde: " << Vtilde.rows() << " * " << Vtilde.cols() << endl;
@@ -485,7 +525,13 @@ void POD::standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const d
     Mat_m UQ = Mat_m::Zero(k+1, k+1);
     Mat_m VQ = Mat_m::Zero(k+1, k+1);
 
-    SVD(Q, sigmaQ, UQ, VQ, k+1);
+    // SVD(Q, sigmaQ, UQ, VQ, k+1);
+    SVD<SVDMethod::Jacobi> svd(Q); // (C, sigma, U, V, dim);
+    svd.compute();
+    UQ = svd.getU();
+    sigmaQ = svd.getS();
+    // Sigma = sigma.asDiagonal();
+    VQ = svd.getV();
     SigmaQ = sigmaQ.asDiagonal();
     cout << "Check UQ:" << endl << UQ << endl << endl;
     cout << "Check SigmaQ:" << endl << SigmaQ << endl << endl;
@@ -647,7 +693,13 @@ void POD::enhanced_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const i
     Mat_m UQ = Mat_m::Zero(k+1, k+1);
     Mat_m VQ = Mat_m::Zero(k+1, k+1);
 
-    SVD(Q, sigmaQ, UQ, VQ, k+1);
+    // SVD(Q, sigmaQ, UQ, VQ, k+1);
+    SVD<SVDMethod::Jacobi> svd(Q); // (C, sigma, U, V, dim);
+    svd.compute();
+    UQ = svd.getU();
+    sigmaQ = svd.getS();
+    // Sigma = sigma.asDiagonal();
+    VQ = svd.getV();
     SigmaQ = sigmaQ.asDiagonal();
     cout << "Check UQ:" << endl << UQ << endl << endl;
     cout << "Check SigmaQ:" << endl << SigmaQ << endl << endl;
