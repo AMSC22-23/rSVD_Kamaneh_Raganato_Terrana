@@ -403,13 +403,13 @@ protected:
   // Matrix on the left-hand side (M / deltat + theta A).
   TrilinosWrappers::SparseMatrix lhs_matrix;
   // TrilinosWrappers::SparseMatrix reduced_system_lhs_aux;
-  SparseMatrix<double> reduced_system_lhs_aux;
+  dealii::SparseMatrix<double> reduced_system_lhs_aux;
   FullMatrix<double> reduced_system_lhs;
 
   // Matrix on the right-hand side (M / deltat - (1 - theta) A).
   TrilinosWrappers::SparseMatrix rhs_matrix;
   // TrilinosWrappers::SparseMatrix reduced_rhs_matrix;
-  SparseMatrix<double> reduced_rhs_matrix;
+  dealii::SparseMatrix<double> reduced_rhs_matrix;
 
   // Right-hand side vector in the linear system.
   TrilinosWrappers::MPI::Vector system_rhs;

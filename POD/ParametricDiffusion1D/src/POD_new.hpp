@@ -15,6 +15,8 @@
 // #include <eigen3/Eigen/Sparse>
 // #include <eigen3/unsupported/Eigen/SparseExtra>
 
+#include "../../../PCA/include/SVD_class.hpp"
+
 using namespace std;
 // using namespace Eigen;
 
@@ -44,10 +46,10 @@ public:
     // CONTROLLA STAMPANDO SE conservativeResize FUNZIONA
 
     // Power Method
-    void PM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v);
+    // void PM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v);
 
     // Singular Value Decomposition through Power Method
-    void SVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim);
+    // void SVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim);
 
     // Algorithm 6.1 page 126 – POD Algorithm
     Mat_m standard_POD(Mat_m &S, const int r, double const tol);
