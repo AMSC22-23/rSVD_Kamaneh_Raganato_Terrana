@@ -402,25 +402,19 @@ protected:
 
   // Matrix on the left-hand side (M / deltat + theta A).
   TrilinosWrappers::SparseMatrix lhs_matrix;
-  // TrilinosWrappers::SparseMatrix reduced_system_lhs_aux;
   dealii::SparseMatrix<double> reduced_system_lhs_aux;
   FullMatrix<double> reduced_system_lhs;
 
   // Matrix on the right-hand side (M / deltat - (1 - theta) A).
   TrilinosWrappers::SparseMatrix rhs_matrix;
-  // TrilinosWrappers::SparseMatrix reduced_rhs_matrix;
   dealii::SparseMatrix<double> reduced_rhs_matrix;
 
   // Right-hand side vector in the linear system.
   TrilinosWrappers::MPI::Vector system_rhs;
-  // TrilinosWrappers::MPI::Vector reduced_system_rhs;
   Vector<double> reduced_system_rhs;
 
   // System solution (without ghost elements).
   TrilinosWrappers::MPI::Vector solution_owned;
-  // TrilinosWrappers::MPI::Vector reduced_solution_owned;
-  // Vector<double> reduced_solution_owned;
-  // TrilinosWrappers::MPI::Vector reduced_solution;
   Vector<double> reduced_solution;
   
   // Vector collecting the durations of solving a single time step.

@@ -159,7 +159,6 @@ AdvDiffPOD::setup_reduced()
     // matrix. Since the reduced left-hand side matrix and the reduced right-hand side vector are obtained by projection.
     pcout << "  Initializing the matrices" << std::endl;
     reduced_system_lhs_aux.reinit(sparsity_pattern_r);
-    // reduced_system_lhs.reinit(dof_handler_r.n_dofs(), dof_handler_r.n_dofs());
     reduced_system_lhs.copy_from(reduced_system_lhs_aux);
 
     pcout << "  Initializing the system right-hand side" << std::endl;
@@ -244,10 +243,8 @@ AdvDiffPOD::assemble_matrices()
 
       cell->get_dof_indices(dof_indices);
 
-      // mass_matrix.add(dof_indices, cell_mass_matrix, false); // cambiato
-      // stiffness_matrix.add(dof_indices, cell_stiffness_matrix, false); // cambiato
-      mass_matrix.add(dof_indices, cell_mass_matrix); // cambiato
-      stiffness_matrix.add(dof_indices, cell_stiffness_matrix); // cambiato
+      mass_matrix.add(dof_indices, cell_mass_matrix);
+      stiffness_matrix.add(dof_indices, cell_stiffness_matrix);
     }
 
   mass_matrix.compress(VectorOperation::add);
@@ -388,24 +385,18 @@ AdvDiffPOD::project_u0(PETScWrappers::FullMatrix &transformation_matrix)
   // Note that at time 0 solution_owned is defined and contains the initial condition.
   // reduced_solution_owned = 0.0;
   reduced_solution = 0.0;
+
+  // Projection: reduced_solution_owned = T^T * solution_owned
+
   assert(transformation_matrix.m() == solution_owned_copy.size());
   transformation_matrix.Tvmult(dst, solution_owned_copy);
   dst.compress(VectorOperation::insert);
 
   for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
-    // reduced_solution_owned(i) = dst(i); // riprova con questo
     reduced_solution(i) = dst(i);
-  // reduced_solution_owned = dst; // Copy, mi sa che però bisogna fare attenzione
 
-  // Projection: reduced_solution_owned = T^T * solution_owned
-  // transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
   reduced_solution.compress(VectorOperation::insert);
 
-  // This print is commented to save time and space in the output.
-  // pcout << "  Check reduced_solution_owned size:\t" << reduced_solution_owned.size() << std::endl;
-  // pcout << "  Check reduced_solution_owned values:" << std::endl;
-  // pcout << "    reduced_solution_owned(0) = "  << reduced_solution_owned(0) << std::endl;
-  // pcout << "    reduced_solution_owned(1) = "  << reduced_solution_owned(1) << std::endl;
   pcout << "  Check reduced_solution size:\t" << reduced_solution.size() << std::endl;
   pcout << "  Check reduced_solution values:" << std::endl;
   pcout << "    reduced_solution(0) = "  << reduced_solution(0) << std::endl;
@@ -416,38 +407,12 @@ AdvDiffPOD::project_u0(PETScWrappers::FullMatrix &transformation_matrix)
 void
 AdvDiffPOD::project_lhs(PETScWrappers::FullMatrix &transformation_matrix)
 {
-  // PETScWrappers::FullMatrix aux(transformation_matrix.n(), lhs_matrix.n()); // (Tn * Tm) * (Lm * Ln) = Tn * Ln
   PETScWrappers::MPI::Vector aux_col;
-  // pcout << "BLOCCO QUI 1" << std::endl;
   PETScWrappers::MPI::Vector dst_col;
-  // pcout << "BLOCCO QUI 1" << std::endl;
   PETScWrappers::FullMatrix intermediate_mat(transformation_matrix.n(), lhs_matrix.n());
-   // (transformation_matrix.n(), lhs_matrix.n()); // (Tn * Tm) * (Lm * Ln) = Tn * Ln
-  // PETScWrappers::FullMatrix dst; // (transformation_matrix.n(), transformation_matrix.n()); // (Tn * Ln) * (Tm * Tn) = Tn * Tn
-  // PETScWrappers::FullMatrix lhs_matrix_copy; // (lhs_matrix.m(), lhs_matrix.n());
-  // for (unsigned int i = 0; i < lhs_matrix.m(); ++i)
-  //   for (unsigned int j = 0; j < lhs_matrix.n(); ++j)
-      // lhs_matrix_copy(i, j) = lhs_matrix(i, j);
-      // lhs_matrix_copy.set(i, j, lhs_matrix(i, j));
-  // lhs_matrix_copy.copy_from(lhs_matrix); // non mi sembra funzionare
 
-  // pcout << "  Check lhs_matrix_copy: " << std::endl;
-  // pcout << lhs_matrix(0, 0) << std::endl;
-  // pcout << lhs_matrix_copy(0, 0) << std::endl;
-  // pcout << lhs_matrix(1, 0) << std::endl;
-  // pcout << lhs_matrix_copy(1, 0) << std::endl;
-  // pcout << lhs_matrix(100, 70) << std::endl;
-  // pcout << lhs_matrix_copy(100, 70) << std::endl;
-  // pcout << lhs_matrix(120, 70) << std::endl;
-  // pcout << lhs_matrix_copy(120, 70) << std::endl;
-
-  // for 
-  // aux_row = prima col di transformation
-  // aux_col = prima colonna di lhs
-
-  // pcout << "BLOCCO QUI 1" << std::endl;
   reduced_system_lhs = 0.0;
-  // pcout << "BLOCCO QUI 1" << std::endl;
+
   pcout <<"lhs" << lhs_matrix.m() << " " << lhs_matrix.n() << std::endl;
   pcout << lhs_matrix.el(0, 0) << std::endl;
   pcout << lhs_matrix.el(1, 0) << std::endl;
@@ -463,12 +428,9 @@ AdvDiffPOD::project_lhs(PETScWrappers::FullMatrix &transformation_matrix)
       assert(i < aux_col.size());
       assert(i < lhs_matrix.m());
       assert(j < lhs_matrix.n());
-      // if (lhs_matrix(i, j))
-      aux_col(i) = lhs_matrix.el(i, j);
-      // else
-      //   aux_col(i) = 0.0;
+      aux_col(i) = lhs_matrix.el(i, j); // spiega
     }
-    // aux_col.compress(VectorOperation::insert);
+    aux_col.compress(VectorOperation::insert);
 
     // pcout << "BLOCCO QUI 1" << std::endl;
 
@@ -500,6 +462,7 @@ AdvDiffPOD::project_lhs(PETScWrappers::FullMatrix &transformation_matrix)
     aux_col.reinit(MPI_COMM_WORLD, transformation_matrix.m(), transformation_matrix.m());
     for (unsigned int i = 0; i < transformation_matrix.m(); ++i)
       aux_col(i) = transformation_matrix(i, j);
+    aux_col.compress(VectorOperation::insert);
 
     pcout << "  Check aux_col size:\t\t" << aux_col.size() << std::endl;
     pcout << "  Check aux_col values:" << std::endl;
@@ -534,45 +497,13 @@ AdvDiffPOD::project_lhs(PETScWrappers::FullMatrix &transformation_matrix)
   }
 
 
-  // assert(transformation_matrix.m() == lhs_matrix_copy.m()); // Check on sizes
-  // pcout << "  Check lhs_matrix size:\t\t" << lhs_matrix_copy.m() << " * " << lhs_matrix.n() << std::endl;
-
-  // Intermediate step of projection: aux = T^T * lhs_matrix
-
-  // transformation_matrix.Tmmult(aux, lhs_matrix_copy, v);
-  
-  // pcout << "  Check auxiliary matrix size:\t\t" << aux.m() << " * " << aux.n() << std::endl;
-
-  // assert(aux.n() == transformation_matrix.m()); // Check on sizes
-  // Projection: reduced_system_lhs = aux * T = T^T * lhs_matrix * T
-  // aux.mmult(dst, transformation_matrix, v);
-  // for (unsigned int i = 0; i < dst.m(); ++i)
-  //   for (unsigned int j = 0; j < dst.n(); ++j) // Dimensioni giuste??
-  //     reduced_system_lhs.set(i, j, dst(i, j));
   pcout << "  Check reduced_system_lhs size:\t" << reduced_system_lhs.m() << " * " << reduced_system_lhs.n() << std::endl;
 
-  // reduced_system_lhs.compress(VectorOperation::insert);
-
-  // PRIMADI AGGIUNGERE 
-  // reduced_system_lhs = 0.0;
-  // assert(transformation_matrix.m() == lhs_matrix_copy.m()); // Check on sizes
-  // pcout << "  Check lhs_matrix size:\t\t" << lhs_matrix_copy.m() << " * " << lhs_matrix.n() << std::endl;
-
-  // // Intermediate step of projection: aux = T^T * lhs_matrix
-  // transformation_matrix.Tmmult(aux, lhs_matrix);
-  // pcout << "  Check auxiliary matrix size:\t\t" << aux.m() << " * " << aux.n() << std::endl;
-
-  // assert(aux.n() == transformation_matrix.m()); // Check on sizes
-  // // Projection: reduced_system_lhs = aux * T = T^T * lhs_matrix * T
-  // aux.mmult(reduced_system_lhs, transformation_matrix);
-  // pcout << "  Check reduced_system_lhs size:\t" << reduced_system_lhs.m() << " * " << reduced_system_lhs.n() << std::endl;
-
-  // reduced_system_lhs.compress(VectorOperation::add);
 
   // This print is commented to save time and space in the output.
-  // pcout << "  Check reduced_system_lhs values:" << std::endl;
-  // pcout << "    reduced_system_lhs(0, 0) = " << reduced_system_lhs(0, 0) << std::endl;
-  // pcout << "    reduced_system_lhs(1, 0) = " << reduced_system_lhs(1, 0) << std::endl;
+  pcout << "  Check reduced_system_lhs values:" << std::endl;
+  pcout << "    reduced_system_lhs(0, 0) = " << reduced_system_lhs(0, 0) << std::endl;
+  pcout << "    reduced_system_lhs(1, 0) = " << reduced_system_lhs(1, 0) << std::endl;
 }
 
 // Projection of the right-hand side vector.
@@ -581,21 +512,19 @@ AdvDiffPOD::project_rhs(PETScWrappers::FullMatrix &transformation_matrix)
 {
 
   PETScWrappers::MPI::Vector dst(MPI_COMM_WORLD, transformation_matrix.n(), transformation_matrix.n()); // (transformation_matrix.n());
-  // Vector<double> system_rhs_copy(system_rhs); // Copy constructor
   PETScWrappers::MPI::Vector system_rhs_copy(MPI_COMM_WORLD, system_rhs.size(), system_rhs.size()); // (system_rhs.size());
-  // Vector<double> system_rhs_copy(transformation_matrix.m());
 
   // // FAI CHECK SU DIMENSIONI CON ERRORE
   for (unsigned int i = 0; i < transformation_matrix.m(); ++i)
     system_rhs_copy(i) = system_rhs(i);
   system_rhs_copy.compress(VectorOperation::insert);
-  // system_rhs_copy.compress(VectorOperation::add);
-  //   pcout << "  Check rhs_matrix_copy: " << std::endl;
-  // pcout << system_rhs(40) << std::endl;
-  // pcout << system_rhs_copy(40) << std::endl;
-  // pcout << system_rhs(41) << std::endl;
-  // pcout << system_rhs_copy(41) << std::endl;
-  // PROBLEMINO QUI
+
+  pcout << "  Check rhs_matrix_copy: " << std::endl;
+  pcout << system_rhs(40) << std::endl;
+  pcout << system_rhs_copy(40) << std::endl;
+  pcout << system_rhs(41) << std::endl;
+  pcout << system_rhs_copy(41) << std::endl;
+
   reduced_system_rhs = 0.0; // TENERE?
   
   assert(transformation_matrix.m() == system_rhs_copy.size());
@@ -603,20 +532,12 @@ AdvDiffPOD::project_rhs(PETScWrappers::FullMatrix &transformation_matrix)
   dst.compress(VectorOperation::insert);
   for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
     reduced_system_rhs(i) = dst(i);
-  // reduced_system_rhs = dst; // Copy
-    // reduced_system_rhs.set(i, dst(i));
   reduced_system_rhs.compress(VectorOperation::insert);
 
-  // PRIMA DI FULL
-  // reduced_system_rhs = 0.0;
-  // // Projection: reduced_system_rhs = T^T * system_rhs
-  // transformation_matrix.Tvmult(reduced_system_rhs, system_rhs);
-  // reduced_system_rhs.compress(VectorOperation::add);
-
   // This print is commented to save time and space in the output.
-  // pcout << "  Check reduced_system_rhs values:" << std::endl;
-  // pcout << "    reduced_system_rhs(0) = "  << reduced_system_rhs(0) << std::endl;
-  // pcout << "    reduced_system_rhs(1) = "  << reduced_system_rhs(1) << std::endl;
+  pcout << "  Check reduced_system_rhs values:" << std::endl;
+  pcout << "    reduced_system_rhs(0) = "  << reduced_system_rhs(0) << std::endl;
+  pcout << "    reduced_system_rhs(1) = "  << reduced_system_rhs(1) << std::endl;
 }
 
 // Expansion of the reduced order solution to the full order solution.
@@ -629,43 +550,22 @@ AdvDiffPOD::expand_solution(PETScWrappers::FullMatrix &transformation_matrix)
     reduced_solution_copy(i) = reduced_solution(i);
   reduced_solution_copy.compress(VectorOperation::insert);
 
-  // pcout << "Check reduced solution" << reduced_solution(0) << "  " << reduced_solution_copy(0) << std::endl;
-  // pcout << "Check reduced solution" << reduced_solution(1) << "  " << reduced_solution_copy(1) << std::endl;
+  pcout << "Check reduced solution" << reduced_solution(0) << "  " << reduced_solution_copy(0) << std::endl;
+  pcout << "Check reduced solution" << reduced_solution(1) << "  " << reduced_solution_copy(1) << std::endl;
 
   // Note that at time 0 solution_owned is defined and contains the initial condition.
-  // reduced_solution_owned = 0.0;
-  // transformation_matrix.Tvmult(dst, solution_owned_copy);
   fom_solution = 0.0;
+
   // Expansion: fom_solution = T * reduced_solution
   assert(transformation_matrix.n() == reduced_solution_copy.size()); // cambiato in n
   transformation_matrix.vmult(dst, reduced_solution_copy);
   dst.compress(VectorOperation::insert);
-  // for (unsigned int i = 0; i < transformation_matrix.n(); ++i)
-  //   dst_aux(i) = dst(i);
+
   Vector<double> dst_aux(dst); // Copy constructor 
 
-  // dst_aux.compress(VectorOperation::insert); 
   fom_solution = dst_aux;
 
-  // Projection: reduced_solution_owned = T^T * solution_owned
-  // transformation_matrix.Tvmult(reduced_solution_owned, solution_owned);
   fom_solution.compress(VectorOperation::insert);
-  // assert(fom_solution == dst);
-  // pcout << "Check fom_solution" << fom_solution(0) << "  " << dst(0) << std::endl;
-  // pcout << "Check fom_solution" << fom_solution(1) << "  " << dst(1) << std::endl;
-
-
-
-  // PRIMA 
-  // fom_solution = 0.0;
-  // // Expansion: fom_solution = T * reduced_solution
-  // transformation_matrix.vmult(fom_solution, reduced_solution);
-  // fom_solution.compress(VectorOperation::add);
-
-  // pcout << "  Check fom_solution size: " << fom_solution.size() << std::endl;
-  // pcout << "  Check fom_solution values: " << std::endl;
-  // pcout << "    fom_solution(17) = " << fom_solution(17) << std::endl;
-  // pcout << "    fom_solution(80) = " << fom_solution(80) << std::endl;
 
   pcout << "  Check fom_solution size: " << fom_solution.size() << std::endl;
   pcout << "  Check fom_solution values: " << std::endl;
@@ -679,19 +579,6 @@ AdvDiffPOD::expand_solution(PETScWrappers::FullMatrix &transformation_matrix)
 void
 AdvDiffPOD::solve_time_step_reduced()
 {
-  // SolverControl solver_control(1000, 1e-6 * reduced_system_rhs.l2_norm());
-
-  // SolverCG<TrilinosWrappers::MPI::Vector> solver(solver_control);
-  // TrilinosWrappers::PreconditionSSOR      preconditioner;
-  // preconditioner.initialize(
-  //   reduced_system_lhs, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
-
-  // solver.solve(reduced_system_lhs, reduced_solution_owned, reduced_system_rhs, preconditioner);
-  // This print is commented to save time and space in the output.
-  // pcout << "  " << solver_control.last_step() << " CG iterations" << std::endl;
-
-  // reduced_solution = reduced_solution_owned;
-
   SolverControl solver_control(1000, 1e-6 * reduced_system_rhs.l2_norm());
   // SolverControl solver_control(2000, 1e-5 * reduced_system_rhs.l2_norm());
 

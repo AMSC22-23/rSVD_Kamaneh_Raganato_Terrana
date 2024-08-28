@@ -6,7 +6,7 @@ project(ParametricDiffusion LANGUAGES CXX C)
 
 include(../common/cmake-common.cmake)
 
-add_executable(Diff1D_A_one_prm src/Diff1D_A_one_prm.cpp src/POD.cpp src/AdvDiff1D.cpp src/AdvDiff1D_POD.cpp)
+add_executable(Diff1D_A_one_prm src/Diff1D_A_one_prm.cpp src/POD.cpp src/AdvDiff1D.cpp src/AdvDiff1D_POD_mpi.cpp)
 deal_ii_setup_target(Diff1D_A_one_prm)
 
 # add_executable(Diff1D_B_more_prm src/Diff1D_B_more_prm.cpp src/POD.cpp src/AdvDiff1D.cpp src/AdvDiff1D_POD.cpp)
@@ -15,9 +15,10 @@ deal_ii_setup_target(Diff1D_A_one_prm)
 # add_executable(Diff1D_C_new_prm src/Diff1D_C_new_prm.cpp src/POD.cpp src/AdvDiff1D.cpp src/AdvDiff1D_POD.cpp)
 # deal_ii_setup_target(Diff1D_C_new_prm)
 
-# add_executable(Diff1D_C_new_prm src/Diff1D_C_new_prm.cpp ../../PCA/src/SVD_class.cpp ../../PCA/src/PM.cpp 
-# ../../PCA/src/Jacobi_Class.cpp ../../PCA/src/JacobiOperations.cpp src/POD.cpp src/AdvDiff1D.cpp src/AdvDiff1D_POD.cpp)
-# deal_ii_setup_target(Diff1D_C_new_prm)
+# add_executable(Diff1D_C_new_prm_new src/Diff1D_C_new_prm_new.cpp  ../../PCA/src/PM.cpp 
+# ../../PCA/src/Jacobi_Class.cpp ../../PCA/src/JacobiOperations.cpp src/POD_new.cpp src/AdvDiff1D.cpp src/AdvDiff1D_POD.cpp)
+# deal_ii_setup_target(Diff1D_C_new_prm_new)
+# ../../PCA/src/SVD_class.cpp
 
 # add_executable(Diff1D_D_openmp src/Diff1D_D_openmp.cpp src/POD.cpp src/AdvDiff1D.cpp src/AdvDiff1D_POD.cpp)
 # deal_ii_setup_target(Diff1D_D_openmp)

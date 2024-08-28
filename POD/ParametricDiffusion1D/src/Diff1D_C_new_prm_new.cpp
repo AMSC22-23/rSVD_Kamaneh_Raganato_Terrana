@@ -9,7 +9,7 @@
 #include <chrono>
 using namespace std::chrono;
 
-#include "POD.hpp"
+#include "POD_new.hpp"
 #include "AdvDiff1D.hpp"
 #include "AdvDiff1D_POD.hpp"
 

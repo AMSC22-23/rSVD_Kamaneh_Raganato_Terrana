@@ -159,7 +159,6 @@ AdvDiffPOD::setup_reduced()
     // matrix. Since the reduced left-hand side matrix and the reduced right-hand side vector are obtained by projection.
     pcout << "  Initializing the matrices" << std::endl;
     reduced_system_lhs_aux.reinit(sparsity_pattern_r);
-    // reduced_system_lhs.reinit(dof_handler_r.n_dofs(), dof_handler_r.n_dofs());
     reduced_system_lhs.copy_from(reduced_system_lhs_aux);
 
     pcout << "  Initializing the system right-hand side" << std::endl;
@@ -244,10 +243,8 @@ AdvDiffPOD::assemble_matrices()
 
       cell->get_dof_indices(dof_indices);
 
-      // mass_matrix.add(dof_indices, cell_mass_matrix, false); // cambiato
-      // stiffness_matrix.add(dof_indices, cell_stiffness_matrix, false); // cambiato
-      mass_matrix.add(dof_indices, cell_mass_matrix); // cambiato
-      stiffness_matrix.add(dof_indices, cell_stiffness_matrix); // cambiato
+      mass_matrix.add(dof_indices, cell_mass_matrix);
+      stiffness_matrix.add(dof_indices, cell_stiffness_matrix);
     }
 
   mass_matrix.compress(VectorOperation::add);
@@ -342,10 +339,29 @@ AdvDiffPOD::assemble_rhs(const double &time)
 void
 AdvDiffPOD::convert_modes(PETScWrappers::FullMatrix &transformation_matrix)
 {
-  for (unsigned int i = 0; i < modes.size(); ++i)
+
+  unsigned int rows_per_process = modes.size()/mpi_size;
+  unsigned int rows_remainder = modes.size()%mpi_size;
+
+  unsigned int local_row_size, local_row_start;
+
+  if (mpi_rank < rows_remainder) {
+    local_row_size = rows_per_process + 1;
+    local_row_start = mpi_rank * local_row_size;
+  } else {
+    local_row_size = rows_per_process;
+    local_row_start = mpi_rank * local_row_size + rows_remainder;
+  } 
+
+  for (unsigned int i = local_row_start; i < local_row_start+local_row_size; ++i)
     for (unsigned int j = 0; j < modes[0].size(); ++j)
       transformation_matrix.set(i, j, modes[i][j]);
-  transformation_matrix.compress(VectorOperation::insert); // Changed from add to insert
+  transformation_matrix.compress(VectorOperation::insert); 
+
+  // for (unsigned int i = 0; i < modes.size(); ++i)
+  //   for (unsigned int j = 0; j < modes[0].size(); ++j)
+  //     transformation_matrix.set(i, j, modes[i][j]);
+  // transformation_matrix.compress(VectorOperation::insert); // Changed from add to insert
 
   // This print is commented to save time and space in the output.
   pcout << "  Check transformation_matrix values:" << std::endl;
@@ -359,10 +375,10 @@ AdvDiffPOD::convert_modes(PETScWrappers::FullMatrix &transformation_matrix)
   pcout << "    transformation_matrix(40, 1) = " << transformation_matrix(40, 1) << std::endl;
   pcout << "    modes[44][1] = " << modes[44][1] << std::endl;
   pcout << "    transformation_matrix(44, 1) = " << transformation_matrix(44, 1) << std::endl;
-  pcout << "    modes[89][1] = " << modes[89][1] << std::endl;
-  pcout << "    transformation_matrix(89, 1) = " << transformation_matrix(89, 1) << std::endl;
-  pcout << "    modes[108][1] = " << modes[108][1] << std::endl;
-  pcout << "    transformation_matrix(108, 1) = " << transformation_matrix(108, 1) << std::endl;
+  // pcout << "    modes[89][1] = " << modes[89][1] << std::endl;
+  // pcout << "    transformation_matrix(89, 1) = " << transformation_matrix(89, 1) << std::endl;
+  // pcout << "    modes[108][1] = " << modes[108][1] << std::endl;
+  // pcout << "    transformation_matrix(108, 1) = " << transformation_matrix(108, 1) << std::endl;
   pcout << "    modes[27][0] = " << modes[27][0] << std::endl;
   pcout << "    transformation_matrix(27, 0) = " << transformation_matrix(27, 0) << std::endl;
 
@@ -550,6 +566,7 @@ AdvDiffPOD::project_lhs(PETScWrappers::FullMatrix &transformation_matrix)
     aux_col.reinit(MPI_COMM_WORLD, transformation_matrix.m(), local_row_size);
     
     pcout << "  Check aux_col size:\t\t" << aux_col.size() << std::endl;
+    pcout << "  Check aux_col local size:\t\t" << aux_col.locally_owned_size() << std::endl;
     pcout << "check transf local size" << transformation_matrix.local_size();
 
     // for (unsigned int i = 0; i < transformation_matrix.m(); ++i)
@@ -559,7 +576,7 @@ AdvDiffPOD::project_lhs(PETScWrappers::FullMatrix &transformation_matrix)
       // assert(i < lhs_matrix.m());
       assert(i >= transformation_matrix_lr.first && i < transformation_matrix_lr.second);
       assert(j < transformation_matrix.n());
-      aux_col(i) = transformation_matrix.el(i, j);
+      aux_col(i) = transformation_matrix(i, j);
     }
     aux_col.compress(VectorOperation::insert);
 
@@ -578,8 +595,9 @@ AdvDiffPOD::project_lhs(PETScWrappers::FullMatrix &transformation_matrix)
 
     assert(intermediate_mat.n() == aux_col.size()); // Check on sizes
 
-    dst_col.reinit(MPI_COMM_WORLD, transformation_matrix.n(), local_col_size); // tolto mpi size
-    // dst_col.reinit(MPI_COMM_WORLD, transformation_matrix.n(), transformation_matrix.n()/mpi_size);
+    // dst_col.reinit(MPI_COMM_WORLD, transformation_matrix.n(), local_col_size); // tolto mpi size
+    // dst_col.reinit(MPI_COMM_WORLD, transformation_matrix.n(), transformation_matrix.n()/2);
+    dst_col.reinit(MPI_COMM_WORLD, intermediate_mat.m(), intermediate_mat.m()/mpi_size);
     intermediate_mat.vmult(dst_col, aux_col);
     dst_col.compress(VectorOperation::add);
         pcout << "BLOCCO 4" << std::endl;
@@ -640,9 +658,9 @@ AdvDiffPOD::project_lhs(PETScWrappers::FullMatrix &transformation_matrix)
   // reduced_system_lhs.compress(VectorOperation::add);
 
   // This print is commented to save time and space in the output.
-  // pcout << "  Check reduced_system_lhs values:" << std::endl;
-  // pcout << "    reduced_system_lhs(0, 0) = " << reduced_system_lhs(0, 0) << std::endl;
-  // pcout << "    reduced_system_lhs(1, 0) = " << reduced_system_lhs(1, 0) << std::endl;
+  pcout << "  Check reduced_system_lhs values:" << std::endl;
+  pcout << "    reduced_system_lhs(0, 0) = " << reduced_system_lhs(0, 0) << std::endl;
+  pcout << "    reduced_system_lhs(1, 0) = " << reduced_system_lhs(1, 0) << std::endl;
 }
 
 // Projection of the right-hand side vector.
@@ -662,11 +680,11 @@ AdvDiffPOD::project_rhs(PETScWrappers::FullMatrix &transformation_matrix)
     system_rhs_copy(i) = system_rhs(i);
   system_rhs_copy.compress(VectorOperation::insert);
   // system_rhs_copy.compress(VectorOperation::add);
-  //   pcout << "  Check rhs_matrix_copy: " << std::endl;
-  // pcout << system_rhs(40) << std::endl;
-  // pcout << system_rhs_copy(40) << std::endl;
-  // pcout << system_rhs(41) << std::endl;
-  // pcout << system_rhs_copy(41) << std::endl;
+  pcout << "  Check rhs_matrix_copy: " << std::endl;
+  pcout << system_rhs(40) << std::endl;
+  pcout << system_rhs_copy(40) << std::endl;
+  pcout << system_rhs(41) << std::endl;
+  pcout << system_rhs_copy(41) << std::endl;
   // PROBLEMINO QUI
   reduced_system_rhs = 0.0; // TENERE?
   
@@ -689,9 +707,9 @@ AdvDiffPOD::project_rhs(PETScWrappers::FullMatrix &transformation_matrix)
   // reduced_system_rhs.compress(VectorOperation::add);
 
   // This print is commented to save time and space in the output.
-  // pcout << "  Check reduced_system_rhs values:" << std::endl;
-  // pcout << "    reduced_system_rhs(0) = "  << reduced_system_rhs(0) << std::endl;
-  // pcout << "    reduced_system_rhs(1) = "  << reduced_system_rhs(1) << std::endl;
+  pcout << "  Check reduced_system_rhs values:" << std::endl;
+  pcout << "    reduced_system_rhs(0) = "  << reduced_system_rhs(0) << std::endl;
+  pcout << "    reduced_system_rhs(1) = "  << reduced_system_rhs(1) << std::endl;
 }
 
 // Expansion of the reduced order solution to the full order solution.
@@ -724,8 +742,8 @@ AdvDiffPOD::expand_solution(PETScWrappers::FullMatrix &transformation_matrix)
     reduced_solution_copy(i) = reduced_solution(i);
   reduced_solution_copy.compress(VectorOperation::insert);
 
-  // pcout << "Check reduced solution" << reduced_solution(0) << "  " << reduced_solution_copy(0) << std::endl;
-  // pcout << "Check reduced solution" << reduced_solution(1) << "  " << reduced_solution_copy(1) << std::endl;
+  pcout << "Check reduced solution" << reduced_solution(0) << "  " << reduced_solution_copy(0) << std::endl;
+  pcout << "Check reduced solution" << reduced_solution(1) << "  " << reduced_solution_copy(1) << std::endl;
 
   // Note that at time 0 solution_owned is defined and contains the initial condition.
   // reduced_solution_owned = 0.0;
@@ -763,12 +781,12 @@ AdvDiffPOD::expand_solution(PETScWrappers::FullMatrix &transformation_matrix)
   // pcout << "    fom_solution(80) = " << fom_solution(80) << std::endl;
 
   // COMMENTATO
-  // pcout << "  Check fom_solution size: " << fom_solution.size() << std::endl;
-  // pcout << "  Check fom_solution values: " << std::endl;
-  // pcout << "    fom_solution(2)  = " << fom_solution(2) << std::endl;
-  // pcout << "    fom_solution(17) = " << fom_solution(17) << std::endl;
-  // pcout << "    fom_solution(50) = " << fom_solution(50) << std::endl;
-  // pcout << "    fom_solution(80) = " << fom_solution(80) << std::endl;
+  pcout << "  Check fom_solution size: " << fom_solution.size() << std::endl;
+  pcout << "  Check fom_solution values: " << std::endl;
+  pcout << "    fom_solution(2)  = " << fom_solution(2) << std::endl;
+  pcout << "    fom_solution(17) = " << fom_solution(17) << std::endl;
+  pcout << "    fom_solution(50) = " << fom_solution(50) << std::endl;
+  pcout << "    fom_solution(80) = " << fom_solution(80) << std::endl;
 }
 
 // Solve the reduced order system.
