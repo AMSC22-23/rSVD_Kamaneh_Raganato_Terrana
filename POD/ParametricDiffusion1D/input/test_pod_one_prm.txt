@@ -1,0 +1,10 @@
+# Advection diffusion problem in 1D
+# Parameters employed by the main file
+
+dim 1           # Dimension of the problem
+n 1             # Number of parameters
+mu_min 0.0001   # Minimum diffusion coefficient
+mu_max 0.0005   # Maximum diffusion coefficient
+rank 50         # Rank --- in POD riguarda per cosa, attenta che con 10 non funziona ti dava troppi zeri
+tol 1e-12       # sempre per POD...
+rom_sizes 2 4 6 # Sizes for the reduced order models
