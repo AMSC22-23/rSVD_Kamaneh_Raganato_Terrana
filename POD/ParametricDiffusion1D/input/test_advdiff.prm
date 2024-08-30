@@ -1,10 +1,10 @@
 # Advection diffusion problem in 1D
 # Parameters employed by the classes AdvDiff and AdvDiffPOD
 
-set beta         = 2.0 # 0.2
+set beta         = 0.2 # 2.0
 set u0_choice    = 1
 set amplitude    = 1.0
-set N            = 119
+set N            = 199 # 119
 set degree       = 1
 set T            = 0.05
 set deltat       = 1e-3 # 50 steps
