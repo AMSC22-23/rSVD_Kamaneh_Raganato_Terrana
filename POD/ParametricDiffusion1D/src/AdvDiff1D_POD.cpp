@@ -722,27 +722,27 @@ void AdvDiffPOD<dim>::solve_reduced()
   // duration_reduced_avg = duration_reduced_vec.accumulate() / duration_reduced_vec.size();
 }
 
-// template <int dim>
-// double AdvDiffPOD<dim>::compute_error(const VectorTools::NormType &norm_type)
-// {
-//   FE_Q<dim> fe_linear(1);
-//   MappingFE mapping(fe_linear);
+template <int dim>
+double AdvDiffPOD<dim>::compute_error(const VectorTools::NormType &norm_type)
+{
+  FE_Q<dim> fe_linear(1);
+  MappingFE mapping(fe_linear);
 
-//   const QGauss<dim> quadrature_error = QGauss<dim>(r + 2);
+  const QGauss<dim> quadrature_error = QGauss<dim>(r + 2);
 
-//   exact_solution.set_time(time);
+  exact_solution.set_time(time);
 
-//   Vector<double> error_per_cell;
-//   VectorTools::integrate_difference(mapping,
-//                                     dof_handler,
-//                                     solution,
-//                                     exact_solution,
-//                                     error_per_cell,
-//                                     quadrature_error,
-//                                     norm_type);
+  Vector<double> error_per_cell;
+  VectorTools::integrate_difference(mapping,
+                                    dof_handler,
+                                    solution,
+                                    exact_solution,
+                                    error_per_cell,
+                                    quadrature_error,
+                                    norm_type);
 
-//   const double error =
-//     VectorTools::compute_global_error(mesh, error_per_cell, norm_type);
+  const double error =
+    VectorTools::compute_global_error(mesh, error_per_cell, norm_type);
 
-//   return error;
-// }
+  return error;
+}

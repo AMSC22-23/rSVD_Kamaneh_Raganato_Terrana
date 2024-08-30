@@ -277,8 +277,8 @@ public:
   solve();
 
   // Compute the error for convergence analysis.
-  // double
-  // compute_error(const VectorTools::NormType &norm_type);
+  double
+  compute_error(const VectorTools::NormType &norm_type);
 
   // Snapshot matrix. It collects the solution at each time step. It contains the snapshots computed for a single parameter, 
   // in other words, the time evolution for a single parameter.
@@ -340,7 +340,7 @@ protected:
   FunctionU0 u_0;
 
   // Exact solution.
-  // ExactSolution exact_solution;
+  ExactSolution exact_solution;
 
   // Current time.
   double time;

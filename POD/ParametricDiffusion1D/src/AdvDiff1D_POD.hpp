@@ -288,8 +288,8 @@ public:
   solve_reduced();
 
   // Compute the error for convergence analysis.
-  // double
-  // compute_error(const VectorTools::NormType &norm_type);
+  double
+  compute_error(const VectorTools::NormType &norm_type);
 
   // System solution (including ghost elements). It collects the full order approximated solution that is obtained by projecting
   // (expanding) the reduced order solution.
@@ -364,7 +364,7 @@ protected:
   FunctionU0 u_0;
 
   // Exact solution.
-  // ExactSolution exact_solution;
+  ExactSolution exact_solution;
 
   // Current time.
   double time;

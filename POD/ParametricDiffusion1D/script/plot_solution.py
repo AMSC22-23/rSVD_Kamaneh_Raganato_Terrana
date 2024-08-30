@@ -12,11 +12,31 @@ reconstructed_data = mmread(sys.argv[2])
 full_data = full_data.todense()
 reconstructed_data = reconstructed_data.todense()
 
-# Read the number of parameters and the rom sizes
-n = int(sys.argv[3])
-rom_sizes = list(map(int, sys.argv[4:]))
+# Read the matrix containing the errors for all the parameters and rom sizes
+errors_data = mmread(sys.argv[3])
+errors_data = errors_data.todense()
 
-# Plot
+# Read the txt file containing the parameters
+parameter_file = sys.argv[4]
+parameters = {}
+with open(parameter_file, 'r') as file:
+    for line in file:
+        if line.startswith('#') or not line.strip():
+            continue
+        key, value = line.split(maxsplit=1)
+        value = value.split('#')[0].strip()
+        parameters[key] = value.strip()
+n = int(parameters['n'])
+mu_min = float(parameters['mu_min'])
+mu_max = float(parameters['mu_max'])
+mu = np.linspace(mu_min, mu_max, n)
+rom_sizes = list(map(int, parameters['rom_sizes'].split()))
+
+
+# n = int(sys.argv[4])
+# rom_sizes = list(map(int, sys.argv[5:]))
+
+# Plot the solution
 plt.rcParams.update({"font.size": 14})
 
 for i in range(n):
@@ -25,11 +45,21 @@ for i in range(n):
         plt.plot(reconstructed_data[:,j*n+i], 'o', markerfacecolor='None', markersize = 2, label = f"{rom_sizes[j]} POD modes")
         plt.xlabel("x")
         plt.ylabel("u")
+        plt.title(f"Solution for mu = {mu[i]}")
         plt.legend()
-    plt.savefig(f"plot_{i}.pdf")
+    plt.savefig(f"plot_{mu[i]}mu.pdf")
     plt.close()
 
-
+# Plot the error
+for j in range(len(rom_sizes)):
+    plt.plot(mu, errors_data[:,j], 'o', markersize = 2, label = f"{rom_sizes[j]} POD modes")
+    plt.xlabel("mu")
+    plt.ylabel("error")
+    plt.yscale("log")
+    plt.title(f"Relative errors for different numbers of POD modes")
+    plt.legend()
+plt.savefig(f"error_{rom_sizes[j]}POD.pdf")
+plt.close()
 
 
 
