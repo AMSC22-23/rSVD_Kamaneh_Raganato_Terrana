@@ -183,8 +183,16 @@ public:
     value(const Point<dim> & p,
           const unsigned int /*component*/ = 0) const override
     {
+      const int u0_choice = advdiffpod.parameters.get_integer("u0_choice");
       const double amplitude = advdiffpod.parameters.get_double("amplitude");
-      return amplitude*std::sin(M_PI*p[0]);
+
+      if (u0_choice == 0)
+        return amplitude*std::sin(M_PI*p[0]);
+      else if (u0_choice == 1)
+        return 2.0*std::sin(9.0*M_PI*p[0])-std::sin(4.0*M_PI*p[0]);
+
+      return amplitude*std::sin(M_PI*p[0]); // Default initial condition
+
     }
 
     private:
@@ -240,6 +248,55 @@ public:
   //   }
   // };
 
+    // Exact solution
+  class ExactSolution : public Function<dim>
+  {
+  public:
+    virtual double
+    value(const Point<dim> &p,
+          const unsigned int /*component*/ = 0) const override
+    {
+      // double temp_val = std::cos(M_PI * p[0]) * std::cos(M_PI * p[1]);
+      // if (dim == 2) 
+      //   return (temp_val + 2) * std::exp(-this->get_time());
+
+      // if (dim == 3)
+      //   return (temp_val * std::cos(M_PI * p[2])) * std::exp(-this->get_time());
+
+      // else 
+      return 0.0;
+      
+    }
+
+    virtual Tensor<1, dim>
+    gradient(const Point<dim> &p,
+             const unsigned int /*component*/ = 0) const override
+    {
+      Tensor<1, dim> result;
+
+      // if (dim == 2)
+      // {
+      //   result[0] = -M_PI * std::sin(M_PI * p[0]) * std::cos(M_PI * p[1]) *
+      //               std::exp(-this->get_time());
+      //   result[1] = -M_PI * std::cos(M_PI * p[0]) * std::sin(M_PI * p[1]) *
+      //               std::exp(-this->get_time());
+      // }
+      
+      // if (dim == 3)
+      // {
+      //   result[0] = -M_PI * std::sin(M_PI * p[0]) * std::cos(M_PI * p[1]) *
+      //               std::cos(M_PI * p[2]) * std::exp(-this->get_time());
+      //   result[1] = -M_PI * std::sin(M_PI * p[1]) * std::cos(M_PI * p[0]) *
+      //               std::cos(M_PI * p[2]) * std::exp(-this->get_time());
+      //   result[2] = -M_PI * std::sin(M_PI * p[2]) * std::cos(M_PI * p[0]) *
+      //               std::cos(M_PI * p[1]) * std::exp(-this->get_time());
+      // }
+
+      return result;
+      // return 0.0;
+    }
+  };
+
   // Default constructor.
   AdvDiffPOD(/*const unsigned int N_,
              const unsigned int &r_,
@@ -267,6 +324,7 @@ public:
   {
       // parameters.declare_entry("mu", "1.0", Patterns::Double(), "dummy");
       parameters.declare_entry("beta", "1.0", Patterns::Double(), "dummy");
+      parameters.declare_entry("u0_choice", "0", Patterns::Integer(), "dummy");
       parameters.declare_entry("amplitude", "1.0", Patterns::Double(), "dummy");
 
       parameters.declare_entry("N", "0", Patterns::Integer(), "dummy");

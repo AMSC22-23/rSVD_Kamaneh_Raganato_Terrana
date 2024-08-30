@@ -30,6 +30,7 @@ n = int(parameters['n'])
 mu_min = float(parameters['mu_min'])
 mu_max = float(parameters['mu_max'])
 mu = np.linspace(mu_min, mu_max, n)
+
 rom_sizes = list(map(int, parameters['rom_sizes'].split()))
 
 
@@ -37,28 +38,32 @@ rom_sizes = list(map(int, parameters['rom_sizes'].split()))
 # rom_sizes = list(map(int, sys.argv[5:]))
 
 # Plot the solution
-plt.rcParams.update({"font.size": 14})
+plt.rcParams.update({"font.size": 8})
 
 for i in range(n):
     plt.plot(full_data[:,i], label = "FOM")
     for j in range(len(rom_sizes)):
-        plt.plot(reconstructed_data[:,j*n+i], 'o', markerfacecolor='None', markersize = 2, label = f"{rom_sizes[j]} POD modes")
+        plt.plot(reconstructed_data[:,j*n+i], 'o', markerfacecolor='None', markersize=2, label = f"{rom_sizes[j]} POD modes")
         plt.xlabel("x")
         plt.ylabel("u")
-        plt.title(f"Solution for mu = {mu[i]}")
-        plt.legend()
-    plt.savefig(f"plot_{mu[i]}mu.pdf")
+        mu_print = f"{mu[i]:.4f}"
+        plt.title(f"Solution for mu = {mu_print}")
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        plt.subplots_adjust(right=0.8)
+    plt.savefig(f"plot_{mu_print}mu.pdf", bbox_inches='tight')
     plt.close()
 
 # Plot the error
 for j in range(len(rom_sizes)):
-    plt.plot(mu, errors_data[:,j], 'o', markersize = 2, label = f"{rom_sizes[j]} POD modes")
+    plt.plot(mu, errors_data[:,j], marker='o', markersize=2, label = f"{rom_sizes[j]} POD modes")
     plt.xlabel("mu")
+    plt.xticks(mu)
     plt.ylabel("error")
     plt.yscale("log")
     plt.title(f"Relative errors for different numbers of POD modes")
-    plt.legend()
-plt.savefig(f"error_{rom_sizes[j]}POD.pdf")
+    plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+    plt.subplots_adjust(right=0.8)
+plt.savefig(f"error.pdf", bbox_inches='tight')
 plt.close()
 
 

@@ -728,6 +728,7 @@ double AdvDiffPOD<dim>::compute_error(const VectorTools::NormType &norm_type)
   FE_Q<dim> fe_linear(1);
   MappingFE mapping(fe_linear);
 
+  const unsigned int r = parameters.get_integer("degree");
   const QGauss<dim> quadrature_error = QGauss<dim>(r + 2);
 
   exact_solution.set_time(time);
@@ -735,7 +736,7 @@ double AdvDiffPOD<dim>::compute_error(const VectorTools::NormType &norm_type)
   Vector<double> error_per_cell;
   VectorTools::integrate_difference(mapping,
                                     dof_handler,
-                                    solution,
+                                    fom_solution,
                                     exact_solution,
                                     error_per_cell,
                                     quadrature_error,
