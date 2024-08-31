@@ -13,6 +13,8 @@ using namespace std::chrono;
 #include "AdvDiff1D.hpp"
 #include "AdvDiff1D_POD.hpp"
 
+#include <unsupported/Eigen/SparseExtra>
+
 // Main function.
 int
 main(int argc, char * argv[])
@@ -61,7 +63,7 @@ main(int argc, char * argv[])
       pod_prm >> mu_min;
     else if (key == "mu_max")
       pod_prm >> mu_max;
-        else if (key == "mu_new")
+    else if (key == "mu_new")
       pod_prm >> mu_new;
     else if (key == "rank")
       pod_prm >> rank;
@@ -79,17 +81,15 @@ main(int argc, char * argv[])
   }
   pod_prm.close();
 
-  constexpr unsigned int d = 1; // lascia un attimo così poi sistemi, eventualmente lascia così e cambia nel main
-  // if (dim == 1)
-  //   d = 1; // sistemare e spiegare
+  if (dim != 1) {
+    std::cerr << "The problem dimension should be 1. Check 'dim' in the parameter file." << std::endl;
+    return 1;
+  }
+  constexpr unsigned int d = 1;
 
   // Solve the advection diffusion problem on the full order model and collect snapshots in the snapshot matrix.
   pcout << "===================================================================" << std::endl;
   pcout << "Run FOM and collect snapshots" << std::endl;
-
-  // SISTEMA
-  // Only one parameter. The snapshot matrix is composed by solving the problem only once.
-  // double prm_diffusion_coefficient = 0.0001; // per ora lascia, perché andrà gestito quando ne hai di più
 
   std::vector<double> prm_diffusion_coefficient;
   prm_diffusion_coefficient.resize(n); 
@@ -97,10 +97,11 @@ main(int argc, char * argv[])
   Eigen::Index snapshot_length = 0;
   Eigen::Index time_steps = 0;
   Mat_m snapshots;
+  Mat_m solutions; // The solutions matrix stores the full order model solutions for all parameters. It is then exported.
 
   for (unsigned int i=0; i<n; i++)
   {
-    if (n == 1)
+    if (n == 1) // The snapshot matrix is composed by solving the problem only once.
       prm_diffusion_coefficient[i] = mu_min;
     else
       prm_diffusion_coefficient[i] = (mu_min+i*(mu_max-mu_min)/(n-1));
@@ -123,14 +124,16 @@ main(int argc, char * argv[])
       snapshot_length = problem.snapshot_matrix.size();
       time_steps = problem.snapshot_matrix[0].size();
       snapshots.resize(snapshot_length, n*time_steps);
-      // Mat_m snapshots = Mat_m::Zero(snapshot_length, time_steps);
+      solutions.resize(snapshot_length, n);
     }
     for (Eigen::Index j=0; j<snapshots.rows(); j++)
-      for (Eigen::Index k=0; k<time_steps; k++) // controlla e commenta per stripe
+      for (Eigen::Index k=0; k<time_steps; k++)
         snapshots(j, (i*time_steps)+k) = problem.snapshot_matrix[j][k];
 
-    pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
+    solutions.col(i) = snapshots.col((i*time_steps)+time_steps-1);
 
+    pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
+    // This print is commented to save time and space in the output.
     pcout << "  Check snapshots and problem solution values:" << std::endl;
     pcout << "    snapshots(0, time_steps-1)  = " << snapshots(0, (i*time_steps)+time_steps-1) << std::endl;
     pcout << "    problem.solution(0)         = " << problem.solution(0) << std::endl;
@@ -138,7 +141,6 @@ main(int argc, char * argv[])
     pcout << "    problem.solution(1)         = " << problem.solution(1) << std::endl;
     pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, (i*time_steps)+time_steps-1) << std::endl;
     pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl; 
-    // togliere stampa da misurazione tempo
   }
   auto stop_snapshot = high_resolution_clock::now();
   auto duration_snapshot = duration_cast<milliseconds>(stop_snapshot - start_snapshot);
@@ -147,9 +149,6 @@ main(int argc, char * argv[])
   // Compute U by applying SVD or one POD algorithm to snapshots.
   pcout << "===================================================================" << std::endl;
   pcout << "Compute POD modes" << std::endl;
-
-  // const int rank = std::min(snapshots.rows(), snapshots.cols()); // Maximum rank
-  // const int rank = 15;
   pcout << "  Check rank = " << rank << std::endl;
 
   // VERSIONE CON SVD //////
@@ -204,26 +203,20 @@ main(int argc, char * argv[])
   pcout << "===================================================================" << std::endl;
   pcout << "Construct and run ROM" << std::endl;
 
-  // const double deltat_rom = 1e-3; // CAMBIA
-  // const double deltat_rom = 3.01204e-4; // CAMBIA
-  // ORA PROVA A TENERE STESSA deltat
-
-
-
-  // Eigen::Index rom_size = 6; // Number of modes
-  // std::vector<Eigen::Index> rom_sizes = {2, 4, 6}; // CAMBIA
-  // std::vector<size_t> rom_sizes = {5, 10, 25, 50, 75, 100}; // comportamento strano con 10 modes CAMBIA
-
   std::vector<std::vector<double>> modes;
 
   // The approximations matrix stores the final fom_state for each rom size. 
-  // Mat_m approximations = Mat_m::Zero(snapshots.rows(), rom_size ma non ha senso);
+  Mat_m approximations = Mat_m::Zero(snapshot_length, rom_sizes.size()*n);
 
+  // The vector errors stores the relative errors in L2 norm between the full and reconstructed solution for each rom size and each parameter.
+  Mat_m errors = Mat_m::Zero(n, rom_sizes.size());
+
+  /**
   // Now we want to use the class AdvDiffPOD to solve a reduced problem in which the diffusion parameter wasn't used for the
   // construction of the snapshot matrix. The aim is to save time and space thanks to this prediction.
   // At first, we solve the full order problem with the new parameter through the AdvDiff class, its solution will be used for 
   // computing the relative error. Then we solve the reduced order problem changing the number of reduced order size.
-  // double new_diffusion_coefficient = 0.00025;
+  */
 
   AdvDiff<d> problem_new_parameter(mu_new, advdiff_parameter_file);    
 
@@ -240,9 +233,8 @@ main(int argc, char * argv[])
   for (size_t i=0; i<problem_new_parameter.solution.size(); i++)
     solution_new_parameter(i) = problem_new_parameter.solution(i);
   
-  // qui ha senso farlo per le diverse rom_sizes
-  for (size_t h=0; h<rom_sizes.size(); h++) {
-  // for (size_t i=0; i<1; i++) {
+  for (size_t h=0; h<rom_sizes.size(); h++)
+  {
     pcout << "-------------------------------------------------------------------" << std::endl;
     pcout << "Creating ROM for " << rom_sizes[h] << " modes\n" << std::endl;
 
@@ -272,19 +264,18 @@ main(int argc, char * argv[])
     auto duration_reduced = duration_cast<milliseconds>(stop_reduced - start_reduced);
 
     // The final fom_solution is copied in an Eigen vector fom_state in order to easily compare it with snapshots and compute 
-    // the relative error.
-    Vec_v fom_state = Vec_v::Zero(snapshot_length); // SISTEMA DIMENSIONI CAMBIARE
+    // the relative error. For the same reason, we can initialize the fom_state with the snapshot_length.
+    Vec_v fom_state = Vec_v::Zero(snapshot_length);
     for (Eigen::Index j=0; j<snapshot_length; j++)
       fom_state(j) = problemPOD.fom_solution[j];
     
     // The current fom_state is stored in approximations matrix.
-    // approximations.col(i) = fom_state;
+    approximations.col(h) = fom_state;
 
     // Compute the relative l2 error.
     double fom_solution_norm = solution_new_parameter.norm();
     double err = (solution_new_parameter - fom_state).norm();
 
-    // POI EVENTUALMENTE COMMENTARE
     pcout << "  Check fom_state values:" << std::endl;
     pcout << "    fom solution(0)              = " << solution_new_parameter(0) << std::endl;
     pcout << "    fom approximated solution(0) = " << fom_state(0) << std::endl;
@@ -303,6 +294,18 @@ main(int argc, char * argv[])
     modes.resize(0);
     modes[0].resize(0, 0.0);
   }
+
+  // Export the vector containing the full order model solutions for the new parameter.
+  std::string matrixFileOut1("../output/full.mtx");
+  Eigen::saveMarket(solution_new_parameter, matrixFileOut1);  
+
+  // Export the matrix containing the approximated solutions for all rom_sizes and the new parameter.
+  std::string matrixFileOut2("../output/reconstruction.mtx");
+  Eigen::saveMarket(approximations, matrixFileOut2); 
+
+  // Export the vector containing the relative errors for all rom_sizes and the new parameter.
+  std::string matrixFileOut3("../output/errors.mtx");
+  Eigen::saveMarket(errors, matrixFileOut3); 
 
   return 0;
 }

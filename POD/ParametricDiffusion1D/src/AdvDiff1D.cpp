@@ -73,7 +73,6 @@ void AdvDiff<dim>::setup()
   // Initialize the linear system.
   {
     pcout << "Initializing the linear system" << std::endl;
-
     pcout << "  Initializing the sparsity pattern" << std::endl;
 
     TrilinosWrappers::SparsityPattern sparsity(locally_owned_dofs,
@@ -117,8 +116,6 @@ void AdvDiff<dim>::assemble_matrices()
   mass_matrix      = 0.0;
   stiffness_matrix = 0.0;
 
-  // const double mu = parameters.get_double("mu");
-  // const double beta = parameters.get_double("beta");
   const double deltat = parameters.get_double("deltat");
   const double theta = parameters.get_double("theta");
 
@@ -272,7 +269,9 @@ void AdvDiff<dim>::solve_time_step()
     lhs_matrix, TrilinosWrappers::PreconditionSSOR::AdditionalData(1.0));
 
   solver.solve(lhs_matrix, solution_owned, system_rhs, preconditioner);
-  pcout << "  " << solver_control.last_step() << " CG iterations" << std::endl;
+
+  // This print is commented to save time and space in the output.
+  // pcout << "  " << solver_control.last_step() << " CG iterations" << std::endl;
 
   solution = solution_owned;
 }
@@ -280,19 +279,22 @@ void AdvDiff<dim>::solve_time_step()
 template <int dim>
 void AdvDiff<dim>::assemble_snapshot_matrix(const unsigned int &time_step)
 {
-  // At the first call, it is useful to resize the snapshot matrix so that it can be easily filled. It has as many rows as the
-  // solution size and as many columns as the number of time steps.
   const double T = parameters.get_double("T");
   const double deltat = parameters.get_double("deltat");
   const unsigned int sample_every = parameters.get_integer("sample_every");
 
+  /**
+  // At the first call, it is useful to resize the snapshot matrix so that it can be easily filled. It has as many rows as the
+  // solution size and as many columns as the number of time steps.
+  */
   if(time_step == 0) {
     snapshot_matrix.resize(solution.size());
     for(auto &row : snapshot_matrix)
-      row.resize(static_cast<std::vector<double>::size_type>(T/(deltat*sample_every)+1), 0.0); // COSI SAREBBE INIZIALE + 25 SNAPSHOTS OGNI 200 ISTANTI TEMPORALI – CAPIRE E SISTEMARE
+      row.resize(static_cast<std::vector<double>::size_type>(T/(deltat*sample_every)+1), 0.0); 
   }
 
-  // It is not necessarily to build a snapshot_array, since snapshot_matrix can be directly filled with solution.
+  /**
+  // It is not necessary to build a snapshot_array, since snapshot_matrix can be directly filled with solution.
   // The idea of a snapshot_array helps in understanding that the snapshot_matrix will be filled with column vectors that
   // represent the solution at each time step.
   // std::vector<double> snapshot_array(solution.size());
@@ -300,6 +302,7 @@ void AdvDiff<dim>::assemble_snapshot_matrix(const unsigned int &time_step)
   //   snapshot_array[i] = solution[i];
   // pcout << "  Check solution.size()       = " << solution.size() << std::endl;
   // pcout << "  Check snapshot_array.size() = " << snapshot_array.size() << std::endl;
+  */
 
   std::pair<unsigned int, unsigned int> solution_local_range = solution.local_range();
   
@@ -341,6 +344,8 @@ void AdvDiff<dim>::solve()
 
     // Output the initial solution.
     // output(0);
+
+    // Assemble the snapshot matrix.
     assemble_snapshot_matrix(0);
 
   pcout << "-------------------------------------------------------------------" << std::endl;
@@ -352,8 +357,10 @@ void AdvDiff<dim>::solve()
   const double T = parameters.get_double("T");
   const double deltat = parameters.get_double("deltat");
 
+  /**
   // This parameter establishes how much frequently the snapshots are collected in the snapshot matrix. The default value 1 means
-  // that all the snapshots are collected. SISTEMARE COMMENTO
+  // that all the snapshots are collected.
+  */
   const unsigned int sample_every = parameters.get_integer("sample_every");
 
   while (time < T && time_step < floor(T/deltat))
@@ -361,8 +368,9 @@ void AdvDiff<dim>::solve()
       time += deltat;
       ++time_step;
 
-      pcout << "n = " << std::setw(3) << time_step << ", t = " << std::setw(5)
-            << time << ":" << std::flush;
+      // This print is commented to save time and space in the output.
+      // pcout << "n = " << std::setw(3) << time_step << ", t = " << std::setw(5)
+      //       << time << ":" << std::flush;
 
       assemble_rhs(time);
 
@@ -380,8 +388,6 @@ void AdvDiff<dim>::solve()
 
   // Compute the average duration of solving a single time step.
   duration_full_avg = std::reduce(duration_full_vec.begin(), duration_full_vec.end())/static_cast<double>(duration_full_vec.size());
-  
-  // duration_full_vec.accumulate() / duration_full_vec.size();
 }
 
 template <int dim>

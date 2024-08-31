@@ -78,17 +78,15 @@ main(int argc, char * argv[])
   }
   pod_prm.close();
 
-  constexpr unsigned int d = 1; // lascia un attimo così poi sistemi, eventualmente lascia così e cambia nel main
-  // if (dim == 1)
-  //   d = 1; // sistemare e spiegare
+  if (dim != 1) {
+    std::cerr << "The problem dimension should be 1. Check 'dim' in the parameter file." << std::endl;
+    return 1;
+  }
+  constexpr unsigned int d = 1;
 
   // Solve the advection diffusion problem on the full order model and collect snapshots in the snapshot matrix.
   pcout << "===================================================================" << std::endl;
   pcout << "Run FOM and collect snapshots" << std::endl;
-
-  // SISTEMA
-  // Only one parameter. The snapshot matrix is composed by solving the problem only once.
-  // double prm_diffusion_coefficient = 0.0001; // per ora lascia, perché andrà gestito quando ne hai di più
 
   std::vector<double> prm_diffusion_coefficient;
   prm_diffusion_coefficient.resize(n); 
@@ -96,11 +94,11 @@ main(int argc, char * argv[])
   Eigen::Index snapshot_length = 0;
   Eigen::Index time_steps = 0;
   Mat_m snapshots;
-  Mat_m solutions; // da esportare per confronto
+  Mat_m solutions; // The solutions matrix stores the full order model solutions for all parameters. It is then exported.
 
   for (unsigned int i=0; i<n; i++)
   {
-    if (n == 1)
+    if (n == 1) // The snapshot matrix is composed by solving the problem only once.
       prm_diffusion_coefficient[i] = mu_min;
     else
       prm_diffusion_coefficient[i] = (mu_min+i*(mu_max-mu_min)/(n-1));
@@ -124,16 +122,15 @@ main(int argc, char * argv[])
       time_steps = problem.snapshot_matrix[0].size();
       snapshots.resize(snapshot_length, n*time_steps);
       solutions.resize(snapshot_length, n);
-      // Mat_m snapshots = Mat_m::Zero(snapshot_length, time_steps);
     }
     for (Eigen::Index j=0; j<snapshots.rows(); j++)
-      for (Eigen::Index k=0; k<time_steps; k++) // controlla e commenta per stripe
+      for (Eigen::Index k=0; k<time_steps; k++)
         snapshots(j, (i*time_steps)+k) = problem.snapshot_matrix[j][k];
 
-    solutions.col(i) = snapshots.col((i*time_steps)+time_steps-1); // NON SO
+    solutions.col(i) = snapshots.col((i*time_steps)+time_steps-1);
 
     pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
-
+    // This print is commented to save time and space in the output.
     pcout << "  Check snapshots and problem solution values:" << std::endl;
     pcout << "    snapshots(0, time_steps-1)  = " << snapshots(0, (i*time_steps)+time_steps-1) << std::endl;
     pcout << "    problem.solution(0)         = " << problem.solution(0) << std::endl;
@@ -141,7 +138,6 @@ main(int argc, char * argv[])
     pcout << "    problem.solution(1)         = " << problem.solution(1) << std::endl;
     pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, (i*time_steps)+time_steps-1) << std::endl;
     pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl; 
-    // togliere stampa da misurazione tempo
   }
   auto stop_snapshot = high_resolution_clock::now();
   auto duration_snapshot = duration_cast<milliseconds>(stop_snapshot - start_snapshot);
@@ -150,9 +146,6 @@ main(int argc, char * argv[])
   // Compute U by applying SVD or one POD algorithm to snapshots.
   pcout << "===================================================================" << std::endl;
   pcout << "Compute POD modes" << std::endl;
-
-  // const int rank = std::min(snapshots.rows(), snapshots.cols()); // Maximum rank
-  // const int rank = 15;
   pcout << "  Check rank = " << rank << std::endl;
 
   // VERSIONE CON SVD //////
@@ -207,28 +200,16 @@ main(int argc, char * argv[])
   pcout << "===================================================================" << std::endl;
   pcout << "Construct and run ROM" << std::endl;
 
-  // const double deltat_rom = 1e-3; // CAMBIA
-  // const double deltat_rom = 3.01204e-4; // CAMBIA
-  // ORA PROVA A TENERE STESSA deltat
-
-
-
-  // Eigen::Index rom_size = 6; // Number of modes
-  // std::vector<Eigen::Index> rom_sizes = {2, 4, 6}; // CAMBIA
-  // std::vector<size_t> rom_sizes = {5, 10, 25, 50, 75, 100}; // comportamento strano con 10 modes CAMBIA
-
   std::vector<std::vector<double>> modes;
 
   // The approximations matrix stores the final fom_state for each rom size. 
-  Mat_m approximations = Mat_m::Zero(snapshot_length, rom_sizes.size()*n); // lo avevi tolto per più parametri con una sola rom size ma non ha senso);
-  // avrebbe doppio indice rom_sizes.size()*n
+  Mat_m approximations = Mat_m::Zero(snapshot_length, rom_sizes.size()*n);
 
-  // Vector containing relative errors in L2 norm between the full and reconstructed solution for each rom size and each parameter.
+  // The vector errors stores the relative errors in L2 norm between the full and reconstructed solution for each rom size and each parameter.
   Mat_m errors = Mat_m::Zero(n, rom_sizes.size());
 
   for (size_t h=0; h<rom_sizes.size(); h++)
   {
-  // for (size_t i=0; i<1; i++) {
     for (unsigned int i=0; i<n; i++)
     {
       pcout << "-------------------------------------------------------------------" << std::endl;
@@ -249,9 +230,8 @@ main(int argc, char * argv[])
         for (Eigen::Index k=0; k<rom_sizes[h]; k++)
           modes[j][k] = compute_modes.W(j, k);
 
-      // if (dim == 1)
-        AdvDiffPOD<d> problemPOD(modes, prm_diffusion_coefficient[i], advdiff_parameter_file);
-      
+      AdvDiffPOD<d> problemPOD(modes, prm_diffusion_coefficient[i], advdiff_parameter_file);
+
       problemPOD.setup();
       problemPOD.solve_reduced();
 
@@ -262,14 +242,13 @@ main(int argc, char * argv[])
         fom_state(j) = problemPOD.fom_solution[j];
       
       // The current fom_state is stored in approximations matrix.
-      approximations.col(h*n+i) = fom_state; // taglia*numero parametri+parametro corrente
+      approximations.col(h*n+i) = fom_state;
 
       // Compute the relative l2 error.
       double fom_solution_norm = (snapshots.col((i*time_steps)+time_steps-1)).norm();
       double err = (snapshots.col((i*time_steps)+time_steps-1) - fom_state).norm();
       errors(i, h) = err/fom_solution_norm;
 
-      // POI EVENTUALMENTE COMMENTARE
       pcout << "  Check fom_state values:" << std::endl;
       pcout << "    fom solution(0)              = " << snapshots(0, (i*time_steps)+time_steps-1) << std::endl;
       pcout << "    fom approximated solution(0) = " << fom_state(0) << std::endl;
