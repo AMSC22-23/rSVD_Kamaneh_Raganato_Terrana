@@ -2,8 +2,8 @@
 # Parameters employed by the classes AdvDiff and AdvDiffPOD
 
 set beta         = 0.2 # 2.0
-set u0_choice    = 1
-set amplitude    = 1.0
+set u0_choice    = 0
+set amplitude    = 2.0
 set N            = 199 # 119
 set degree       = 1
 set T            = 0.05

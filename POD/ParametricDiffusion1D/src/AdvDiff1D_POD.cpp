@@ -194,7 +194,11 @@ void AdvDiffPOD<dim>::assemble_matrices()
   mass_matrix      = 0.0;
   stiffness_matrix = 0.0;
 
-  const double deltat = parameters.get_double("deltat");
+  double deltat = 0.0;
+  if (convergence_deltat == 0.0) // If convergence_deltat assumes its default value, then the time step is set by deltat.
+    deltat = parameters.get_double("deltat");
+  else
+    deltat = convergence_deltat;
   const double theta = parameters.get_double("theta");
 
   for (const auto &cell : dof_handler.active_cell_iterators())
@@ -279,7 +283,11 @@ void AdvDiffPOD<dim>::assemble_rhs(const double &time)
   system_rhs = 0.0;
 
   const double theta = parameters.get_double("theta");
-  const double deltat = parameters.get_double("deltat");
+  double deltat = 0.0;
+  if (convergence_deltat == 0.0) // If convergence_deltat assumes its default value, then the time step is set by deltat.
+    deltat = parameters.get_double("deltat");
+  else
+    deltat = convergence_deltat;
 
   for (const auto &cell : dof_handler.active_cell_iterators())
     {
@@ -719,7 +727,11 @@ void AdvDiffPOD<dim>::solve_reduced()
   double       time      = 0;
 
   const double T = parameters.get_double("T");
-  const double deltat = parameters.get_double("deltat");
+  double deltat = 0.0;
+  if (convergence_deltat == 0.0) // If convergence_deltat assumes its default value, then the time step is set by deltat.
+    deltat = parameters.get_double("deltat");
+  else
+    deltat = convergence_deltat;
 
   pcout << "-------------------------------------------------------------------" << std::endl;
   pcout << "Solving the reduced order system" << std::endl;

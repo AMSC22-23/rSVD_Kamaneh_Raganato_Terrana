@@ -134,16 +134,25 @@ public:
   {
   public:
     // Constructor.
-    ForcingTerm()
+    // ForcingTerm()
+    // {}
+
+    ForcingTerm(const double prm_diffusion_coefficient, const AdvDiffPOD<dim> &advdiffpod) : prm(prm_diffusion_coefficient), advdiffpod(advdiffpod)
     {}
 
     // Evaluation.
     virtual double
-    value(const Point<dim> & /*p*/,
+    value(const Point<dim> & p,
           const unsigned int /*component*/ = 0) const override
     {
-      return 0.0;
+      const double transport_coefficient = advdiffpod.parameters.get_double("beta");
+      return (prm*M_PI*M_PI-1)*std::sin(M_PI*p[0])*std::exp(-this->get_time())+
+             transport_coefficient*M_PI*std::cos(M_PI*p[0])*std::exp(-this->get_time());
     }
+
+  private:
+    double prm;
+    const AdvDiffPOD<dim> &advdiffpod;
   };
 
     // Dirichlet boundary conditions.
@@ -192,7 +201,6 @@ public:
         return 2.0*std::sin(9.0*M_PI*p[0])-std::sin(4.0*M_PI*p[0]);
 
       return amplitude*std::sin(M_PI*p[0]); // Default initial condition
-
     }
 
     private:
@@ -256,16 +264,10 @@ public:
     value(const Point<dim> &p,
           const unsigned int /*component*/ = 0) const override
     {
-      // double temp_val = std::cos(M_PI * p[0]) * std::cos(M_PI * p[1]);
-      // if (dim == 2) 
-      //   return (temp_val + 2) * std::exp(-this->get_time());
-
-      // if (dim == 3)
-      //   return (temp_val * std::cos(M_PI * p[2])) * std::exp(-this->get_time());
-
-      // else 
-      return 0.0;
-      
+      if (dim == 1) 
+        return std::sin(M_PI*p[0])*std::exp(-this->get_time());
+      else 
+        return 0.0;
     }
 
     virtual Tensor<1, dim>
@@ -274,26 +276,10 @@ public:
     {
       Tensor<1, dim> result;
 
-      // if (dim == 2)
-      // {
-      //   result[0] = -M_PI * std::sin(M_PI * p[0]) * std::cos(M_PI * p[1]) *
-      //               std::exp(-this->get_time());
-      //   result[1] = -M_PI * std::cos(M_PI * p[0]) * std::sin(M_PI * p[1]) *
-      //               std::exp(-this->get_time());
-      // }
-      
-      // if (dim == 3)
-      // {
-      //   result[0] = -M_PI * std::sin(M_PI * p[0]) * std::cos(M_PI * p[1]) *
-      //               std::cos(M_PI * p[2]) * std::exp(-this->get_time());
-      //   result[1] = -M_PI * std::sin(M_PI * p[1]) * std::cos(M_PI * p[0]) *
-      //               std::cos(M_PI * p[2]) * std::exp(-this->get_time());
-      //   result[2] = -M_PI * std::sin(M_PI * p[2]) * std::cos(M_PI * p[0]) *
-      //               std::cos(M_PI * p[1]) * std::exp(-this->get_time());
-      // }
+      if (dim == 1)
+        result[0] = M_PI*std::cos(M_PI*p[0])*std::exp(-this->get_time());
 
       return result;
-      // return 0.0;
     }
   };
 
@@ -305,7 +291,8 @@ public:
              const double       &theta_,*/
              const std::vector<std::vector<double>> &modes_,
              const double       &prm_diffusion_coefficient_,
-             const std::string  &prm_file_)
+             const std::string  &prm_file_,
+             const double       &convergence_deltat_ = 0.0) // Default value
     : mpi_size(Utilities::MPI::n_mpi_processes(MPI_COMM_WORLD))
     , mpi_rank(Utilities::MPI::this_mpi_process(MPI_COMM_WORLD))
     , pcout(std::cout, mpi_rank == 0)
@@ -316,11 +303,12 @@ public:
     // , deltat(deltat_)
     // , theta(theta_)
     , beta(*this)
+    , forcing_term(prm_diffusion_coefficient_, *this)
     , u_0(*this)
+    , convergence_deltat(convergence_deltat_)
     , modes(modes_)
     , prm_file(prm_file_)
     , mesh(MPI_COMM_WORLD)
-    // , mesh_r(MPI_COMM_WORLD)
   {
       // parameters.declare_entry("mu", "1.0", Patterns::Double(), "dummy");
       parameters.declare_entry("beta", "1.0", Patterns::Double(), "dummy");
@@ -426,6 +414,9 @@ protected:
 
   // Current time.
   double time;
+
+  // Convergence time step.
+  const double convergence_deltat;
   
   // Final time.
   // const double T;

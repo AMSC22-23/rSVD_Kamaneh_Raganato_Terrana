@@ -116,7 +116,11 @@ void AdvDiff<dim>::assemble_matrices()
   mass_matrix      = 0.0;
   stiffness_matrix = 0.0;
 
-  const double deltat = parameters.get_double("deltat");
+  double deltat = 0.0;
+  if (convergence_deltat == 0.0) // If convergence_deltat assumes its default value, then the time step is set by deltat.
+    deltat = parameters.get_double("deltat");
+  else
+    deltat = convergence_deltat;
   const double theta = parameters.get_double("theta");
 
   for (const auto &cell : dof_handler.active_cell_iterators())
@@ -201,7 +205,11 @@ void AdvDiff<dim>::assemble_rhs(const double &time)
   system_rhs = 0.0;
 
   const double theta = parameters.get_double("theta");
-  const double deltat = parameters.get_double("deltat");
+  double deltat = 0.0;
+  if (convergence_deltat == 0.0) // If convergence_deltat assumes its default value, then the time step is set by deltat.
+    deltat = parameters.get_double("deltat");
+  else
+    deltat = convergence_deltat;
 
   for (const auto &cell : dof_handler.active_cell_iterators())
     {
@@ -280,7 +288,11 @@ template <int dim>
 void AdvDiff<dim>::assemble_snapshot_matrix(const unsigned int &time_step)
 {
   const double T = parameters.get_double("T");
-  const double deltat = parameters.get_double("deltat");
+  double deltat = 0.0;
+  if (convergence_deltat == 0.0) // If convergence_deltat assumes its default value, then the time step is set by deltat.
+    deltat = parameters.get_double("deltat");
+  else
+    deltat = convergence_deltat;
   const unsigned int sample_every = parameters.get_integer("sample_every");
 
   /**
@@ -355,7 +367,14 @@ void AdvDiff<dim>::solve()
   double       time      = 0;
 
   const double T = parameters.get_double("T");
-  const double deltat = parameters.get_double("deltat");
+  double deltat = 0.0;
+  if (convergence_deltat == 0.0) // If convergence_deltat assumes its default value, then the time step is set by deltat.
+    deltat = parameters.get_double("deltat");
+  else
+    deltat = convergence_deltat;
+
+  pcout << "-------------------------------------------------------------------" << std::endl;
+  pcout << "Solving the full order system" << std::endl;
 
   /**
   // This parameter establishes how much frequently the snapshots are collected in the snapshot matrix. The default value 1 means

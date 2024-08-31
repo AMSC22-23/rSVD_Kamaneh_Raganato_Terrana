@@ -89,7 +89,12 @@ main(int argc, char * argv[])
   pcout << "Run FOM and collect snapshots" << std::endl;
 
   std::vector<double> prm_diffusion_coefficient;
-  prm_diffusion_coefficient.resize(n); 
+  prm_diffusion_coefficient.resize(n);
+
+  // AGGIUNTO
+  // The convergence value This code is not used for the convergence analysis. In this case the AdvDiff and AdvDiffPOD classes
+  // use the deltat value from the parameter file.
+  double convergence = 0.0; 
 
   Eigen::Index snapshot_length = 0;
   Eigen::Index time_steps = 0;
@@ -110,7 +115,7 @@ main(int argc, char * argv[])
   {
     pcout << "  Computing snapshot matrix stripe " << i+1 << " out of " << n << std::endl;
 
-    AdvDiff<d> problem(prm_diffusion_coefficient[i], advdiff_parameter_file);    
+    AdvDiff<d> problem(prm_diffusion_coefficient[i], convergence, advdiff_parameter_file);    
 
     problem.setup();
     problem.solve();
