@@ -254,8 +254,10 @@ void AdvDiff<dim>::assemble_rhs(const double &time)
 
     std::map<types::boundary_id, const Function<dim> *> boundary_functions;
 
-    boundary_functions[0] = &function_g;
-    boundary_functions[1] = &function_g;
+    // boundary_functions[0] = &function_g;
+    // boundary_functions[1] = &function_g;
+    boundary_functions[0] = &exact_solution;
+    boundary_functions[1] = &exact_solution;
 
     VectorTools::interpolate_boundary_values(dof_handler,
                                              boundary_functions,
@@ -359,8 +361,6 @@ void AdvDiff<dim>::solve()
 
     // Assemble the snapshot matrix.
     assemble_snapshot_matrix(0);
-
-  pcout << "-------------------------------------------------------------------" << std::endl;
   }
 
   unsigned int time_step = 0;

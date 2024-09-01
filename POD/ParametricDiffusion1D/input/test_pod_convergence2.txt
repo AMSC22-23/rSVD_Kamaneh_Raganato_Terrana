@@ -4,11 +4,11 @@
 dim 1             # Dimension of the problem
 n 1               # Number of parameters
 mu_min 0.0001     # Minimum diffusion coefficient
-mu_max 0.005     # Maximum diffusion coefficient
-convergence_deltat 0.005 0.0025 0.002 0.0015 0.001
+mu_max 0.0005     # Maximum diffusion coefficient
+convergence_deltat 0.0005 0.00025 0.000125
 # 0.001 0.0009 0.0008 0.0007 # 0.0012 0.00011 0.0001 # 0.00009 0.00008 # 0.001 0.005 0.001 # 0.0005 0.0001 1e-3 5e-4 1e-4 #
 rank 20           # Rank --- in POD riguarda per cosa
 tol 1e-12         # sempre per POD...
-rom_sizes 3       # Sizes for the reduced order models
+rom_sizes 2       # Sizes for the reduced order models
 
 # SPECIFICA CHE DEVE FUNZIONARE CON UN SOLO PRM E UNA SOLA ROM SIZE E SNAPSHOT CREATA SOLO AL PRIMO DELTAT

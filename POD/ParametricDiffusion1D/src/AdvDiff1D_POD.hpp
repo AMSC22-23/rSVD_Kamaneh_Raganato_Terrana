@@ -146,8 +146,19 @@ public:
           const unsigned int /*component*/ = 0) const override
     {
       const double transport_coefficient = advdiffpod.parameters.get_double("beta");
-      return (prm*M_PI*M_PI-1)*std::sin(M_PI*p[0])*std::exp(-this->get_time())+
-             transport_coefficient*M_PI*std::cos(M_PI*p[0])*std::exp(-this->get_time());
+      const int u0_choice = advdiffpod.parameters.get_integer("u0_choice");
+      const double amplitude = advdiffpod.parameters.get_double("amplitude");
+      if (dim == 1 && u0_choice == 0)
+        return (prm*M_PI*M_PI-1)*std::sin(M_PI*p[0])*std::exp(-this->get_time())+
+               transport_coefficient*M_PI*std::cos(M_PI*p[0])*std::exp(-this->get_time());
+      else if (dim == 1 && u0_choice == 1)
+        return 0.0;
+      else if (dim == 1 && u0_choice == 2)
+        return 5*M_PI*std::cos(5*M_PI*this->get_time())*std::sin(amplitude*M_PI*p[0])+
+               prm*amplitude*amplitude*M_PI*M_PI*std::sin(5*M_PI*this->get_time())*std::sin(amplitude*M_PI*p[0])+
+               transport_coefficient*amplitude*M_PI*std::sin(5*M_PI*this->get_time())*std::cos(amplitude*M_PI*p[0]);
+      else
+        return 0.0;
     }
 
   private:
@@ -199,6 +210,8 @@ public:
         return amplitude*std::sin(M_PI*p[0]);
       else if (u0_choice == 1)
         return 2.0*std::sin(9.0*M_PI*p[0])-std::sin(4.0*M_PI*p[0]);
+      else if (u0_choice == 2)
+        return std::sin(amplitude*M_PI*p[0]);
 
       return amplitude*std::sin(M_PI*p[0]); // Default initial condition
     }
@@ -260,12 +273,23 @@ public:
   class ExactSolution : public Function<dim>
   {
   public:
+
+    ExactSolution(const AdvDiffPOD<dim> &advdiffpod) : advdiffpod(advdiffpod)
+    {}
+    
     virtual double
     value(const Point<dim> &p,
           const unsigned int /*component*/ = 0) const override
     {
-      if (dim == 1) 
+      const int u0_choice = advdiffpod.parameters.get_integer("u0_choice");
+      const double amplitude = advdiffpod.parameters.get_double("amplitude");
+
+      if (dim == 1 && u0_choice == 0) 
         return std::sin(M_PI*p[0])*std::exp(-this->get_time());
+      else if (dim == 1 && u0_choice == 1)
+        return 0.0;
+      else if (dim == 1 && u0_choice == 2)
+        return std::sin(5*M_PI*this->get_time())*std::sin(amplitude*M_PI*p[0]);
       else 
         return 0.0;
     }
@@ -275,12 +299,23 @@ public:
              const unsigned int /*component*/ = 0) const override
     {
       Tensor<1, dim> result;
+      const int u0_choice = advdiffpod.parameters.get_integer("u0_choice");
+      const double amplitude = advdiffpod.parameters.get_double("amplitude");
 
-      if (dim == 1)
+      if (dim == 1 && u0_choice == 0)
         result[0] = M_PI*std::cos(M_PI*p[0])*std::exp(-this->get_time());
+      else if (dim == 1 && u0_choice == 1)
+        result[0] = 0.0;
+      else if (dim == 1 && u0_choice == 2)
+        result[0] = amplitude*M_PI*std::sin(5*M_PI*this->get_time())*std::cos(amplitude*M_PI*p[0]);
+      else
+        result[0] = 0.0;
 
       return result;
     }
+  
+  private:
+    const AdvDiffPOD<dim> &advdiffpod;
   };
 
   // Default constructor.
@@ -305,6 +340,7 @@ public:
     , beta(*this)
     , forcing_term(prm_diffusion_coefficient_, *this)
     , u_0(*this)
+    , exact_solution(*this)
     , convergence_deltat(convergence_deltat_)
     , modes(modes_)
     , prm_file(prm_file_)

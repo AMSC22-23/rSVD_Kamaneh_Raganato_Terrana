@@ -26,7 +26,7 @@ void convergence_order(const std::vector<double> &deltat_vector,
             << std::endl;
 
   std::ofstream convergence_file("convergence.csv");
-  convergence_file << "dt,eL2,eH1" << std::endl;
+  convergence_file << "dt,eL2_full,eH1_full,eL2_reconstructed,eH1_reconstructed" << std::endl;
 
   for (unsigned int i = 0; i < deltat_vector.size(); ++i)
     {
@@ -36,7 +36,7 @@ void convergence_order(const std::vector<double> &deltat_vector,
       std::cout << std::scientific << "dt = " << std::setw(4)
                 << std::setprecision(2) << deltat_vector[i];
 
-      std::cout << std::scientific << " | eL2_full          = " << errors_L2_full[i];
+      std::cout << std::scientific << " | eL2_full = " << errors_L2_full[i];
       std::cout << std::scientific << " | eL2_reconstructed = " << errors_L2_reconstructed[i];
 
       // Estimate the convergence order.
@@ -59,7 +59,7 @@ void convergence_order(const std::vector<double> &deltat_vector,
       else
         std::cout << " (  - )";
 
-      std::cout << std::scientific << " | eH1_full          = " << errors_H1_full[i];
+      std::cout << std::scientific << " | eH1_full = " << errors_H1_full[i];
       std::cout << std::scientific << " | eH1_reconstructed = " << errors_H1_reconstructed[i];
 
       // Estimate the convergence order.
@@ -226,8 +226,8 @@ main(int argc, char * argv[])
 
       // Now the snapshot_matrix, defined with standard library, is required to fit in snapshots, defined in Eigen, since the SVD
       // method is implemented in Eigen.
-      // if (*ptr == *convergence_deltat.begin()) // The snapshot matrix is assembled only with the first deltat value.
-      // {
+      if (dt == 0) // The snapshot matrix is assembled only with the first deltat value.
+      {
         if (i == 0) { // At the first iteration it is useful to resize snapshots.
           snapshot_length = problem.snapshot_matrix.size();
           time_steps = problem.snapshot_matrix[0].size();
@@ -249,7 +249,7 @@ main(int argc, char * argv[])
         pcout << "    problem.solution(1)         = " << problem.solution(1) << std::endl;
         pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, (i*time_steps)+time_steps-1) << std::endl;
         pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl;
-      // } 
+      } 
     }
   }
 
