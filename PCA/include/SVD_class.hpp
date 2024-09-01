@@ -14,6 +14,7 @@
 #include <vector>
 #include <tuple>
 #include <algorithm>
+#include <omp.h>
 #include "JacobiOperations.hpp"
 #include "PM.hpp"
 #include "Jacobi_Class.hpp"
@@ -27,7 +28,8 @@ using Vec = Eigen::VectorXd;
 enum class SVDMethod {
     Jacobi,
     Power,
-    DynamicJacobi
+    DynamicJacobi,
+    ParallelJacobi
 };
 
 // Template class for Singular Value Decomposition (SVD)
@@ -60,6 +62,9 @@ private:
 
     // Dynamic Jacobi method implementation for SVD
     void DynamicJacobiSVD() ;
+
+    // Parallel Jacobi method implementation for SVD
+    void ParallelJacobiSVD() ;
 };
 
 // Constructor implementation
@@ -80,6 +85,9 @@ void SVD<method>::compute() {
         powerMethodSVD();
     } else if constexpr (method == SVDMethod::DynamicJacobi) {
         DynamicJacobiSVD();
+    }
+    else if constexpr (method == SVDMethod::ParallelJacobi) {
+        ParallelJacobiSVD();
     }
 }
 
@@ -284,5 +292,116 @@ void SVD<method>::DynamicJacobiSVD()  {
     }
     
 }
+
+// Parallel Jacobi method implementation for SVD
+template<SVDMethod method>
+void SVD<method>::ParallelJacobiSVD()  {
+    size_t m = A.rows();
+    size_t n = A.cols();
+    int niter = 0;
+
+    // Step 1: B = A
+    Mat m_workMatrix = A;
+
+    // Step 2: U = I_mxn
+    m_matrixU = Mat::Identity(m, n);
+
+    // Step 3: V = I_nxn
+    m_matrixV = Mat::Identity(n, n);
+
+    if (m > n) {
+        Mat B = m_workMatrix;
+        Eigen::HouseholderQR<Mat> qr(B);
+        m_workMatrix = qr.matrixQR().block(0, 0, n, n).triangularView<Eigen::Upper>();
+        m_matrixU = qr.householderQ() * m_matrixU;
+    }
+
+    bool finished = false;
+    const double considerAsZero = 1e-10; // Tolerance for zero
+    const double precision = 1e-10;      // Precision tolerance
+    double maxDiagEntry = m_workMatrix.cwiseAbs().diagonal().maxCoeff();
+
+    while (!finished) {
+        niter++;
+        finished = true;
+
+        std::vector<std::tuple<double, size_t, size_t>> off_diagonal_weights;
+
+        // Calcolo dei pesi off-diagonali
+        #pragma omp parallel for collapse(2)
+        for (size_t p = 1; p < n; ++p) {
+            for (size_t q = 0; q < p; ++q) {
+                double threshold = std::max(considerAsZero, precision * maxDiagEntry);
+
+                double weight = m_workMatrix(p, q) * m_workMatrix(p, q) +
+                                m_workMatrix(q, p) * m_workMatrix(q, p);
+
+                if (weight > threshold) {
+                    #pragma omp critical
+                    {
+                        off_diagonal_weights.emplace_back(weight, p, q);
+                    }
+                    finished = false;
+                }
+            }
+        }
+
+        // Ordina i pesi in ordine decrescente
+        std::sort(off_diagonal_weights.begin(), off_diagonal_weights.end(), std::greater<>());
+
+        // Calcola il matching massimo usando l'approccio greedy
+        auto matching = greedy_maximum_weight_matching(off_diagonal_weights);
+
+        // Applica le rotazioni in parallelo basate sul matching calcolato
+        #pragma omp parallel for
+        for (size_t k = 0; k < matching.size(); ++k) {
+            size_t p = matching[k].first;
+            size_t q = matching[k].second;
+
+            if (svd_precondition_2x2_block_to_be_real(m_workMatrix, p, q, maxDiagEntry)) {
+                double c_left, s_left, c_right, s_right;
+                real_2x2_jacobi_svd(m_workMatrix, c_left, s_left, c_right, s_right, p, q);
+                
+                applyOnTheLeft(m_workMatrix, p, q, c_left, s_left);
+                applyOnTheRight(m_matrixU, p, q, c_left, -s_left);
+                applyOnTheRight(m_workMatrix, p, q, c_right, s_right);
+                applyOnTheRight(m_matrixV, p, q, c_right, s_right);
+
+                #pragma omp critical
+                {
+                    maxDiagEntry = std::max(maxDiagEntry, std::max(std::abs(m_workMatrix(p, p)), std::abs(m_workMatrix(q, q))));
+                }
+            }
+        }
+    }
+
+    std::cout << "niter: " << niter << std::endl;
+
+    // Step 7: Ensure positive diagonal entries
+    #pragma omp parallel for
+    for (size_t i = 0; i < m_workMatrix.rows(); ++i) {
+        double a = m_workMatrix(i, i);
+        Sigma(i) = std::abs(a);
+        if (a < 0) m_matrixU.col(i) = -m_matrixU.col(i);
+    }
+
+    // Step 8: Sort singular values in descending order and compute the number of nonzero singular values
+    size_t m_nonzeroSingularValues = Sigma.size();
+    for (size_t i = 0; i < Sigma.size(); ++i) {
+        size_t pos;
+        double maxRemainingSingularValue = Sigma.tail(Sigma.size() - i).maxCoeff(&pos);
+        if (maxRemainingSingularValue == 0) {
+            m_nonzeroSingularValues = i;
+            break;
+        }
+        if (pos) {
+            pos += i;
+            std::swap(Sigma.coeffRef(i), Sigma.coeffRef(pos));
+            m_matrixU.col(pos).swap(m_matrixU.col(i));
+            m_matrixV.col(pos).swap(m_matrixV.col(i));
+        }
+    }
+}
+
 
 #endif // SVD_CLASS_HPP
