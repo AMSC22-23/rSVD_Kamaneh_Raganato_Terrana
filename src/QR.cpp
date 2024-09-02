@@ -19,13 +19,13 @@ void givens_rotation(double a, double b, Matrix2d& G)
          s, c;
 }
 
-void qr_decomposition_full(const Mat &A, Mat &Q, Mat &R) 
+void qr_decomposition_full(const Mat_m &A, Mat_m &Q, Mat_m &R) 
 {
     int m = A.rows();
     int n = A.cols();
     Matrix2d G;
 
-    Q = Mat::Identity(m, m);
+    Q = Mat_m::Identity(m, m);
     R = A;
 
     for (int j = 0; j < std::min(m, n); ++j) {
@@ -40,14 +40,14 @@ void qr_decomposition_full(const Mat &A, Mat &Q, Mat &R)
     }
 }
 
-void qr_decomposition_reduced(const Mat &A, Mat &Q, Mat &R) 
+void qr_decomposition_reduced(const Mat_m &A, Mat_m &Q, Mat_m &R) 
 {
     int m = A.rows();
     int n = A.cols();
     Matrix2d G;
 
-    Mat Q_temp = Mat::Identity(m, m);
-    Mat R_temp = A;
+    Mat_m Q_temp = Mat_m::Identity(m, m);
+    Mat_m R_temp = A;
 
     for (int j = 0; j < std::min(m, n); ++j) {
         for (int i = m - 1; i > j; --i) {
@@ -58,7 +58,7 @@ void qr_decomposition_reduced(const Mat &A, Mat &Q, Mat &R)
                 // this matrix block has 2 rows and n-j cols
                 int block_rows = 2;
                 int block_cols = n-j;
-                Mat temp_1(block_rows, block_cols);
+                Mat_m temp_1(block_rows, block_cols);
                 for (int inner_i=0; inner_i<block_rows; ++inner_i){
                     for (int inner_j=0; inner_j<block_cols; ++inner_j){
                         double sum = 0.0;

@@ -39,11 +39,14 @@ rom_sizes = list(map(int, parameters['rom_sizes'].split()))
 
 # Plot the solution
 plt.rcParams.update({"font.size": 8})
+# colors = plt.cm.viridis(np.linspace(0, 1, len(rom_sizes)))
+# colors = plt.cm.jet(np.linspace(0, 1, len(rom_sizes)))
+colors = plt.cm.tab20(np.linspace(0, 1, len(rom_sizes)))
 
 for i in range(n):
-    plt.plot(full_data[:,i], label = "FOM")
+    plt.plot(full_data[:,i], label = "FOM", color='black')
     for j in range(len(rom_sizes)):
-        plt.plot(reconstructed_data[:,j*n+i], 'o', markerfacecolor='None', markersize=2, label = f"{rom_sizes[j]} POD modes")
+        plt.plot(reconstructed_data[:,j*n+i], 'o', markerfacecolor='None', markersize=2, label = f"{rom_sizes[j]} POD modes", color=colors[j])
         plt.xlabel("x")
         plt.ylabel("u")
         mu_print = f"{mu[i]:.4f}"

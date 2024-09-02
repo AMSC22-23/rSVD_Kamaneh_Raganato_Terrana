@@ -1,7 +1,7 @@
 #include "../include/PM.hpp"
 #include <mpi.h>
 
-void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v) {
+void PM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v) {
 
     // Get the total number of processors and the rank of the current processor
     int num_procs, rank;
@@ -9,8 +9,8 @@ void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     // Generate a random initial guess x0
-    Vec x0 = Vec::Zero(A.cols()); // To multiply B with x0
-    Vec res = Vec::Zero(A.cols()); // To multiply B with x0
+    Vec_v x0 = Vec_v::Zero(A.cols()); // To multiply B with x0
+    Vec_v res = Vec_v::Zero(A.cols()); // To multiply B with x0
 
     random_device rd;
     mt19937 gen(rd());
@@ -25,7 +25,7 @@ void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v) {
     double epsilon = 1.e-10;
     double delta = 0.05;
     double lambda = 0.1;
-    int s = ceil(log(4 * log(2 * A.cols() / delta) / (epsilon * delta)) / (2 * lambda));
+    int s = static_cast<int>(ceil(log(4 * log(2 * A.cols() / delta) / (epsilon * delta)) / (2 * lambda)));
 
     // Divide rows of A among processors
     int rows_per_proc = B.rows() / num_procs;
@@ -78,3 +78,4 @@ void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v) {
     // Compute the right singular vector
     u = A * v / sigma;
 }
+

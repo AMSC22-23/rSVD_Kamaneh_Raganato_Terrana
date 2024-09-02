@@ -157,6 +157,8 @@ public:
         return 5*M_PI*std::cos(5*M_PI*this->get_time())*std::sin(amplitude*M_PI*p[0])+
                prm*amplitude*amplitude*M_PI*M_PI*std::sin(5*M_PI*this->get_time())*std::sin(amplitude*M_PI*p[0])+
                transport_coefficient*amplitude*M_PI*std::sin(5*M_PI*this->get_time())*std::cos(amplitude*M_PI*p[0]);
+      else if (dim == 1 && u0_choice == 3)
+        return std::exp(-this->get_time())*(1+std::exp(p[0])*(transport_coefficient-prm-1));
       else
         return 0.0;
     }
@@ -212,8 +214,10 @@ public:
         return 2.0*std::sin(9.0*M_PI*p[0])-std::sin(4.0*M_PI*p[0]);
       else if (u0_choice == 2)
         return std::sin(amplitude*M_PI*p[0]);
-
-      return amplitude*std::sin(M_PI*p[0]); // Default initial condition
+      else if (u0_choice == 3)
+        return std::exp(p[0])-1;
+      else
+        return amplitude*std::sin(M_PI*p[0]); // Default initial condition
     }
 
     private:
@@ -290,6 +294,8 @@ public:
         return 0.0;
       else if (dim == 1 && u0_choice == 2)
         return std::sin(5*M_PI*this->get_time())*std::sin(amplitude*M_PI*p[0]);
+      else if (dim == 1 && u0_choice == 3)
+        return (std::exp(p[0])-1)*std::exp(-this->get_time());
       else 
         return 0.0;
     }
@@ -308,6 +314,8 @@ public:
         result[0] = 0.0;
       else if (dim == 1 && u0_choice == 2)
         result[0] = amplitude*M_PI*std::sin(5*M_PI*this->get_time())*std::cos(amplitude*M_PI*p[0]);
+      else if (dim == 1 && u0_choice == 3)
+        result[0] = std::exp(p[0])*std::exp(-this->get_time());
       else
         result[0] = 0.0;
 

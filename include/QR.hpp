@@ -8,11 +8,11 @@
 using namespace std;
 using namespace Eigen;
 
-using Mat = MatrixXd;
-using Vec = VectorXd;
+using Mat_m = MatrixXd;
+using Vec_v = VectorXd;
 
-Mat givens_rotation(double a, double b);
-void qr_decomposition_full(const Mat &A, Mat &Q, Mat &R);
-void qr_decomposition_reduced(const Mat &A, Mat &Q, Mat &R);
+Mat_m givens_rotation(double a, double b);
+void qr_decomposition_full(const Mat_m &A, Mat_m &Q, Mat_m &R);
+void qr_decomposition_reduced(const Mat_m &A, Mat_m &Q, Mat_m &R);
 
 #endif

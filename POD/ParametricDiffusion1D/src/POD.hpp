@@ -5,18 +5,17 @@
 #include <random>
 #include <limits>
 #include <numeric>
+#include <tuple>
+#include <memory>
 
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>
 #include <Eigen/Sparse>
 #include <unsupported/Eigen/SparseExtra>
-// #include <eigen3/Eigen/Dense>
-// #include <eigen3/unsupported/Eigen/MatrixFunctions>
-// #include <eigen3/Eigen/Sparse>
-// #include <eigen3/unsupported/Eigen/SparseExtra>
+
+#include "../../../include/SVD_class.hpp"
 
 using namespace std;
-// using namespace Eigen;
 
 using Mat_m = Eigen::MatrixXd;
 using Vec_v = Eigen::VectorXd;
@@ -24,14 +23,20 @@ using Vec_v = Eigen::VectorXd;
 class POD
 {
 public:
-    // Default constructor for standard POD
-    POD(Mat_m &S, const int r, const double tol);
+    // Default constructor for POD
+    POD();
+
+    // Constructor for naive POD
+    POD(Mat_m &S, const int svd_type);
+
+    // Constructor for standard POD
+    POD(Mat_m &S, const int r, const double tol, const int svd_type);
 
     // Constructor for energy POD
-    POD(Mat_m &S, Mat_m &Xh, const int r, const double tol);
+    POD(Mat_m &S, Mat_m &Xh, const int r, const double tol, const int svd_type);
 
     // Constructor for weight POD
-    POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol);
+    POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int svd_type);
 
     // Constructor for online POD through incremental SVD: starting from A it computes U, Sigma, V
     POD(Mat_m &A, Mat_m &U, Mat_m &Sigma, Mat_m &V, const int dim, Vec_v c, const int M, const int r, const double tol, const double tol_sv);
@@ -43,20 +48,19 @@ public:
 
     // CONTROLLA STAMPANDO SE conservativeResize FUNZIONA
 
-    // Power Method
-    void PM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v);
+    // Perform the singular value decomposition given the svd_type: Power, Jacobi, Dynamic Jacobi, Parallel Jacobi
+    void perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int svd_type);
 
-    // Singular Value Decomposition through Power Method
-    void SVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim);
+    std::tuple<Mat_m, Vec_v> naive_POD(Mat_m &S, const int svd_type);
 
     // Algorithm 6.1 page 126 – POD Algorithm
-    Mat_m standard_POD(Mat_m &S, const int r, double const tol);
+    std::tuple<Mat_m, Vec_v> standard_POD(Mat_m &S, const int r, double const tol, const int svd_type);
 
     // Algorithm 6.2 page 128 – POD Algorithm with energy norm
-    Mat_m energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol);
+    std::tuple<Mat_m, Vec_v> energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol, const int svd_type);
 
     // Algorithm 6.3 page 134 – POD Algorithm with energy norm and quadrature weights
-    Mat_m weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol);
+    std::tuple<Mat_m, Vec_v> weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int svd_type);
 
     // Algorithm 6.4 page 137
 
@@ -72,6 +76,9 @@ public:
 
     // Matrice contenente modes
     Mat_m W;
+
+    // Vector containing singular values
+    Vec_v sigma;
 
 };
 

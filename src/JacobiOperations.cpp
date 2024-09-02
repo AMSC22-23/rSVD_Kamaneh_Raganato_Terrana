@@ -3,7 +3,7 @@
 #include "../include/Jacobi_Class.hpp"
 
 
-void applyOnTheLeft(Mat &matrix, int p, int q, double c, double s) {
+void applyOnTheLeft(Mat_m &matrix, int p, int q, double c, double s) {
     //apply_rotation_in_the_plane(matrix.row(p), matrix.row(q), matrix.cols(), j.getS(), j.getC());
     for (int i = 0; i < matrix.cols(); ++i) {
         double xi = matrix(p,i);
@@ -13,7 +13,7 @@ void applyOnTheLeft(Mat &matrix, int p, int q, double c, double s) {
 }
 }
 
-void applyOnTheRight(Mat &matrix, int p, int q, double c, double s) {
+void applyOnTheRight(Mat_m &matrix, int p, int q, double c, double s) {
 
     for (int i = 0; i < matrix.rows(); ++i) {
         double xi = matrix(i,p);
@@ -22,9 +22,9 @@ void applyOnTheRight(Mat &matrix, int p, int q, double c, double s) {
         matrix(i,q) = s * xi + (c) * yi;
     }
 }
-void real_2x2_jacobi_svd(Mat &matrix, double &c_left,double &s_left,double &c_right,double &s_right,int p, int q) {
+void real_2x2_jacobi_svd(Mat_m &matrix, double &c_left,double &s_left,double &c_right,double &s_right,int p, int q) {
   
-    Mat m=Eigen::MatrixXd::Zero(2,2);
+    Mat_m m=Eigen::MatrixXd::Zero(2,2);
    m << matrix(p,p), matrix(p,q),
         matrix(q,p), matrix(q,q);
         
@@ -70,14 +70,14 @@ void real_2x2_jacobi_svd(Mat &matrix, double &c_left,double &s_left,double &c_ri
     }
     
     
-    Mat j_right(2,2);
+    Mat_m j_right(2,2);
     j_right<<c_right,s_right,
             -s_right,c_right;
-    Mat rot_to_eigen(2,2);
+    Mat_m rot_to_eigen(2,2);
     rot_to_eigen<<rot1.getC(),rot1.getS(),
                 -rot1.getS(),rot1.getC();
                 
-    Mat left(2,2);
+    Mat_m left(2,2);
     left= rot_to_eigen * j_right.transpose();
     
     c_left=left(0,0);
@@ -86,9 +86,9 @@ void real_2x2_jacobi_svd(Mat &matrix, double &c_left,double &s_left,double &c_ri
 
     
 }
-bool svd_precondition_2x2_block_to_be_real(Mat& m_workMatrix, int p, int q, double maxDiagEntry) {
+bool svd_precondition_2x2_block_to_be_real(Mat_m& m_workMatrix, int p, int q, double maxDiagEntry) {
     // Estrai il blocco 2x2 dalla matrice di lavoro
-    Mat block=Eigen::MatrixXd::Zero(2,2);
+    Mat_m block=Eigen::MatrixXd::Zero(2,2);
    block << m_workMatrix(p,p), m_workMatrix(p,q),
         m_workMatrix(q,p), m_workMatrix(q,q);
 
@@ -102,4 +102,17 @@ bool svd_precondition_2x2_block_to_be_real(Mat& m_workMatrix, int p, int q, doub
     return true;
 }
 
+std::vector<std::pair<size_t, size_t>> greedy_maximum_weight_matching(const std::vector<std::tuple<double, size_t, size_t>>& weights) {
+    std::vector<std::pair<size_t, size_t>> matching;
+    std::vector<bool> used(weights.size(), false);
+
+    for (const auto& [weight, i, j] : weights) {
+        if (!used[i] && !used[j]) {
+            matching.emplace_back(i, j);
+            used[i] = true;
+            used[j] = true;
+        }
+    }
+    return matching;
+}
 

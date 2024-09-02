@@ -6,7 +6,7 @@ import sys
 
 convergence_data = pd.read_csv(sys.argv[1], sep = ",")
 
-plt.rcParams.update({"font.size": 14})
+plt.rcParams.update({"font.size": 8})
 
 plt.plot(convergence_data.dt,
          convergence_data.eL2_full,
