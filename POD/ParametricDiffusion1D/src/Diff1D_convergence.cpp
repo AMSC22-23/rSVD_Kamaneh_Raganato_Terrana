@@ -160,7 +160,14 @@ main(int argc, char * argv[])
       std::getline(pod_prm, line);
       std::istringstream iss(line);
       while (iss >> aux)
+      {
+        if (dim != 1)
+        {
+          std::cerr << "The rom size can't be 1. Check 'rom_sizes' in the parameter file." << std::endl;
+          return 1;
+        }
         rom_sizes.push_back(aux);
+      }
     }
   }
   pod_prm.close();
