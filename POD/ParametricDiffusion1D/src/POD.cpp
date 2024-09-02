@@ -5,7 +5,7 @@ POD::POD(Mat_m &S, const int r, const double tol)
 {
     cout << "===================================================================" << endl;
     cout << "Default constructor for POD" << endl << endl;
-    W = standard_POD(S, r, tol);
+    std::tie(W, sigma) = standard_POD(S, r, tol);
 }
 
 // Constructor for energy POD
@@ -13,7 +13,7 @@ POD::POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
 {
     cout << "===================================================================" << endl;
     cout << "Constructor for energy_POD" << endl << endl;
-    W = energy_POD(S, Xh, r, tol);
+    std::tie(W, sigma) = energy_POD(S, Xh, r, tol);
 }
 
 // Constructor for weight POD
@@ -21,18 +21,19 @@ POD::POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol)
 {
     cout << "===================================================================" << endl;
     cout << "Constructor for weight_POD" << endl << endl;
-    W = weight_POD(S, Xh, D, r, tol);
+    std::tie(W, sigma) = weight_POD(S, Xh, D, r, tol);
 }
 
+// NON SO, questo ha molti argomenti ma non ti sembra collegato a quelli sotto, magari dovresti sostituire chiamata a SVD con chiamata a uno di quei due
 // Constructor for online POD through incremental SVD: starting from A it computes U, Sigma, V
-POD::POD(Mat_m &A, Mat_m &U, Mat_m &Sigma, Mat_m &V, const int dim, const Vec_v c, const int M, const int r, const double tol, const double tol_sv)
-{   
-    cout << "===================================================================" << endl;
-    cout << "Constructor for online POD" << endl << endl;
-    Vec_v sigma = Vec_v::Zero(dim);
-    SVD(A, sigma, U, V, dim);
-    Sigma = sigma.asDiagonal();
-}
+// POD::POD(Mat_m &A, Mat_m &U, Mat_m &Sigma, Mat_m &V, const int dim, const Vec_v c, const int M, const int r, const double tol, const double tol_sv)
+// {   
+//     cout << "===================================================================" << endl;
+//     cout << "Constructor for online POD" << endl << endl;
+//     Vec_v sigma = Vec_v::Zero(dim);
+//     SVD(A, sigma, U, V, dim);
+//     Sigma = sigma.asDiagonal();
+// }
 
 // Power Method
 void POD::PM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v)
@@ -96,7 +97,7 @@ void POD::SVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim)
 }
 
 // Algorithm 6.1 page 126 – POD Algorithm
-Mat_m POD::standard_POD(Mat_m &S, const int r, const double tol)
+std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double tol)
 {
     cout << "===================================================================" << endl;
     cout << "Standard POD" << endl << endl;
@@ -190,11 +191,11 @@ Mat_m POD::standard_POD(Mat_m &S, const int r, const double tol)
     cout << "Check dimensions of W:     " << W.rows() << " * " << W.cols() << endl;
     // cout << "Check final W in which the POD basis is stored: " << endl << W << endl << endl;
 
-    return W;
+    return std::make_tuple(W, sigma);
 }
 
 // Algorithm 6.2 page 128 – POD Algorithm with energy norm
-Mat_m POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
+std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
 {
     cout << "===================================================================" << endl;
     cout << "POD with energy norm" << endl << endl;
@@ -309,11 +310,11 @@ Mat_m POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
     cout << "Check dimensions of W:      " << W.rows() << " * " << W.cols() << endl;
     // cout << "Check final W in which the POD basis is stored: " << endl << W << endl << endl;
 
-    return W;
+    return std::make_tuple(W, sigma);
 }
 
 // Algorithm 6.3 page 134 – POD Algorithm with energy norm and quadrature weights
-Mat_m POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol)
+std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol)
 {
     cout << "===================================================================" << endl;
     cout << "POD with energy norm and quadrature weights" << endl << endl;
@@ -442,7 +443,7 @@ Mat_m POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double t
     cout << "Check dimensions of W:      " << W.rows() << " * " << W.cols() << endl;
     // cout << "Check final W in which the POD basis is stored: " << endl << W << endl << endl;
 
-    return W;
+    return std::make_tuple(W, sigma);
 }
 
 // Standard incremental SVD for building POD – Algorithm 1

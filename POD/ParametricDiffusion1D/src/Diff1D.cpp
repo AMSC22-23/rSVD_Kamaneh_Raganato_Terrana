@@ -179,6 +179,14 @@ main(int argc, char * argv[])
   }
   POD compute_modes(snapshots, Xh, rank, tol);
 
+  // Store the singular values
+  Vec_v sigma = compute_modes.sigma;
+  // = Vec_v::Zero(rank);
+  // for (Eigen::Index i=0; i<rank; i++) {
+  //   sigma(i) = compute_modes.sigma(i);
+  // }
+  // DA USARE FUORI PER PLOTTARE SINGUALRE VALUES
+  pcout << "PROVA" << sigma(0) << " " << sigma(1) << std::endl;
 
   // PROVA CON WEIGHT ///// versione
   // Mat_m D = Mat_m::Zero(snapshots.cols(), snapshots.cols());
@@ -270,17 +278,21 @@ main(int argc, char * argv[])
     }
   }
 
-  // Export the matrix containing the full order model solutions for all parameters. POI SARÀ SOLO NEW
+  // Export the matrix containing the full order model solutions for all parameters.
   std::string matrixFileOut1("../output/full.mtx");
   Eigen::saveMarket(solutions, matrixFileOut1);  
 
-  // Export the matrix containing the approximated solutions for all rom_sizes and all parameters. POI SARÀ SOLO NEW
+  // Export the matrix containing the approximated solutions for all rom_sizes and all parameters.
   std::string matrixFileOut2("../output/reconstruction.mtx");
   Eigen::saveMarket(approximations, matrixFileOut2); 
 
-  // Export the vector containing the relative errors for all rom_sizes and all parameters. POI SARÀ SOLO NEW
+  // Export the vector containing the relative errors for all rom_sizes and all parameters.
   std::string matrixFileOut3("../output/errors.mtx");
   Eigen::saveMarket(errors, matrixFileOut3); 
+
+  // Export the vector containing the singular values from the SVD performed in the POD algorithm.
+  std::string matrixFileOut4("../output/sigma.txt");
+  Eigen::saveMarketVector(sigma, matrixFileOut4); 
 
   return 0;
 }

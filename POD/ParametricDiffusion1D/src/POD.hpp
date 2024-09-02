@@ -5,6 +5,7 @@
 #include <random>
 #include <limits>
 #include <numeric>
+#include <tuple>
 
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>
@@ -24,6 +25,9 @@ using Vec_v = Eigen::VectorXd;
 class POD
 {
 public:
+    // Default constructor for standard POD
+    POD(Mat_m &S, const int r, const double tol);
+
     // Default constructor for standard POD
     POD(Mat_m &S, const int r, const double tol);
 
@@ -50,13 +54,13 @@ public:
     void SVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim);
 
     // Algorithm 6.1 page 126 – POD Algorithm
-    Mat_m standard_POD(Mat_m &S, const int r, double const tol);
+    std::tuple<Mat_m, Vec_v> standard_POD(Mat_m &S, const int r, double const tol);
 
     // Algorithm 6.2 page 128 – POD Algorithm with energy norm
-    Mat_m energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol);
+    std::tuple<Mat_m, Vec_v> energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol);
 
     // Algorithm 6.3 page 134 – POD Algorithm with energy norm and quadrature weights
-    Mat_m weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol);
+    std::tuple<Mat_m, Vec_v> weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol);
 
     // Algorithm 6.4 page 137
 
@@ -72,6 +76,9 @@ public:
 
     // Matrice contenente modes
     Mat_m W;
+
+    // Vector containing singular values
+    Vec_v sigma;
 
 };
 

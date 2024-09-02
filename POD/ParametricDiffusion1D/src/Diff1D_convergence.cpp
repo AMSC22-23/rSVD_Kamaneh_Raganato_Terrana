@@ -383,6 +383,18 @@ main(int argc, char * argv[])
 
   convergence_order(convergence_deltat, errors_L2_full, errors_H1_full, errors_L2_reconstructed, errors_H1_reconstructed);
 
+  // Export the matrix containing the full order model solutions for all parameters. POI SARÀ SOLO NEW
+  std::string matrixFileOut1("../output/full.mtx");
+  Eigen::saveMarket(solutions, matrixFileOut1);  
+
+  // Export the matrix containing the approximated solutions for all rom_sizes and all parameters. POI SARÀ SOLO NEW
+  std::string matrixFileOut2("../output/reconstruction.mtx");
+  Eigen::saveMarket(approximations, matrixFileOut2); 
+
+  // Export the vector containing the relative errors for all rom_sizes and all parameters. POI SARÀ SOLO NEW
+  std::string matrixFileOut3("../output/errors.mtx");
+  Eigen::saveMarket(errors, matrixFileOut3); 
+
   return 0;
 }
 
