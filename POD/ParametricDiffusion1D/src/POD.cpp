@@ -1,106 +1,153 @@
 #include "POD.hpp"
 
-// Default constructor for standard POD
-POD::POD(Mat_m &S, const int r, const double tol)
+// Default constructor for POD
+POD::POD()
 {
-    cout << "===================================================================" << endl;
-    cout << "Default constructor for POD" << endl << endl;
-    std::tie(W, sigma) = standard_POD(S, r, tol);
+    // std::cout << "===================================================================" << std::endl;
+    // std::cout << "Default constructor for POD" << std::endl << std::endl;
+}
+
+// Constructor for naive POD
+POD::POD(Mat_m &S, const int svd_type)
+{   
+    // std::cout << "===================================================================" << std::endl;
+    // std::cout << "Constructor for naive POD" << std::endl << std::endl;
+    std::tie(W, sigma) = naive_POD(S, svd_type);
+}
+
+// Constructor for standard POD
+POD::POD(Mat_m &S, const int r, const double tol, const int svd_type)
+{
+    // std::cout << "===================================================================" << std::endl;
+    // std::cout << "Constructor for standard POD" << std::endl << std::endl;
+    std::tie(W, sigma) = standard_POD(S, r, tol, svd_type);
 }
 
 // Constructor for energy POD
-POD::POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
+POD::POD(Mat_m &S, Mat_m &Xh, const int r, const double tol, const int svd_type)
 {
-    cout << "===================================================================" << endl;
-    cout << "Constructor for energy_POD" << endl << endl;
-    std::tie(W, sigma) = energy_POD(S, Xh, r, tol);
+    // std::cout << "===================================================================" << std::endl;
+    // std::cout << "Constructor for energy POD" << std::endl << std::endl;
+    std::tie(W, sigma) = energy_POD(S, Xh, r, tol, svd_type);
 }
 
 // Constructor for weight POD
-POD::POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol)
+POD::POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int svd_type)
 {
-    cout << "===================================================================" << endl;
-    cout << "Constructor for weight_POD" << endl << endl;
-    std::tie(W, sigma) = weight_POD(S, Xh, D, r, tol);
+    // std::cout << "===================================================================" << std::endl;
+    // std::cout << "Constructor for weight POD" << std::endl << std::endl;
+    std::tie(W, sigma) = weight_POD(S, Xh, D, r, tol, svd_type);
 }
 
 // NON SO, questo ha molti argomenti ma non ti sembra collegato a quelli sotto, magari dovresti sostituire chiamata a SVD con chiamata a uno di quei due
 // Constructor for online POD through incremental SVD: starting from A it computes U, Sigma, V
 // POD::POD(Mat_m &A, Mat_m &U, Mat_m &Sigma, Mat_m &V, const int dim, const Vec_v c, const int M, const int r, const double tol, const double tol_sv)
 // {   
-//     cout << "===================================================================" << endl;
-//     cout << "Constructor for online POD" << endl << endl;
+//     std::cout << "===================================================================" << std::endl;
+//     std::cout << "Constructor for online POD" << std::endl << std::endl;
 //     Vec_v sigma = Vec_v::Zero(dim);
-//     SVD(A, sigma, U, V, dim);
+//     SVD<SVDMethod::Jacobi> svd(A); // (A, sigma, U, V, dim);
+//     svd.compute();
+//     U = svd.getU();
+//     sigma = svd.getS();
 //     Sigma = sigma.asDiagonal();
+//     V = svd.getV();
 // }
 
-// Power Method
-void POD::PM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v)
+void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int svd_type)
 {
-    // Generate a random initial guess x0
-    Vec_v x0 = Vec_v::Zero(A.cols());
+    std::unique_ptr<SVD<SVDMethod::Power>> svd_power;
+    std::unique_ptr<SVD<SVDMethod::Jacobi>> svd_jacobi;
+    std::unique_ptr<SVD<SVDMethod::DynamicJacobi>> svd_dynamic_jacobi;
+    std::unique_ptr<SVD<SVDMethod::ParallelJacobi>> svd_parallel_jacobi;
 
-    random_device rd;
-    mt19937 gen(rd());
-    normal_distribution<double> distribution(0.0, 1.0);
-
-    for (unsigned int i=0; i<x0.size(); i++) {
-        x0(i) = distribution(gen);
+    // Note that blocks {} are needed inside each case to allow the declaration of svd.
+    switch (svd_type)
+    {
+        case 0:
+        {
+            std::cout << "  SVD with Power Method" << std::endl;
+            svd_power = std::make_unique<SVD<SVDMethod::Power>>(A);
+            break;
+        }
+        case 1:
+        {
+            std::cout << "  SVD with Jacobi Method" << std::endl;
+            svd_jacobi = std::make_unique<SVD<SVDMethod::Jacobi>>(A);
+            break;
+        }
+        case 2:
+        {
+            std::cout << "  SVD with Dynamic Jacobi Method" << std::endl;
+            svd_dynamic_jacobi = std::make_unique<SVD<SVDMethod::DynamicJacobi>>(A);
+            break;
+        }
+        case 3:
+        {
+            std::cout << "  SVD with Parallel Jacobi Method" << std::endl;
+            svd_parallel_jacobi = std::make_unique<SVD<SVDMethod::ParallelJacobi>>(A);
+            break;
+        }
+        default:
+        {
+            std::cerr << "The svd_type should be among 0, 1, 2, 3. Check 'svd_type' in the parameter file." << std::endl;
+        }
     }
-    x0.normalize();
-
-    // Define the number of iterations
-    double epsilon = 1.e-10;
-    double delta = 0.05;
-    double lambda = 0.1;
-    int s = ceil( log(4*log(2*A.cols()/delta)/(epsilon*delta)) /(2*lambda));
-    // cout << "Check the number of iterations: " << s << endl;
-
-    for (unsigned int i=1; i<=s; i++) {
-        x0 = B*x0; // B = A^T*A
-        x0.normalize();
+    if (svd_power)
+    {
+        svd_power->compute();
+        U = svd_power->getU();
+        sigma = svd_power->getS();
+        V = svd_power->getV();
     }
-
-    // Compute the left singlular vector
-    v = x0;
-    v.normalize();
-
-    // Compute the singular value
-    sigma = (A*v).norm();
-
-    // Compute the right singular vector
-    u = A*v/sigma;
+    else if (svd_jacobi)
+    {
+        svd_jacobi->compute();
+        U = svd_jacobi->getU();
+        sigma = svd_jacobi->getS();
+        V = svd_jacobi->getV();
+    }
+    else if (svd_dynamic_jacobi)
+    {
+        svd_dynamic_jacobi->compute();
+        U = svd_dynamic_jacobi->getU();
+        sigma = svd_dynamic_jacobi->getS();
+        V = svd_dynamic_jacobi->getV();
+    }
+    else if (svd_parallel_jacobi)
+    {
+        svd_parallel_jacobi->compute();
+        U = svd_parallel_jacobi->getU();
+        sigma = svd_parallel_jacobi->getS();
+        V = svd_parallel_jacobi->getV();
+    }
 }
 
-// Singular Value Decomposition through Power Method
-void POD::SVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim)
+std::tuple<Mat_m, Vec_v> POD::naive_POD(Mat_m &S, const int svd_type)
 {
-    Mat_m VT = Mat_m::Zero(dim, A.cols()); // VT is the transpose of V
+    std::cout << "===================================================================" << std::endl;
+    std::cout << "Naive POD" << std::endl;
 
-    // Define the matrix B = A^T*A
-    Mat_m B = A.transpose()*A; // n*n
+    // SISTEMA TUTTI COMMENTI; qui in realtà hai già inizializzato, stai solo ridefinendo dimensioni
+    // Initialize the matrix W to store all the POD modes, then it will be resized in order to form the POD basis
+    W = Mat_m::Zero(S.rows(), S.rows());
 
-    // Define auxiliary vectors u and v
-    Vec_v u = Vec_v::Zero(A.rows());
-    Vec_v v = Vec_v::Zero(A.cols());
-    
-    for (unsigned int i=0; i<dim; i++) {
-        PM(A, B, sigma(i), u, v);
-        A -= sigma(i)*u*v.transpose();
-        B = A.transpose()*A;
-        U.col(i) = u;
-        VT.row(i) = v;
-    }
+    // Initialize the vector sigma to store the singular values
+    int min= S.rows() < S.cols() ? S.rows() : S.cols();
+    sigma = Vec_v::Zero(min);
 
-    V = VT.transpose(); // V is the transpose of VT
+    Mat_m V = Mat_m::Zero(S.cols(), S.cols());
+
+    perform_SVD(S, W, sigma, V, svd_type);
+
+    return std::make_tuple(W, sigma);
 }
 
 // Algorithm 6.1 page 126 – POD Algorithm
-std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double tol)
+std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double tol, const int svd_type)
 {
-    cout << "===================================================================" << endl;
-    cout << "Standard POD" << endl << endl;
+    std::cout << "===================================================================" << std::endl;
+    std::cout << "Standard POD" << std::endl;
     // NOTE: in the book, W is called V, V is called Z
     // NOTE: it can be proved that solving an eigenvalue problem is equivalent to computing the SVD
 
@@ -112,13 +159,13 @@ std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double t
     W = Mat_m::Zero(Nh, r);
 
     // Initialize the vector sigma to store the singular values
-    Vec_v sigma = Vec_v::Zero(r);
+    sigma = Vec_v::Zero(r);
 
     if (ns <= Nh) {
         // Form the correlation matrix
         Mat_m C = S.transpose()*S; // ns*ns
-        cout << "Case ns = " << ns << " <= " << Nh << " = Nh" << endl;
-        cout << "Check dimensions of C:     " << C.rows() << " * " << C.cols() << endl;
+        std::cout << "Case ns = " << ns << " <= " << Nh << " = Nh" << std::endl;
+        std::cout << "Check dimensions of C:     " << C.rows() << " * " << C.cols() << std::endl;
 
         // Solve the eigenvalue problem through SVD
         // – Initialize the inputs required by the SVD method
@@ -126,10 +173,13 @@ std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double t
         Mat_m U = Mat_m::Zero(ns, r);
         Mat_m V = Mat_m::Zero(ns, r);
 
-        SVD(C, sigma, U, V, r); // i = 1, ..., r
-        cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << endl;
-        cout << "Check dimensions of sigma: " << sigma.size() << endl;
-        cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << endl;
+        // SVD(C, sigma, U, V, r); // i = 1, ..., r
+        // SVD<SVDMethod::Jacobi> svd(C);
+        perform_SVD(C, U, sigma, V, svd_type);
+        
+        std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
+        std::cout << "Check dimensions of sigma: " << sigma.size() << std::endl;
+        std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl;
 
         // Store the POD modes in W 
         for (int i=0; i<r; i++) {
@@ -139,8 +189,8 @@ std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double t
     else {
         // Form the matrix K
         Mat_m K = S*S.transpose(); // Nh*Nh
-        cout << "Case ns = " << ns << " > " << Nh << " = Nh" << endl;
-        cout << "Check dimensions of K:     " << K.rows() << " * " << K.cols() << endl;
+        std::cout << "Case ns = " << ns << " > " << Nh << " = Nh" << std::endl;
+        std::cout << "Check dimensions of K:     " << K.rows() << " * " << K.cols() << std::endl;
 
         // Solve the eigenvalue problem through SVD
         // – Initialize the inputs required by the SVD method
@@ -148,17 +198,20 @@ std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double t
         Mat_m U = Mat_m::Zero(Nh, r);
         Mat_m V = Mat_m::Zero(Nh, r);
 
-        SVD(K, sigma, U, V, r); // i = 1, ..., r
-        cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << endl;
-        cout << "Check dimensions of sigma: " << sigma.size() << endl;
-        cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << endl;
+        // SVD(K, sigma, U, V, r); // i = 1, ..., r
+        // SVD<SVDMethod::Jacobi> svd(K);
+        perform_SVD(K, U, sigma, V, svd_type);
+        
+        std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
+        std::cout << "Check dimensions of sigma: " << sigma.size() << std::endl;
+        std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl;
 
         // Store the POD modes in W
         W = U; // Nh*r
     }
 
-    cout << "Check dimensions of W:     " << W.rows() << " * " << W.cols() << endl;
-    // cout << "Check intermediate W in which all POD modes are stored: " << endl << W << endl << endl;
+    std::cout << "Check dimensions of W:     " << W.rows() << " * " << W.cols() << std::endl;
+    // std::cout << "Check intermediate W in which all POD modes are stored: " << std::endl << W << std::endl << std::endl;
 
     // Use the criterion to define the minimal POD dimension N <= r such that the projection error is smaller than the
     // desired tolerance
@@ -188,17 +241,17 @@ std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double t
 
     // Build the POD basis
     W.conservativeResize(Eigen::NoChange, N);
-    cout << "Check dimensions of W:     " << W.rows() << " * " << W.cols() << endl;
-    // cout << "Check final W in which the POD basis is stored: " << endl << W << endl << endl;
+    std::cout << "Check dimensions of W:     " << W.rows() << " * " << W.cols() << std::endl;
+    // std::cout << "Check final W in which the POD basis is stored: " << std::endl << W << std::endl << std::endl;
 
     return std::make_tuple(W, sigma);
 }
 
 // Algorithm 6.2 page 128 – POD Algorithm with energy norm
-std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol)
+std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol, const int svd_type)
 {
-    cout << "===================================================================" << endl;
-    cout << "POD with energy norm" << endl << endl;
+    std::cout << "===================================================================" << std::endl;
+    std::cout << "POD with energy norm" << std::endl;
     // NOTE: in the book, W is called V, V is called Z
     // NOTE: it can be proved that solving an eigenvalue problem is equivalent to computing the SVD
 
@@ -210,13 +263,13 @@ std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const
     W = Mat_m::Zero(Nh, r);
 
     // Initialize the vector sigma to store the singular values
-    Vec_v sigma = Vec_v::Zero(r);
+    sigma = Vec_v::Zero(r);
 
     if (ns <= Nh) {
         // Form the correlation matrix
         Mat_m Ctilde = (S.transpose()*Xh) * S; // Ctilde = (ns*Nh) * (Nh*Nh) * (Nh*ns) = ns*ns
-        cout << "Case ns = " << ns << " <= " << Nh << " = Nh" << endl;
-        cout << "Check dimensions of Ctilde: " << Ctilde.rows() << " * " << Ctilde.cols() << endl;
+        std::cout << "Case ns = " << ns << " <= " << Nh << " = Nh" << std::endl;
+        std::cout << "Check dimensions of Ctilde: " << Ctilde.rows() << " * " << Ctilde.cols() << std::endl;
 
         // Solve the eigenvalue problem through SVD
         // – Initialize the inputs required by the SVD method
@@ -224,10 +277,13 @@ std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const
         Mat_m Utilde = Mat_m::Zero(ns, r);
         Mat_m Vtilde = Mat_m::Zero(ns, r);
 
-        SVD(Ctilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
-        cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << endl;
-        cout << "Check dimensions of sigma:  " << sigma.size() << endl;
-        cout << "Check dimensions of Vtilde: " << Vtilde.rows() << " * " << Vtilde.cols() << endl;
+        // SVD(Ctilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
+        // SVD<SVDMethod::Jacobi> svd(Ctilde);
+        perform_SVD(Ctilde, Utilde, sigma, Vtilde, svd_type);
+    
+        std::cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << std::endl;
+        std::cout << "Check dimensions of sigma:  " << sigma.size() << std::endl;
+        std::cout << "Check dimensions of Vtilde: " << Vtilde.rows() << " * " << Vtilde.cols() << std::endl;
 
         // Store the POD modes in W 
         for (int i=0; i<r; i++) {
@@ -241,14 +297,14 @@ std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const
         // and https://eigen.tuxfamily.org/dox-devel/classEigen_1_1SelfAdjointEigenSolver.html#title20
         Eigen::SelfAdjointEigenSolver<Mat_m> es(Xh);
         Mat_m Xh_sqrt = es.operatorSqrt();
-        // cout << "Check Xh: " << endl << Xh << endl << endl;
-        cout << "The square root of Xh is: " << endl << Xh_sqrt << endl << endl;
-        cout << "Check if Xh = Xh_sqrt * Xh_sqrt: " << endl << Xh_sqrt*Xh_sqrt << endl << endl;
-        cout << "Norm of ||Xh - Xh_sqrt * Xh_sqrt||: " << (Xh-Xh_sqrt*Xh_sqrt).norm() << endl << endl;
+        // std::cout << "Check Xh: " << std::endl << Xh << std::endl << std::endl;
+        // std::cout << "The square root of Xh is: " << std::endl << Xh_sqrt << std::endl << std::endl;
+        // std::cout << "Check if Xh = Xh_sqrt * Xh_sqrt: " << std::endl << Xh_sqrt*Xh_sqrt << std::endl << std::endl;
+        std::cout << "Norm of ||Xh - Xh_sqrt * Xh_sqrt||: " << (Xh-Xh_sqrt*Xh_sqrt).norm() << std::endl << std::endl;
 
         Mat_m Ktilde = ((Xh_sqrt*S) * S.transpose()) * Xh_sqrt; // Ktilde = (Nh*Nh) * (Nh*ns) * (ns*Nh) * (Nh*Nh) = Nh*Nh
-        cout << "Case ns = " << ns << " > " << Nh << " = Nh" << endl;
-        cout << "Check dimensions of Ktilde: " << Ktilde.rows() << " * " << Ktilde.cols() << endl;
+        std::cout << "Case ns = " << ns << " > " << Nh << " = Nh" << std::endl;
+        std::cout << "Check dimensions of Ktilde: " << Ktilde.rows() << " * " << Ktilde.cols() << std::endl;
 
         // Solve the eigenvalue problem through SVD
         // – Initialize the inputs required by the SVD method
@@ -256,10 +312,13 @@ std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const
         Mat_m Utilde = Mat_m::Zero(Nh, r);
         Mat_m Vtilde = Mat_m::Zero(Nh, r);
 
-        SVD(Ktilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
-        cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << endl;
-        cout << "Check dimensions of sigma:  " << sigma.size() << endl;
-        cout << "Check dimensions of Vtilde: " << Vtilde.rows() << " * " << Vtilde.cols() << endl;
+        // SVD(Ktilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
+        // SVD<SVDMethod::Jacobi> svd(Ktilde);
+        perform_SVD(Ktilde, Utilde, sigma, Vtilde, svd_type);
+     
+        std::cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << std::endl;
+        std::cout << "Check dimensions of sigma:  " << sigma.size() << std::endl;
+        std::cout << "Check dimensions of Vtilde: " << Vtilde.rows() << " * " << Vtilde.cols() << std::endl;
 
         // Solve the linear sistem Xh_square * U.col(i) = Utilde.col(i) with Eigen native CG
         Mat_m U = Mat_m::Zero(Nh, r);
@@ -276,8 +335,8 @@ std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const
         W = U; // Nh*r
     }
 
-    cout << "Check dimensions of W:      " << W.rows() << " * " << W.cols() << endl;
-    // cout << "Check intermediate W in which all POD modes are stored: " << endl << W << endl << endl;
+    std::cout << "Check dimensions of W:      " << W.rows() << " * " << W.cols() << std::endl;
+    // std::cout << "Check intermediate W in which all POD modes are stored: " << std::endl << W << std::endl << std::endl;
 
     // Use the criterion to define the minimal POD dimension N <= r such that the projection error is smaller than the
     // desired tolerance
@@ -307,17 +366,17 @@ std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const
 
     // Build the POD basis
     W.conservativeResize(Eigen::NoChange, N);
-    cout << "Check dimensions of W:      " << W.rows() << " * " << W.cols() << endl;
-    // cout << "Check final W in which the POD basis is stored: " << endl << W << endl << endl;
+    std::cout << "Check dimensions of W:      " << W.rows() << " * " << W.cols() << std::endl;
+    // std::cout << "Check final W in which the POD basis is stored: " << std::endl << W << std::endl << std::endl;
 
     return std::make_tuple(W, sigma);
 }
 
 // Algorithm 6.3 page 134 – POD Algorithm with energy norm and quadrature weights
-std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol)
+std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int svd_type)
 {
-    cout << "===================================================================" << endl;
-    cout << "POD with energy norm and quadrature weights" << endl << endl;
+    std::cout << "===================================================================" << std::endl;
+    std::cout << "POD with energy norm and quadrature weights" << std::endl;
     // NOTE: in the book, W is called V, V is called Z
     // NOTE: it can be proved that solving an eigenvalue problem is equivalent to computing the SVD
 
@@ -329,7 +388,7 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
     W = Mat_m::Zero(Nh, r);
 
     // Initialize the vector sigma to store the singular values
-    Vec_v sigma = Vec_v::Zero(r);
+    sigma = Vec_v::Zero(r);
 
     if (ns <= Nh) {
         // Form the matrix Stilde
@@ -338,17 +397,17 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
         // and https://eigen.tuxfamily.org/dox-devel/classEigen_1_1SelfAdjointEigenSolver.html#title20
         Eigen::SelfAdjointEigenSolver<Mat_m> esD(D);
         Mat_m D_sqrt = esD.operatorSqrt();
-        // cout << "Check D: " << endl << D << endl << endl;
-        // cout << "The square root of D is: " << endl << D_sqrt << endl << endl;
-        // cout << "Check if D = D_sqrt * D_sqrt: " << endl << D_sqrt*D_sqrt << endl << endl;
-        cout << "Norm of ||D - D_sqrt * D_sqrt||: " << (D-D_sqrt*D_sqrt).norm() << endl << endl;
+        // std::cout << "Check D: " << std::endl << D << std::endl << std::endl;
+        // std::cout << "The square root of D is: " << std::endl << D_sqrt << std::endl << std::endl;
+        // std::cout << "Check if D = D_sqrt * D_sqrt: " << std::endl << D_sqrt*D_sqrt << std::endl << std::endl;
+        std::cout << "Norm of ||D - D_sqrt * D_sqrt||: " << (D-D_sqrt*D_sqrt).norm() << std::endl << std::endl;
 
         Mat_m Stilde = S * D_sqrt; // Stilde = (Nh*ns) * (ns*ns) = Nh*ns
 
         // Form the correlation matrix
         Mat_m Ctilde = (Stilde.transpose()*Xh) * Stilde; // Ctilde = (ns*Nh) * (Nh*Nh) * (Nh*ns) = ns*ns
-        cout << "Case ns = " << ns << " <= " << Nh << " = Nh" << endl;
-        cout << "Check dimensions of Ctilde: " << Ctilde.rows() << " * " << Ctilde.cols() << endl;
+        std::cout << "Case ns = " << ns << " <= " << Nh << " = Nh" << std::endl;
+        std::cout << "Check dimensions of Ctilde: " << Ctilde.rows() << " * " << Ctilde.cols() << std::endl;
 
         // Solve the eigenvalue problem through SVD
         // – Initialize the inputs required by the SVD method
@@ -356,10 +415,13 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
         Mat_m Utilde = Mat_m::Zero(ns, r);
         Mat_m Vtilde = Mat_m::Zero(ns, r);
 
-        SVD(Ctilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
-        cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << endl;
-        cout << "Check dimensions of sigma:  " << sigma.size() << endl;
-        cout << "Check dimensions of Vtilde: " << Vtilde.rows() << " * " << Vtilde.cols() << endl;
+        // SVD(Ctilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
+        // SVD<SVDMethod::Jacobi> svd(Ctilde);
+        perform_SVD(Ctilde, Utilde, sigma, Vtilde, svd_type);
+    
+        std::cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << std::endl;
+        std::cout << "Check dimensions of sigma:  " << sigma.size() << std::endl;
+        std::cout << "Check dimensions of Vtilde: " << Vtilde.rows() << " * " << Vtilde.cols() << std::endl;
 
         // Store the POD modes in W 
         for (int i=0; i<r; i++) {
@@ -373,15 +435,15 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
         // and https://eigen.tuxfamily.org/dox-devel/classEigen_1_1SelfAdjointEigenSolver.html#title20
         Eigen::SelfAdjointEigenSolver<Mat_m> es(Xh);
         Mat_m Xh_sqrt = es.operatorSqrt();
-        // cout << "Check Xh: " << endl << Xh << endl << endl;
-        // cout << "The square root of Xh is: " << endl << Xh_sqrt << endl << endl;
-        // cout << "Check if Xh = Xh_sqrt * Xh_sqrt: " << endl << Xh_sqrt*Xh_sqrt << endl << endl;
-        cout << "Norm of ||Xh - Xh_sqrt * Xh_sqrt||: " << (Xh-Xh_sqrt*Xh_sqrt).norm() << endl << endl;
+        // std::cout << "Check Xh: " << std::endl << Xh << std::endl << std::endl;
+        // std::cout << "The square root of Xh is: " << std::endl << Xh_sqrt << std::endl << std::endl;
+        // std::cout << "Check if Xh = Xh_sqrt * Xh_sqrt: " << std::endl << Xh_sqrt*Xh_sqrt << std::endl << std::endl;
+        std::cout << "Norm of ||Xh - Xh_sqrt * Xh_sqrt||: " << (Xh-Xh_sqrt*Xh_sqrt).norm() << std::endl << std::endl;
 
         Mat_m Ktilde = (((Xh_sqrt*S) * D) * S.transpose()) * Xh_sqrt;
         // Ktilde = (Nh*Nh) * (Nh*ns) * (ns*ns) * (ns*Nh) * (Nh*Nh) = Nh*Nh
-        cout << "Case ns = " << ns << " > " << Nh << " = Nh" << endl;
-        cout << "Check dimensions of Ktilde: " << Ktilde.rows() << " * " << Ktilde.cols() << endl;
+        std::cout << "Case ns = " << ns << " > " << Nh << " = Nh" << std::endl;
+        std::cout << "Check dimensions of Ktilde: " << Ktilde.rows() << " * " << Ktilde.cols() << std::endl;
 
         // Solve the eigenvalue problem through SVD
         // – Initialize the inputs required by the SVD method
@@ -389,10 +451,13 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
         Mat_m Utilde = Mat_m::Zero(Nh, r);
         Mat_m Vtilde = Mat_m::Zero(Nh, r);
 
-        SVD(Ktilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
-        cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << endl;
-        cout << "Check dimensions of sigma:  " << sigma.size() << endl;
-        cout << "Check dimensions of Vtilde: " << Vtilde.rows() << " * " << Vtilde.cols() << endl;
+        // SVD(Ktilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
+        // SVD<SVDMethod::Jacobi> svd(Ktilde);
+        perform_SVD(Ktilde, Utilde, sigma, Vtilde, svd_type);
+
+        std::cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << std::endl;
+        std::cout << "Check dimensions of sigma:  " << sigma.size() << std::endl;
+        std::cout << "Check dimensions of Vtilde: " << Vtilde.rows() << " * " << Vtilde.cols() << std::endl;
 
         // Solve the linear sistem Xh_square * U.col(i) = Utilde.col(i) with Eigen native CG
         Mat_m U = Mat_m::Zero(Nh, r);
@@ -409,8 +474,8 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
         W = U; // Nh*r
     }
 
-    cout << "Check dimensions of W:      " << W.rows() << " * " << W.cols() << endl;
-    // cout << "Check intermediate W in which all POD modes are stored: " << endl << W << endl << endl;
+    std::cout << "Check dimensions of W:      " << W.rows() << " * " << W.cols() << std::endl;
+    // std::cout << "Check intermediate W in which all POD modes are stored: " << std::endl << W << std::endl << std::endl;
 
     // Use the criterion to define the minimal POD dimension N <= r such that the projection error is smaller than the
     // desired tolerance
@@ -440,8 +505,8 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
 
     // Build the POD basis
     W.conservativeResize(Eigen::NoChange, N);
-    cout << "Check dimensions of W:      " << W.rows() << " * " << W.cols() << endl;
-    // cout << "Check final W in which the POD basis is stored: " << endl << W << endl << endl;
+    std::cout << "Check dimensions of W:      " << W.rows() << " * " << W.cols() << std::endl;
+    // std::cout << "Check final W in which the POD basis is stored: " << std::endl << W << std::endl << std::endl;
 
     return std::make_tuple(W, sigma);
 }
@@ -449,8 +514,8 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
 // Standard incremental SVD for building POD – Algorithm 1
 void POD::standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const double tol, const double tol_sv)
 {
-    cout << "===================================================================" << endl;
-    cout << "Standard incremental SVD" << endl << endl;
+    std::cout << "===================================================================" << std::endl;
+    std::cout << "Standard incremental SVD" << std::endl << std::endl;
     // NOTE: in the paper, U is called V and V is called W
     // NOTE: in the paper, the starting index is 1, here it is 0
 
@@ -473,10 +538,10 @@ void POD::standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const d
     Q.block(0, k, k, 1) = d;
     if (p < tol)
         Q(k, k) = p;
-    cout << "Check Sigma:" << endl << Sigma << endl << endl;
-    cout << "Check d:" << endl << d << endl << endl;
-    cout << "Check p:" << endl << p << endl << endl;
-    cout << "Check Q:" << endl << Q << endl << endl;
+    std::cout << "Check Sigma:" << std::endl << Sigma << std::endl << std::endl;
+    std::cout << "Check d:" << std::endl << d << std::endl << std::endl;
+    std::cout << "Check p:" << std::endl << p << std::endl << std::endl;
+    std::cout << "Check Q:" << std::endl << Q << std::endl << std::endl;
 
     // Step 2: SVD solution
     // – Initialize the inputs required by the SVD method
@@ -486,13 +551,16 @@ void POD::standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const d
     Mat_m UQ = Mat_m::Zero(k+1, k+1);
     Mat_m VQ = Mat_m::Zero(k+1, k+1);
 
-    SVD(Q, sigmaQ, UQ, VQ, k+1);
+    // SVD(Q, sigmaQ, UQ, VQ, k+1);
+    // SVD<SVDMethod::Jacobi> svd(Q); // (C, sigma, U, V, dim);
+    perform_SVD(Q, UQ, sigmaQ, VQ, 0); // poi aggiungi svd_type
+ 
     SigmaQ = sigmaQ.asDiagonal();
-    cout << "Check UQ:" << endl << UQ << endl << endl;
-    cout << "Check SigmaQ:" << endl << SigmaQ << endl << endl;
-    cout << "Check VQ:" << endl << VQ << endl << endl;
+    std::cout << "Check UQ:" << std::endl << UQ << std::endl << std::endl;
+    std::cout << "Check SigmaQ:" << std::endl << SigmaQ << std::endl << std::endl;
+    std::cout << "Check VQ:" << std::endl << VQ << std::endl << std::endl;
 
-    cout << "Compare intermediate and final dimensions with the initial k = " << k << endl << endl;
+    std::cout << "Compare intermediate and final dimensions with the initial k = " << k << std::endl << std::endl;
 
     // Step 3: left singular vectors update
     // Decision: will the added column increase the rank of the updated matrix?
@@ -536,14 +604,14 @@ void POD::standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const d
         // V       (k+1)*(k+1)
     }
 
-    cout << "Intermediate dimensions: ";
+    std::cout << "Intermediate dimensions: ";
     if ((p < tol || k >= n) == true)
-        cout << "in step 3 the 'if' branch is taken" << endl;
+        std::cout << "in step 3 the 'if' branch is taken" << std::endl;
     else
-        cout << "in step 3 the 'else' branch is taken" << endl;
-    cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << endl;
-    cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << endl;
-    cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << endl << endl;
+        std::cout << "in step 3 the 'else' branch is taken" << std::endl;
+    std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
+    std::cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << std::endl;
+    std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl << std::endl;
 
     // Step 4: SEE THE ENHANCED ALGORITHM
 
@@ -584,14 +652,14 @@ void POD::standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const d
     // Sigma   (k+1)*(k+1)
     // V       (k+1)*(k+1)
 
-    cout << "Final dimensions: " << endl;
+    std::cout << "Final dimensions: " << std::endl;
     if (((Sigma(k-2, k-2) > tol_sv) && (Sigma(k-1, k-1) < tol_sv)) == true)
-        cout << "in step 5 the 'if' branch is taken" << endl;
+        std::cout << "in step 5 the 'if' branch is taken" << std::endl;
     else
-        cout << "in step 5 the 'if' branch is not taken" << endl;
-    cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << endl;
-    cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << endl;
-    cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << endl << endl;
+        std::cout << "in step 5 the 'if' branch is not taken" << std::endl;
+    std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
+    std::cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << std::endl;
+    std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl << std::endl;
 
 
     // FUNZIONA TOGLIENDO DIRETTAMENTE?
@@ -611,8 +679,8 @@ void POD::standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const d
 // Enhanced incremental SVD for building POD – Algorithm 2
 void POD::enhanced_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const int M, const double tol, const double tol_sv)
 {
-    cout << "===================================================================" << endl;
-    cout << "Enhanced incremental SVD" << endl << endl;
+    std::cout << "===================================================================" << std::endl;
+    std::cout << "Enhanced incremental SVD" << std::endl << std::endl;
     // NOTE: in the paper, U is called V and V is called W
     // NOTE: in the paper, the starting index is 1, here it is 0
 
@@ -635,10 +703,10 @@ void POD::enhanced_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const i
     Q.block(0, k, k, 1) = d;
     if (p < tol)
         Q(k, k) = p;
-    cout << "Check Sigma:" << endl << Sigma << endl << endl;
-    cout << "Check d:" << endl << d << endl << endl;
-    cout << "Check p:" << endl << p << endl << endl;
-    cout << "Check Q:" << endl << Q << endl << endl;
+    std::cout << "Check Sigma:" << std::endl << Sigma << std::endl << std::endl;
+    std::cout << "Check d:" << std::endl << d << std::endl << std::endl;
+    std::cout << "Check p:" << std::endl << p << std::endl << std::endl;
+    std::cout << "Check Q:" << std::endl << Q << std::endl << std::endl;
 
     // Step 2: SVD solution
     // – Initialize the inputs required by the SVD method
@@ -648,13 +716,16 @@ void POD::enhanced_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const i
     Mat_m UQ = Mat_m::Zero(k+1, k+1);
     Mat_m VQ = Mat_m::Zero(k+1, k+1);
 
-    SVD(Q, sigmaQ, UQ, VQ, k+1);
-    SigmaQ = sigmaQ.asDiagonal();
-    cout << "Check UQ:" << endl << UQ << endl << endl;
-    cout << "Check SigmaQ:" << endl << SigmaQ << endl << endl;
-    cout << "Check VQ:" << endl << VQ << endl << endl;
+    // SVD(Q, sigmaQ, UQ, VQ, k+1);
+    // SVD<SVDMethod::Jacobi> svd(Q); // (C, sigma, U, V, dim);
+    perform_SVD(Q, UQ, sigmaQ, VQ, 0); // poi aggiungi svd_type
 
-    cout << "Compare intermediate and final dimensions with the initial k = " << k << endl << endl;
+    SigmaQ = sigmaQ.asDiagonal();
+    std::cout << "Check UQ:" << std::endl << UQ << std::endl << std::endl;
+    std::cout << "Check SigmaQ:" << std::endl << SigmaQ << std::endl << std::endl;
+    std::cout << "Check VQ:" << std::endl << VQ << std::endl << std::endl;
+
+    std::cout << "Compare intermediate and final dimensions with the initial k = " << k << std::endl << std::endl;
 
     // Step 3: left singular vectors update
     // Decision: will the added column increase the rank of the updated matrix?
@@ -698,14 +769,14 @@ void POD::enhanced_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const i
         // V       (k+1)*(k+1)
     }
 
-    cout << "Intermediate dimensions: " << endl;
+    std::cout << "Intermediate dimensions: " << std::endl;
     if ((p < tol || k >= n) == true)
-        cout << "in step 3 the 'if' branch is taken" << endl;
+        std::cout << "in step 3 the 'if' branch is taken" << std::endl;
     else
-        cout << "in step 3 the 'else' branch is taken" << endl;
-    cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << endl;
-    cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << endl;
-    cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << endl << endl;
+        std::cout << "in step 3 the 'else' branch is taken" << std::endl;
+    std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
+    std::cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << std::endl;
+    std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl << std::endl;
 
     // Step 4
     if (k > M) {
@@ -765,18 +836,18 @@ void POD::enhanced_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const i
     // Sigma   M*M
     // V       (k+1)*M
 
-    cout << "Final dimensions: " << endl;
+    std::cout << "Final dimensions: " << std::endl;
     if (k == M)
-        cout << "in step 4 the 'if' branch is taken, " << endl;
+        std::cout << "in step 4 the 'if' branch is taken, " << std::endl;
     else
-        cout << "in step 4 the 'if' branch is not taken, " << endl;
+        std::cout << "in step 4 the 'if' branch is not taken, " << std::endl;
     if (((Sigma(k-2, k-2) > tol_sv) && (Sigma(k-1, k-1) < tol_sv)) == true)
-        cout << "in step 5 the 'if' branch is taken" << endl;
+        std::cout << "in step 5 the 'if' branch is taken" << std::endl;
     else
-        cout << "in step 5 the 'if' branch is not taken" << endl;
-    cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << endl;
-    cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << endl;
-    cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << endl << endl;
+        std::cout << "in step 5 the 'if' branch is not taken" << std::endl;
+    std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
+    std::cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << std::endl;
+    std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl << std::endl;
 
 
 

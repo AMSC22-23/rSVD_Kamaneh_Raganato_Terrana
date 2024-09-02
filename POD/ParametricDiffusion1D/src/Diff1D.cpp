@@ -37,12 +37,14 @@ main(int argc, char * argv[])
   }
 
   // Read the parameters from the pod_parameter_file.
-  unsigned int dim  = 0;   // Dimension of the problem
-  unsigned int n    = 0;   // Number of parameters
-  double mu_min     = 0.0; // Minimum diffusion coefficient
-  double mu_max     = 0.0; // Maximum diffusion coefficient
-  unsigned int rank = 0;   // Rank --- in POD riguarda per cosa
-  double tol        = 0.0; // sempre per POD...
+  unsigned int dim      = 0;   // Dimension of the problem
+  unsigned int n        = 0;   // Number of parameters
+  double mu_min         = 0.0; // Minimum diffusion coefficient
+  double mu_max         = 0.0; // Maximum diffusion coefficient
+  unsigned int rank     = 0;   // Rank --- in POD riguarda per cosa
+  double tol            = 0.0; // sempre per POD...
+  unsigned int pod_type = 0;   // POD types: naive, standard, energy, weight, ...
+  unsigned int svd_type = 0;   // SVD types: Power, Jacobi, Dynamic Jacobi, Parallel Jacobi
   std::vector<Eigen::Index> rom_sizes; // Sizes for the reduced order models
 
   std::string key;
@@ -65,6 +67,10 @@ main(int argc, char * argv[])
       pod_prm >> rank;
     else if (key == "tol")
       pod_prm >> tol;
+    else if (key == "pod_type")
+      pod_prm >> pod_type;
+    else if (key == "svd_type")
+      pod_prm >> svd_type;
     else if (key == "rom_sizes")
     {
       Eigen::Index aux;
@@ -153,40 +159,68 @@ main(int argc, char * argv[])
   pcout << "Compute POD modes" << std::endl;
   pcout << "  Check rank = " << rank << std::endl;
 
-  // VERSIONE CON SVD //////
-  // Vec_v sigma = Vec_v::Zero(rank);
+  // Commentare
+  std::unique_ptr<POD> naive_pod;
+  std::unique_ptr<POD> standard_pod;
+  std::unique_ptr<POD> energy_pod;
+  std::unique_ptr<POD> weight_pod;
+  POD compute_modes;
 
-  // Initialize the other inputs required by the SVD method, Note that the SVD method returns sigma as a vector, then it has
-  // to be converted into a diagonal matrix
-  // Mat_m U = Mat_m::Zero(snapshots.rows(), snapshots.rows());
-  // Mat_m V = Mat_m::Zero(snapshots.cols(), snapshots.cols());
-  /////////
-
-  // const double tol = 1e-12;
-  // const double tol = 1e-9;
-  // POD compute_modes(snapshots, rank, tol); ///////versione
-
-
-  // PROVA CON ENERGY ma devi capire significato e costruzione Xh///////////
-
-
-
-  Mat_m Xh = Mat_m::Zero(snapshot_length, snapshot_length);
-  for (Eigen::Index i=0; i<snapshot_length; i++) {
-      Xh.coeffRef(i, i) = 2.0;
-    if(i>0) Xh.coeffRef(i, i-1) = -1.0;
-      if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
+  switch (pod_type)
+  {
+    case 0:
+    {
+      naive_pod = std::make_unique<POD>(snapshots, svd_type);
+      compute_modes = *naive_pod;
+      break;
+    }
+    case 1:
+    {
+      standard_pod = std::make_unique<POD>(snapshots, rank, tol, svd_type);
+      compute_modes = *standard_pod;
+      break;
+    }
+    case 2:
+    {
+      Mat_m Xh = Mat_m::Zero(snapshot_length, snapshot_length);
+      for (Eigen::Index i=0; i<snapshot_length; i++)
+      {
+        Xh.coeffRef(i, i) = 2.0;
+        if(i>0) Xh.coeffRef(i, i-1) = -1.0;
+          if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
+      }
+      energy_pod = std::make_unique<POD>(snapshots, Xh, rank, tol, svd_type);
+      compute_modes = *energy_pod;
+      break;
+    }
+    case 3:
+    {
+      Mat_m Xh = Mat_m::Zero(snapshot_length, snapshot_length);
+      for (Eigen::Index i=0; i<snapshot_length; i++)
+      {
+        Xh.coeffRef(i, i) = 2.0;
+        if(i>0) Xh.coeffRef(i, i-1) = -1.0;
+          if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
+      }
+      Mat_m D = Mat_m::Zero(snapshot_length, snapshot_length); // CAMBIARE
+      weight_pod = std::make_unique<POD>(snapshots, Xh, D, rank, tol, svd_type);
+      compute_modes = *weight_pod;
+      break;
+    }
+    default:
+    {
+      std::cerr << "The pod_type should be among 0, 1, 2, 3. Check 'pod_type' in the parameter file." << std::endl;
+      return 1;
+    }
   }
-  POD compute_modes(snapshots, Xh, rank, tol);
 
   // Store the singular values
-  Vec_v sigma = compute_modes.sigma;
+  Vec_v sigma = compute_modes.sigma; // commento su esportare per fare plot
   // = Vec_v::Zero(rank);
   // for (Eigen::Index i=0; i<rank; i++) {
   //   sigma(i) = compute_modes.sigma(i);
   // }
-  // DA USARE FUORI PER PLOTTARE SINGUALRE VALUES
-  pcout << "PROVA" << sigma(0) << " " << sigma(1) << std::endl;
+
 
   // PROVA CON WEIGHT ///// versione
   // Mat_m D = Mat_m::Zero(snapshots.cols(), snapshots.cols());
