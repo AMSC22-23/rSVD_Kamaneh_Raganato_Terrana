@@ -33,15 +33,13 @@ Mat loadTouristsData(const std::string& filename) {
             try {
                 row.push_back(std::stod(value));
             } catch (const std::invalid_argument&) {
-                std::cerr << "Skipping invalid value: " << value << " in row: " << line << std::endl;
+                //std::cerr << "Skipping invalid value: " << value << " in row: " << line << std::endl;
             }
         }
 
         if (row.size() == 8) { // Ensure the row has the correct number of columns
             data.push_back(row);
-        } else {
-            std::cerr << "Skipping invalid row: " << line << std::endl;
-        }
+        } 
     }
 
     file.close();
@@ -130,27 +128,27 @@ int main() {
     std::string path3 ="../data/input/tourists.txt";
     Mat data = loadTouristsData(path3);
 
-    try {
+    
         // Creazione dell'oggetto PCA
-        PCA<SVDMethod::ParallelJacobi> pca(data, true);
+        PCA<SVDMethod::ParallelJacobi> pca(data, false);
 
         // Test dei metodi principali
         //std::cout << "Mean: " << pca.mean().transpose() << std::endl;
-        std::cout << "Principal Components: " << std::endl << pca.principalComponents() << std::endl;
+        /*std::cout << "Principal directions: " << std::endl << pca.principalDirections() << std::endl;
         std::cout << "Scores: " << std::endl << pca.scores() << std::endl;
         std::cout << "Explained Variance: " << pca.explainedVariance().transpose() << std::endl;
         std::cout << "Explained Variance Ratio: " << pca.explainedVarianceRatio().transpose() << std::endl;
-
+*/
         // Test di salvataggio e caricamento
         /*pca.save("pca_state.txt");
         PCA<SVDMethod::SomeMethod> pca_loaded(data, true);
         pca_loaded.load("pca_state.txt");*/
 
         // Verifica dell'ortogonalità
+        pca.summary();
+
         std::cout << "Orthogonality Check: " << pca.checkOrthogonality() << std::endl;
-    } catch (const std::exception& e) {
-        std::cerr << "Errore: " << e.what() << std::endl;
-    }
+    //pca.saveResults("../data/output/pca_tourists_results.txt");
 
     return 0;
 }
