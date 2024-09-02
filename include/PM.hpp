@@ -11,11 +11,11 @@
 using namespace std;
 using namespace Eigen;
 
-using Mat = MatrixXd;
-using Vec = VectorXd;
+using Mat_m = MatrixXd;
+using Vec_v = VectorXd;
 using SpMat = SparseMatrix<double>;
 
-void PM(Mat &A, Mat &B, double &sigma, Vec &u, Vec &v);
+void PM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v);
 
 #endif
 

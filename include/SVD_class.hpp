@@ -21,8 +21,8 @@
 #include <mpi.h>
 
 // Alias to simplify matrix and vector declarations
-using Mat = Eigen::MatrixXd;
-using Vec = Eigen::VectorXd;
+using Mat_m = Eigen::MatrixXd;
+using Vec_v = Eigen::VectorXd;
 
 // Enum to select the SVD method to use
 enum class SVDMethod {
@@ -37,22 +37,22 @@ template<SVDMethod method>
 class SVD {
 public:
     // Constructor that takes the matrix to be decomposed
-    SVD(const Mat& data);
+    SVD(const Mat_m& data);
     
     // Main method to compute the SVD
     void compute();
 
     // Methods to get the resulting U, S, V matrices
-    Mat getU() const { return U_; }
-    Vec getS() const { return S_; }
-    Mat getV() const { return V_; }
+    Mat_m getU() const { return U_; }
+    Vec_v getS() const { return S_; }
+    Mat_m getV() const { return V_; }
 
 private:
     // Internal matrices and vectors to store the decomposition results
-    Mat U_;
-    Vec S_;
-    Mat V_;
-    Mat data_;
+    Mat_m U_;
+    Vec_v S_;
+    Mat_m V_;
+    Mat_m data_;
     
     // Jacobi method implementation for SVD
     void jacobiSVD() ;
@@ -69,15 +69,15 @@ private:
 
 // Constructor implementation
 template<SVDMethod method>
-SVD<method>::SVD(const Mat& data)
+SVD<method>::SVD(const Mat_m& data)
     : data_(data) {}
 
 // Main method to compute the SVD
 template<SVDMethod method>
 void SVD<method>::compute() {
-    U_=Mat::Identity(data_.rows(), data_.rows());
-    V_=Mat::Identity(data_.cols(), data_.cols());
-    S_=Vec::Zero(std::min(data_.rows(), data_.cols()));
+    U_=Mat_m::Identity(data_.rows(), data_.rows());
+    V_=Mat_m::Identity(data_.cols(), data_.cols());
+    S_=Vec_v::Zero(std::min(data_.rows(), data_.cols()));
 
     if constexpr (method == SVDMethod::Jacobi) {
         jacobiSVD();
@@ -98,13 +98,13 @@ void SVD<method>::jacobiSVD()  {
     size_t n = data_.cols();
 
     // Initialize the working matrices
-    Mat m_workMatrix = data_;
-    U_ = Mat::Identity(m, n);
-    V_ = Mat::Identity(n, n);
+    Mat_m m_workMatrix = data_;
+    U_ = Mat_m::Identity(m, n);
+    V_ = Mat_m::Identity(n, n);
     
     if (m > n) {
-        Mat B = m_workMatrix;
-        Eigen::HouseholderQR<Mat> qr(B);
+        Mat_m B = m_workMatrix;
+        Eigen::HouseholderQR<Mat_m> qr(B);
         m_workMatrix = qr.matrixQR().block(0, 0, n, n).triangularView<Eigen::Upper>();
         U_ = qr.householderQ() * U_;
     }
@@ -142,14 +142,14 @@ void SVD<method>::jacobiSVD()  {
     }
 
     // Make the diagonal positive and sort the singular values
-    for (size_t i = 0; i < m_workMatrix.rows(); ++i) {
+    for (Eigen::Index i = 0; i < m_workMatrix.rows(); ++i) {
         double a = m_workMatrix(i, i);
         S_(i) = std::abs(a);
         if (a < 0) U_.col(i) = -U_.col(i);
     }
 
     size_t m_nonzeroSingularValues = S_.size();
-    for(size_t i = 0; i < S_.size(); i++) {
+    for(Eigen::Index i = 0; i < S_.size(); i++) {
         size_t pos;
         double maxRemainingSingularValue = S_.tail(S_.size()-i).maxCoeff(&pos);
         if(maxRemainingSingularValue == 0) {
@@ -169,20 +169,20 @@ void SVD<method>::jacobiSVD()  {
 // Power method implementation for SVD
 template<SVDMethod method>
 void SVD<method>::powerMethodSVD() {
-    int dim = data_.cols() < data_.rows() ? data_.cols() : data_.rows();
+    unsigned int dim = data_.cols() < data_.rows() ? data_.cols() : data_.rows();
     
-    Vec u = Vec::Zero(data_.rows());
-    Vec v = Vec::Zero(data_.cols());
-    Mat B = data_.transpose() * data_;
+    Vec_v u = Vec_v::Zero(data_.rows());
+    Vec_v v = Vec_v::Zero(data_.cols());
+    Mat_m B = data_.transpose() * data_;
 
     for (unsigned int i = 0; i < dim; i++) {
         double sigma;
         PM(data_, B, sigma, u, v);
         if (sigma < 1e-12) {
             if (i == 0) {
-                U_ = Mat::Zero(data_.rows(), 1);
-                S_ = Vec::Zero(1);
-                V_ = Mat::Zero(data_.cols(), 1);
+                U_ = Mat_m::Zero(data_.rows(), 1);
+                S_ = Vec_v::Zero(1);
+                V_ = Mat_m::Zero(data_.cols(), 1);
             } else {
                 U_.conservativeResize(data_.rows(), i);
                 S_.conservativeResize(i);
@@ -190,7 +190,7 @@ void SVD<method>::powerMethodSVD() {
             }
             return;
         }
-        Mat update = sigma * u * v.transpose();
+        Mat_m update = sigma * u * v.transpose();
         data_ -= update;
         B -= update.transpose() * update;
         U_.col(i) = u;
@@ -207,13 +207,13 @@ void SVD<method>::DynamicJacobiSVD()  {
     
 
     // Initialize the working matrices
-    Mat m_workMatrix = data_;
-    U_ = Mat::Identity(m, n);
-    V_ = Mat::Identity(n, n);
+    Mat_m m_workMatrix = data_;
+    U_ = Mat_m::Identity(m, n);
+    V_ = Mat_m::Identity(n, n);
     
     if (m > n) {
-        Mat B = m_workMatrix;
-        Eigen::HouseholderQR<Mat> qr(B);
+        Mat_m B = m_workMatrix;
+        Eigen::HouseholderQR<Mat_m> qr(B);
         m_workMatrix = qr.matrixQR().block(0, 0, n, n).triangularView<Eigen::Upper>();
         U_ = qr.householderQ() * U_;
     }
@@ -269,14 +269,14 @@ void SVD<method>::DynamicJacobiSVD()  {
     }
     
     // Make the diagonal positive and sort the singular values
-    for (size_t i = 0; i < m_workMatrix.rows(); ++i) {
+    for (Eigen::Index i = 0; i < m_workMatrix.rows(); ++i) {
         double a = m_workMatrix(i, i);
         S_(i) = std::abs(a);
         if (a < 0) U_.col(i) = -U_.col(i);
     }
 
     size_t m_nonzeroSingularValues = S_.size();
-    for (size_t i = 0; i < S_.size(); ++i) {
+    for (Eigen::Index i = 0; i < S_.size(); ++i) {
         size_t pos;
         double maxRemainingSingularValue = S_.tail(S_.size() - i).maxCoeff(&pos);
         if (maxRemainingSingularValue == 0) {
@@ -296,24 +296,24 @@ void SVD<method>::DynamicJacobiSVD()  {
 // Parallel Jacobi method implementation for SVD
 template<SVDMethod method>
 void SVD<method>::ParallelJacobiSVD()  {
-    size_t m = A.rows();
-    size_t n = A.cols();
+    size_t m = data_.rows();
+    size_t n = data_.cols();
     int niter = 0;
 
     // Step 1: B = A
-    Mat m_workMatrix = A;
+    Mat_m m_workMatrix = data_;
 
     // Step 2: U = I_mxn
-    m_matrixU = Mat::Identity(m, n);
+    U_ = Mat_m::Identity(m, n);
 
     // Step 3: V = I_nxn
-    m_matrixV = Mat::Identity(n, n);
+    V_ = Mat_m::Identity(n, n);
 
     if (m > n) {
-        Mat B = m_workMatrix;
-        Eigen::HouseholderQR<Mat> qr(B);
+        Mat_m B = m_workMatrix;
+        Eigen::HouseholderQR<Mat_m> qr(B);
         m_workMatrix = qr.matrixQR().block(0, 0, n, n).triangularView<Eigen::Upper>();
-        m_matrixU = qr.householderQ() * m_matrixU;
+        U_ = qr.householderQ() * U_;
     }
 
     bool finished = false;
@@ -363,9 +363,9 @@ void SVD<method>::ParallelJacobiSVD()  {
                 real_2x2_jacobi_svd(m_workMatrix, c_left, s_left, c_right, s_right, p, q);
                 
                 applyOnTheLeft(m_workMatrix, p, q, c_left, s_left);
-                applyOnTheRight(m_matrixU, p, q, c_left, -s_left);
+                applyOnTheRight(U_, p, q, c_left, -s_left);
                 applyOnTheRight(m_workMatrix, p, q, c_right, s_right);
-                applyOnTheRight(m_matrixV, p, q, c_right, s_right);
+                applyOnTheRight(V_, p, q, c_right, s_right);
 
                 #pragma omp critical
                 {
@@ -379,26 +379,26 @@ void SVD<method>::ParallelJacobiSVD()  {
 
     // Step 7: Ensure positive diagonal entries
     #pragma omp parallel for
-    for (size_t i = 0; i < m_workMatrix.rows(); ++i) {
+    for (Eigen::Index i = 0; i < m_workMatrix.rows(); ++i) {
         double a = m_workMatrix(i, i);
-        Sigma(i) = std::abs(a);
-        if (a < 0) m_matrixU.col(i) = -m_matrixU.col(i);
+        S_(i) = std::abs(a);
+        if (a < 0) U_.col(i) = -U_.col(i);
     }
 
     // Step 8: Sort singular values in descending order and compute the number of nonzero singular values
-    size_t m_nonzeroSingularValues = Sigma.size();
-    for (size_t i = 0; i < Sigma.size(); ++i) {
+    size_t m_nonzeroSingularValues = S_.size();
+    for (Eigen::Index i = 0; i < S_.size(); ++i) {
         size_t pos;
-        double maxRemainingSingularValue = Sigma.tail(Sigma.size() - i).maxCoeff(&pos);
+        double maxRemainingSingularValue = S_.tail(S_.size() - i).maxCoeff(&pos);
         if (maxRemainingSingularValue == 0) {
             m_nonzeroSingularValues = i;
             break;
         }
         if (pos) {
             pos += i;
-            std::swap(Sigma.coeffRef(i), Sigma.coeffRef(pos));
-            m_matrixU.col(pos).swap(m_matrixU.col(i));
-            m_matrixV.col(pos).swap(m_matrixV.col(i));
+            std::swap(S_.coeffRef(i), S_.coeffRef(pos));
+            U_.col(pos).swap(U_.col(i));
+            V_.col(pos).swap(V_.col(i));
         }
     }
 }

@@ -6,12 +6,12 @@
 #include <Eigen/Sparse>
 
 
-using Mat = Eigen::MatrixXd;
-using Vec = Eigen::VectorXd;
+using Mat_m = Eigen::MatrixXd;
+using Vec_v = Eigen::VectorXd;
 
 
-void intermediate_step(Mat &A,Mat &Q,Mat &Omega,int &l,int &q);
-void rSVD(Mat& A, Mat&U, Vec& S, Mat& V, int l);
+void intermediate_step(Mat_m &A,Mat_m &Q,Mat_m &Omega,int &l,int &q);
+void rSVD(Mat_m& A, Mat_m&U, Vec_v& S, Mat_m& V, int l);
 
 
 #endif

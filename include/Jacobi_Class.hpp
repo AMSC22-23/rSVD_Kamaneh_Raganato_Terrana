@@ -3,8 +3,8 @@
 
 #include <Eigen/Dense>
 #include <iostream> 
-using Mat=Eigen::MatrixXd;
-using Vec=Eigen::VectorXd;
+using Mat_m=Eigen::MatrixXd;
+using Vec_v=Eigen::VectorXd;
 class JacobiRotation {
 private:
     double c, s;
@@ -28,11 +28,11 @@ public:
         transposed.mat = this->mat.transpose();
         return transposed;
     }
-    Mat operator*(const JacobiRotation& other) const  {
+    Mat_m operator*(const JacobiRotation& other) const  {
         return this->mat * other.mat;
     }
     public:
-    void setMat(const Mat& newMat) {
+    void setMat(const Mat_m& newMat) {
         this->mat = newMat;
     }
     void printMatrix() const {
