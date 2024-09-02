@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <iomanip>
 
 template<SVDMethod method>
 class PCA : public SVD<method> {
@@ -82,7 +83,7 @@ public:
     }
 
     // Access to principal components and scores
-    Mat principalComponents() const {
+    Mat principalDirections() const {
         return this->getV();
     }
 
@@ -99,28 +100,80 @@ public:
         return (pcData * this->getV().transpose()).rowwise() + mean_.transpose();
     }
 
-    // Saving and loading state
-   /* void save(const std::string& filename) const {
-        std::ofstream file(filename);
-        file << data_;
-        file << mean_;
-        file << stddev_;
+    void saveResults(const std::string& filename) {
+    std::ofstream outFile(filename);
+
+    // Save explained variance ratio
+    Vec variance_ratio = explainedVarianceRatio();
+    outFile << "Explained Variance Ratio:\n";
+    for (int i = 0; i < variance_ratio.size(); ++i) {
+        outFile << variance_ratio[i] << std::endl;
     }
 
-    void load(const std::string& filename) {
-        std::ifstream file(filename);
-        file >> data_;
-        file >> mean_;
-        file >> stddev_;
-        initialize();
+    // Save scores (principal components)
+    Mat scores = this->scores();
+    outFile << "\nScores:\n";
+    for (int i = 0; i < scores.rows(); ++i) {
+        for (int j = 0; j < scores.cols(); ++j) {
+            outFile << scores(i, j);
+            if (j < scores.cols() - 1) outFile << ", ";
+        }
+        outFile << std::endl;
     }
-*/
+    outFile.close();
+}
+
     // Check orthogonality of eigenvectors
     double checkOrthogonality() const {
         auto V = this->getV();
         auto VtV = V.transpose() * V;
         return (VtV - Mat::Identity(V.cols(), V.cols())).norm();
     }
+
+void summary() const {
+    Vec singular_values = this->getS();  // Get singular values from SVD
+    int numComponents = singular_values.size();
+    double total_variance = singular_values.array().square().sum();  // Total variance is the sum of squared singular values
+
+    Vec proportion_variance = singular_values.array().square() / total_variance;
+    Vec cumulative_variance = proportion_variance;
+
+    // Calculate cumulative variance
+    for (int i = 1; i < numComponents; ++i) {
+        cumulative_variance[i] += cumulative_variance[i - 1];
+    }
+
+    // Print the results in a formatted manner
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "Importance of components:\n";
+    std::cout << "                           ";
+    for (int i = 1; i <= numComponents; ++i) {
+        std::cout << "Comp." << i << "       ";
+    }
+    std::cout << std::endl;
+
+    // Standard deviations
+    std::cout << "Standard deviation     ";
+    for (int i = 0; i < numComponents; ++i) {
+        std::cout << singular_values[i] << " ";
+    }
+    std::cout << std::endl;
+
+    // Proportion of variance
+    std::cout << "Proportion of Variance    ";
+    for (int i = 0; i < numComponents; ++i) {
+        std::cout << proportion_variance[i] << " ";
+    }
+    std::cout << std::endl;
+
+    // Cumulative proportion of variance
+    std::cout << "Cumulative Proportion     ";
+    for (int i = 0; i < numComponents; ++i) {
+        std::cout << cumulative_variance[i] << " ";
+    }
+    std::cout << std::endl;
+}
+
 
 private:
     Mat data_;
