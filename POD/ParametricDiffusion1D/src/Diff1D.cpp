@@ -83,7 +83,8 @@ main(int argc, char * argv[])
   }
   pod_prm.close();
 
-  if (dim != 1) {
+  if (dim != 1)
+  {
     std::cerr << "The problem dimension should be 1. Check 'dim' in the parameter file." << std::endl;
     return 1;
   }
@@ -95,12 +96,6 @@ main(int argc, char * argv[])
 
   std::vector<double> prm_diffusion_coefficient;
   prm_diffusion_coefficient.resize(n);
-
-    /// GUARDARE SE FUNZIONA
-  // // AGGIUNTO
-  // // The convergence value This code is not used for the convergence analysis. In this case the AdvDiff and AdvDiffPOD classes
-  // // use the deltat value from the parameter file.
-  // double convergence = 0.0; 
 
   Eigen::Index snapshot_length = 0;
   Eigen::Index time_steps = 0;

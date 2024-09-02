@@ -91,6 +91,7 @@ void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int svd_
         default:
         {
             std::cerr << "The svd_type should be among 0, 1, 2, 3. Check 'svd_type' in the parameter file." << std::endl;
+            std::exit(EXIT_FAILURE);
         }
     }
     if (svd_power)
