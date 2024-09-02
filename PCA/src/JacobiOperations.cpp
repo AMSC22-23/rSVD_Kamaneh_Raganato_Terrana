@@ -102,4 +102,17 @@ bool svd_precondition_2x2_block_to_be_real(Mat& m_workMatrix, int p, int q, doub
     return true;
 }
 
+std::vector<std::pair<size_t, size_t>> greedy_maximum_weight_matching(const std::vector<std::tuple<double, size_t, size_t>>& weights) {
+    std::vector<std::pair<size_t, size_t>> matching;
+    std::vector<bool> used(weights.size(), false);
+
+    for (const auto& [weight, i, j] : weights) {
+        if (!used[i] && !used[j]) {
+            matching.emplace_back(i, j);
+            used[i] = true;
+            used[j] = true;
+        }
+    }
+    return matching;
+}
 
