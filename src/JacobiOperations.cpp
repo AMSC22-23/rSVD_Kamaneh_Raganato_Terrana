@@ -102,17 +102,90 @@ bool svd_precondition_2x2_block_to_be_real(Mat_m& m_workMatrix, int p, int q, do
     return true;
 }
 
-std::vector<std::pair<size_t, size_t>> greedy_maximum_weight_matching(const std::vector<std::tuple<double, size_t, size_t>>& weights) {
-    std::vector<std::pair<size_t, size_t>> matching;
-    std::vector<bool> used(weights.size(), false);
+// for the parallel version
 
-    for (const auto& [weight, i, j] : weights) {
-        if (!used[i] && !used[j]) {
-            matching.emplace_back(i, j);
-            used[i] = true;
-            used[j] = true;
-        }
+void applyOnTheLeft_par(Mat_m &matrix, size_t p, size_t q, double c, double s) {
+    #pragma omp parallel for
+    for (Eigen::Index i = 0; i < matrix.cols(); ++i) {
+        double xi = matrix(p,i);
+        double yi = matrix(q,i);
+        matrix(p,i) = c * xi + s * yi;
+        matrix(q,i) = -s * xi + c * yi;
     }
-    return matching;
+}
+
+void applyOnTheRight_par(Mat_m &matrix, size_t p, size_t q, double c, double s) {
+    #pragma omp parallel for
+    for (Eigen::Index i = 0; i < matrix.rows(); ++i) {
+        double xi = matrix(i,p);
+        double yi = matrix(i,q);
+        matrix(i,p) = c * xi - s * yi;
+        matrix(i,q) = s * xi + c * yi;
+    }
+}
+
+void real_2x2_jacobi_svd_par(Mat_m &matrix, double &c_left,double &s_left,double &c_right,double &s_right,size_t  p, size_t  q) {
+  
+    Mat_m m=Eigen::MatrixXd::Zero(2,2);
+   m << matrix(p,p), matrix(p,q),
+        matrix(q,p), matrix(q,q);
+        
+    double t = m(0,0) + m(1,1);
+    double d = m(1,0) - m(0,1);
+    
+    JacobiRotation rot1;
+    if(d == 0) {
+        rot1.setS(0.0);
+        rot1.setC(1.0);
+        
+    } else {
+      
+        double u = t / d;
+        double tmp = sqrt(1.0 + u*u);
+        
+        rot1.setS(1 / tmp);
+        rot1.setC(u / tmp);
+        
+    }
+    size_t a1=0;
+    size_t a2=1;
+    applyOnTheLeft_par(m,a1,a2,rot1.getC(),rot1.getS());
+    
+    double deno = 2 * std::abs(m(0,1));
+    if (deno < 1e-10/*std::numeric_limits<double>::min()*/) {
+        c_right=1;
+        s_right=0;
+        
+    } else {
+        double tau = (m(0,0) - m(1,1)) / deno;
+        double w = std::sqrt(tau * tau + 1);
+        double t2;
+        if (tau > 0) {
+            t2 = 1 / (tau + w);
+        } else {
+            t2 = 1 / (tau - w);
+        }
+        double segno = t2 > 0 ? 1 : -1;
+        double n = 1 / std::sqrt(t2 * t2 + 1);
+        s_right=-segno * (m(0,1) / std::abs(m(0,1))) * std::abs(t2) * n;
+        c_right=n;
+        
+    }
+    
+    Mat_m j_right(2,2);
+    j_right<<c_right,s_right,
+            -s_right,c_right;
+    Mat_m rot_to_eigen(2,2);
+    rot_to_eigen<<rot1.getC(),rot1.getS(),
+                -rot1.getS(),rot1.getC();
+                
+    Mat_m left(2,2);
+    left= rot_to_eigen * j_right.transpose();
+    
+    c_left=left(0,0);
+    s_left=left(0,1);
+    
+
+    
 }
 

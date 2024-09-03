@@ -371,7 +371,7 @@ void SVD<method>::ParallelJacobiSVD()  {
     }
     
 
-    //  Ensure positive diagonal entries
+    // Ensure positive diagonal entries
      #pragma omp parallel for
     for (size_t i = 0; i < m_workMatrix.rows(); ++i) {
         double a = m_workMatrix(i, i);
