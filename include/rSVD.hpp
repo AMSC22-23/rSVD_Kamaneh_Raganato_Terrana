@@ -12,6 +12,7 @@ using Vec_v = Eigen::VectorXd;
 
 void intermediate_step(Mat_m &A,Mat_m &Q,Mat_m &Omega,int &l,int &q);
 void rSVD(Mat_m& A, Mat_m&U, Vec_v& S, Mat_m& V, int l);
+Mat_m generateOmega(int n, int l);
 
 
 #endif
