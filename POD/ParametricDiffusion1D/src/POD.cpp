@@ -54,7 +54,7 @@ POD::POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int
 //     V = svd.getV();
 // }
 
-void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int svd_type)
+void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, const int svd_type)
 {
     std::unique_ptr<SVD<SVDMethod::Power>> svd_power;
     std::unique_ptr<SVD<SVDMethod::Jacobi>> svd_jacobi;
@@ -67,7 +67,7 @@ void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int svd_
         case 0:
         {
             std::cout << "  SVD with Power Method" << std::endl;
-            svd_power = std::make_unique<SVD<SVDMethod::Power>>(A);
+            svd_power = std::make_unique<SVD<SVDMethod::Power>>(A, r);
             break;
         }
         case 1:
@@ -139,7 +139,7 @@ std::tuple<Mat_m, Vec_v> POD::naive_POD(Mat_m &S, const int svd_type)
 
     Mat_m V = Mat_m::Zero(S.cols(), S.cols());
 
-    perform_SVD(S, W, sigma, V, svd_type);
+    perform_SVD(S, W, sigma, V, 0, svd_type);
 
     return std::make_tuple(W, sigma);
 }
@@ -176,7 +176,7 @@ std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double t
 
         // SVD(C, sigma, U, V, r); // i = 1, ..., r
         // SVD<SVDMethod::Jacobi> svd(C);
-        perform_SVD(C, U, sigma, V, svd_type);
+        perform_SVD(C, U, sigma, V, r, svd_type);
         
         std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
         std::cout << "Check dimensions of sigma: " << sigma.size() << std::endl;
@@ -201,7 +201,7 @@ std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double t
 
         // SVD(K, sigma, U, V, r); // i = 1, ..., r
         // SVD<SVDMethod::Jacobi> svd(K);
-        perform_SVD(K, U, sigma, V, svd_type);
+        perform_SVD(K, U, sigma, V, r, svd_type);
         
         std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
         std::cout << "Check dimensions of sigma: " << sigma.size() << std::endl;
@@ -280,7 +280,7 @@ std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const
 
         // SVD(Ctilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
         // SVD<SVDMethod::Jacobi> svd(Ctilde);
-        perform_SVD(Ctilde, Utilde, sigma, Vtilde, svd_type);
+        perform_SVD(Ctilde, Utilde, sigma, Vtilde, r, svd_type);
     
         std::cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << std::endl;
         std::cout << "Check dimensions of sigma:  " << sigma.size() << std::endl;
@@ -315,7 +315,7 @@ std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const
 
         // SVD(Ktilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
         // SVD<SVDMethod::Jacobi> svd(Ktilde);
-        perform_SVD(Ktilde, Utilde, sigma, Vtilde, svd_type);
+        perform_SVD(Ktilde, Utilde, sigma, Vtilde, r, svd_type);
      
         std::cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << std::endl;
         std::cout << "Check dimensions of sigma:  " << sigma.size() << std::endl;
@@ -418,7 +418,7 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
 
         // SVD(Ctilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
         // SVD<SVDMethod::Jacobi> svd(Ctilde);
-        perform_SVD(Ctilde, Utilde, sigma, Vtilde, svd_type);
+        perform_SVD(Ctilde, Utilde, sigma, Vtilde, r, svd_type);
     
         std::cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << std::endl;
         std::cout << "Check dimensions of sigma:  " << sigma.size() << std::endl;
@@ -454,7 +454,7 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
 
         // SVD(Ktilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
         // SVD<SVDMethod::Jacobi> svd(Ktilde);
-        perform_SVD(Ktilde, Utilde, sigma, Vtilde, svd_type);
+        perform_SVD(Ktilde, Utilde, sigma, Vtilde, r, svd_type);
 
         std::cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << std::endl;
         std::cout << "Check dimensions of sigma:  " << sigma.size() << std::endl;
@@ -554,7 +554,7 @@ void POD::standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const d
 
     // SVD(Q, sigmaQ, UQ, VQ, k+1);
     // SVD<SVDMethod::Jacobi> svd(Q); // (C, sigma, U, V, dim);
-    perform_SVD(Q, UQ, sigmaQ, VQ, 0); // poi aggiungi svd_type
+    perform_SVD(Q, UQ, sigmaQ, VQ, 0, 0); // poi aggiungi svd_type
  
     SigmaQ = sigmaQ.asDiagonal();
     std::cout << "Check UQ:" << std::endl << UQ << std::endl << std::endl;
@@ -719,7 +719,7 @@ void POD::enhanced_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const i
 
     // SVD(Q, sigmaQ, UQ, VQ, k+1);
     // SVD<SVDMethod::Jacobi> svd(Q); // (C, sigma, U, V, dim);
-    perform_SVD(Q, UQ, sigmaQ, VQ, 0); // poi aggiungi svd_type
+    perform_SVD(Q, UQ, sigmaQ, VQ, 0, 0); // poi aggiungi svd_type
 
     SigmaQ = sigmaQ.asDiagonal();
     std::cout << "Check UQ:" << std::endl << UQ << std::endl << std::endl;

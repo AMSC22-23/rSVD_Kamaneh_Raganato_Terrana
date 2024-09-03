@@ -6,8 +6,8 @@ n 5               # Number of parameters
 mu_min 0.0001     # Minimum diffusion coefficient
 mu_max 0.0005     # Maximum diffusion coefficient
 mu_new 0.00025    # New diffusion coefficient
-rank 50           # Rank --- in POD riguarda per cosa
+rank 15 # 50           # Rank --- in POD riguarda per cosa
 pod_type 0
-svd_type 3
+svd_type 2
 tol 1e-12         # sempre per POD...
 rom_sizes 2 4 6 8       # Sizes for the reduced order models

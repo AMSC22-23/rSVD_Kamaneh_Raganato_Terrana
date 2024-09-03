@@ -39,26 +39,24 @@ rom_sizes = list(map(int, parameters['rom_sizes'].split()))
 
 # Plot the solution
 plt.rcParams.update({"font.size": 8})
-# colors = plt.cm.viridis(np.linspace(0, 1, len(rom_sizes)))
-# colors = plt.cm.jet(np.linspace(0, 1, len(rom_sizes)))
-colors = plt.cm.tab20(np.linspace(0, 1, len(rom_sizes)))
+colors = plt.cm.tab10(np.linspace(0, 1, len(rom_sizes)))
 
 for i in range(n):
-    plt.plot(full_data[:,i], label = "FOM", color='black')
+    plt.plot(full_data[:,i], label = "FOM", color='gray')
     for j in range(len(rom_sizes)):
-        plt.plot(reconstructed_data[:,j*n+i], 'o', markerfacecolor='None', markersize=2, label = f"{rom_sizes[j]} POD modes", color=colors[j])
+        plt.plot(reconstructed_data[:,j*n+i], 'o', markerfacecolor='None', markersize=4, label = f"{rom_sizes[j]} POD modes", color=colors[j])
         plt.xlabel("x")
         plt.ylabel("u")
         mu_print = f"{mu[i]:.4f}"
         plt.title(f"Solution for mu = {mu_print}")
         plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
         plt.subplots_adjust(right=0.8)
-    plt.savefig(f"plot_{mu_print}mu.pdf", bbox_inches='tight')
+    plt.savefig(f"plot_{mu_print}mu_n{n}.pdf", bbox_inches='tight')
     plt.close()
 
 # Plot the error
 for j in range(len(rom_sizes)):
-    plt.plot(mu, errors_data[:,j], marker='o', markersize=2, label = f"{rom_sizes[j]} POD modes")
+    plt.plot(mu, errors_data[:,j], marker='o', markersize=2, label = f"{rom_sizes[j]} POD modes", color=colors[j])
     plt.xlabel("mu")
     plt.xticks(mu)
     plt.ylabel("error")
@@ -69,35 +67,3 @@ for j in range(len(rom_sizes)):
 plt.savefig(f"error.pdf", bbox_inches='tight')
 plt.close()
 
-
-
-# plt.rcParams.update({"font.size": 14})
-
-# plt.plot(convergence_data.h,
-#          convergence_data.eL2,
-#          marker = 'o',
-#          label = 'L2')
-# plt.plot(convergence_data.h,
-#          convergence_data.eH1,
-#          marker = 'o',
-#          label = 'H1')
-# plt.plot(convergence_data.h,
-#          convergence_data.h,
-#          '--',
-#          label = 'h')
-# plt.plot(convergence_data.h,
-#          convergence_data.h**2,
-#          '--',
-#          label = 'h^2')
-# plt.plot(convergence_data.h,
-#          convergence_data.h**3,
-#          '--',
-#          label = 'h^3')
-
-# plt.xscale("log")
-# plt.yscale("log")
-# plt.xlabel("h")
-# plt.ylabel("error")
-# plt.legend()
-
-# plt.savefig("convergence.pdf")

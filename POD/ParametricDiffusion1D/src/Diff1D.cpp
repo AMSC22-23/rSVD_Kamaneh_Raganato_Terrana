@@ -306,7 +306,7 @@ main(int argc, char * argv[])
       pcout << "    fom solution(2)              = " << snapshots(2, (i*time_steps)+time_steps-1) << std::endl;
       pcout << "    fom approximated solution(2) = " << fom_state(2) << std::endl;
 
-      pcout << "\n  With " << rom_sizes[h] << " modes, final relative L2 error: " << errors(h*n+i) << std::endl;
+      pcout << "\n  With " << rom_sizes[h] << " modes, final relative L2 error: " << errors(i, h) << std::endl;
 
       // Clear the modes matrix for the next iteration.
       modes.resize(0);
