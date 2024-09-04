@@ -49,7 +49,7 @@ public:
     // CONTROLLA STAMPANDO SE conservativeResize FUNZIONA
 
     // Perform the singular value decomposition given the svd_type: Power, Jacobi, Dynamic Jacobi, Parallel Jacobi
-    void perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int svd_type);
+    void perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, const int svd_type);
 
     std::tuple<Mat_m, Vec_v> naive_POD(Mat_m &S, const int svd_type);
 

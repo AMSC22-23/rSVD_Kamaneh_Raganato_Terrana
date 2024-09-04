@@ -37,7 +37,8 @@ template<SVDMethod method>
 class SVD {
 public:
     // Constructor that takes the matrix to be decomposed
-    SVD(const Mat_m& data);
+    // SVD(const Mat_m& data);
+    SVD(const Mat_m& data, const int &r = 0);
     
     // Main method to compute the SVD
     void compute();
@@ -53,6 +54,7 @@ private:
     Vec_v S_;
     Mat_m V_;
     Mat_m data_;
+    int r_;
     
     // Jacobi method implementation for SVD
     void jacobiSVD() ;
@@ -68,9 +70,13 @@ private:
 };
 
 // Constructor implementation
+// template<SVDMethod method>
+// SVD<method>::SVD(const Mat_m& data)
+//     : data_(data), r_(0) {}
+
 template<SVDMethod method>
-SVD<method>::SVD(const Mat_m& data)
-    : data_(data) {}
+SVD<method>::SVD(const Mat_m& data, const int &r)
+    : data_(data), r_(r) {}
 
 // Main method to compute the SVD
 template<SVDMethod method>
@@ -177,7 +183,11 @@ void SVD<method>::jacobiSVD()  {
 // Power method implementation for SVD
 template<SVDMethod method>
 void SVD<method>::powerMethodSVD() {
-    unsigned int dim = data_.cols() < data_.rows() ? data_.cols() : data_.rows();
+    unsigned int dim;
+    if (r_ == 0)
+        dim = data_.cols() < data_.rows() ? data_.cols() : data_.rows();
+    else
+        dim = r_;
     
     Vec_v u = Vec_v::Zero(data_.rows());
     Vec_v v = Vec_v::Zero(data_.cols());
@@ -344,15 +354,15 @@ void SVD<method>::ParallelJacobiSVD()  {
     const double considerAsZero = 1e-12; // Tolerance for zero
     const double precision = 1e-12;      // Precision tolerance
     double maxDiagEntry = m_workMatrix.cwiseAbs().diagonal().maxCoeff();
-        double c_left = 0, s_left = 0, c_right = 0, s_right = 0;
+//     double c_left = 0, s_left = 0, c_right = 0, s_right = 0;
 
     std::vector<std::tuple<double, size_t, size_t>> off_diagonal_weights;
     off_diagonal_weights.reserve(min_dim * (min_dim - 1) / 2);  // Pre-allocate space
 
-    while (!finished) {
+//     while (!finished) {
     
-        finished = true;
-        off_diagonal_weights.clear();  // Clear instead of re-allocating
+//         finished = true;
+//         off_diagonal_weights.clear();  // Clear instead of re-allocating
         
         #pragma omp parallel
 {
@@ -372,29 +382,84 @@ void SVD<method>::ParallelJacobiSVD()  {
     off_diagonal_weights.insert(end(off_diagonal_weights), begin(local_weights), end(local_weights));
 }
         
-        if (!off_diagonal_weights.empty()) {
-            // Ordina i blocchi fuori diagonale per norma di Frobenius decrescente
-            std::sort(off_diagonal_weights.begin(), off_diagonal_weights.end(), std::greater<>());
+//         if (!off_diagonal_weights.empty()) {
+//             // Ordina i blocchi fuori diagonale per norma di Frobenius decrescente
+//             std::sort(off_diagonal_weights.begin(), off_diagonal_weights.end(), std::greater<>());
 
-            // Esegui la SVD sui blocchi con maggiore norma di Frobenius
+//             // Esegui la SVD sui blocchi con maggiore norma di Frobenius
             
-            for (const auto &[weight, p, q] : off_diagonal_weights) {
-                if (svd_precondition_2x2_block_to_be_real(m_workMatrix, p, q, maxDiagEntry)) {
+//             for (const auto &[weight, p, q] : off_diagonal_weights) {
+//                 if (svd_precondition_2x2_block_to_be_real(m_workMatrix, p, q, maxDiagEntry)) {
                     
-                    real_2x2_jacobi_svd_par(m_workMatrix, c_left, s_left, c_right, s_right, p, q);
-                    applyOnTheLeft_par(m_workMatrix, p, q, c_left, s_left);
-                    applyOnTheRight_par(U_, p, q, c_left, -s_left);
-                    applyOnTheRight_par(m_workMatrix, p, q, c_right, s_right);
-                    applyOnTheRight_par(V_, p, q, c_right, s_right);
+//                     real_2x2_jacobi_svd_par(m_workMatrix, c_left, s_left, c_right, s_right, p, q);
+//                     applyOnTheLeft_par(m_workMatrix, p, q, c_left, s_left);
+//                     applyOnTheRight_par(U_, p, q, c_left, -s_left);
+//                     applyOnTheRight_par(m_workMatrix, p, q, c_right, s_right);
+//                     applyOnTheRight_par(V_, p, q, c_right, s_right);
                     
 
-                    // Aggiorna il massimo coefficiente diagonale
+//                     // Aggiorna il massimo coefficiente diagonale
+//                     maxDiagEntry = std::max(maxDiagEntry, std::max(std::abs(m_workMatrix(p, p)), std::abs(m_workMatrix(q, q))));
+//                 }
+//             }
+//         }
+//     }
+    
+    while (!finished) {
+        niter++;
+        finished = true;
+
+        std::vector<std::tuple<double, size_t, size_t>> off_diagonal_weights;
+
+        // Calcolo dei pesi off-diagonali
+        #pragma omp parallel for collapse(2)
+        for (size_t p = 1; p < n; ++p) {
+            for (size_t q = 0; q < p; ++q) {
+                double threshold = std::max(considerAsZero, precision * maxDiagEntry);
+
+                double weight = m_workMatrix(p, q) * m_workMatrix(p, q) +
+                                m_workMatrix(q, p) * m_workMatrix(q, p);
+
+                if (weight > threshold) {
+                    #pragma omp critical
+                    {
+                        off_diagonal_weights.emplace_back(weight, p, q);
+                    }
+                    finished = false;
+                }
+            }
+        }
+
+        // Ordina i pesi in ordine decrescente
+        std::sort(off_diagonal_weights.begin(), off_diagonal_weights.end(), std::greater<>());
+
+        // Calcola il matching massimo usando l'approccio greedy
+        auto matching = greedy_maximum_weight_matching(off_diagonal_weights);
+
+        // Applica le rotazioni in parallelo basate sul matching calcolato
+        #pragma omp parallel for
+        for (size_t k = 0; k < matching.size(); ++k) {
+            size_t p = matching[k].first;
+            size_t q = matching[k].second;
+
+            if (svd_precondition_2x2_block_to_be_real(m_workMatrix, p, q, maxDiagEntry)) {
+                double c_left, s_left, c_right, s_right;
+                real_2x2_jacobi_svd(m_workMatrix, c_left, s_left, c_right, s_right, p, q);
+                
+                applyOnTheLeft(m_workMatrix, p, q, c_left, s_left);
+                applyOnTheRight(U_, p, q, c_left, -s_left);
+                applyOnTheRight(m_workMatrix, p, q, c_right, s_right);
+                applyOnTheRight(V_, p, q, c_right, s_right);
+
+                #pragma omp critical
+                {
                     maxDiagEntry = std::max(maxDiagEntry, std::max(std::abs(m_workMatrix(p, p)), std::abs(m_workMatrix(q, q))));
                 }
             }
         }
     }
-    
+
+    std::cout << "niter: " << niter << std::endl;
 
     // Ensure positive diagonal entries
     #pragma omp parallel for

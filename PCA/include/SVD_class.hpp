@@ -323,7 +323,7 @@ void SVD<method>::ParallelJacobiSVD()  {
 
     std::vector<std::tuple<double, size_t, size_t>> off_diagonal_weights;
     off_diagonal_weights.reserve(n * (n - 1) / 2);  // Pre-allocate space
-    
+   
     while (!finished) {
     
         finished = true;

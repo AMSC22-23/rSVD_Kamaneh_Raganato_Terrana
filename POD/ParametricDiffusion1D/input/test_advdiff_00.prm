@@ -1,10 +1,10 @@
 # Advection diffusion problem in 1D
 # Parameters employed by the classes AdvDiff and AdvDiffPOD
 
-set beta         = 0.2 # 2.0
+set beta         = 3.0
 set u0_choice    = 0
-set amplitude    = 5.0
-set N            = 24 # 24
+set amplitude    = 4.0
+set N            = 24
 set degree       = 1
 set T            = 0.05
 set deltat       = 1e-3 # 50 steps
@@ -17,5 +17,5 @@ set theta        = 1.0 # Ixplicit Euler
 
 # This parameter establishes how much frequently the snapshots are collected in the snapshot matrix. The default value 1 means
 # that all the snapshots are collected.
-# set sample_every = 1
-set sample_every = 5
+set sample_every = 1
+# set sample_every = 5
