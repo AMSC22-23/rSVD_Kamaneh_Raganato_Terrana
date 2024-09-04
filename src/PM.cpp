@@ -77,5 +77,6 @@ void PM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v) {
 
     // Compute the right singular vector
     u = A * v / sigma;
+    
 }
 

@@ -4,7 +4,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <unsupported/Eigen/SparseExtra>
-
+#include "matrixOperations.hpp"
 using namespace std;
 using namespace Eigen;
 

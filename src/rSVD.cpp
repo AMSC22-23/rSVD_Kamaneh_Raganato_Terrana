@@ -10,6 +10,7 @@
 
 // Function to generate the Omega matrix using MPI
 Eigen::MatrixXd generateOmega(int n, int k) {
+    
     int rank, num_procs;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
@@ -49,7 +50,7 @@ Eigen::MatrixXd generateOmega(int n, int k) {
 
     // Broadcast the Omega matrix from the root process to all other processes
     MPI_Bcast(Omega.data(), n * k, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
+    
     return Omega;
 }
 
@@ -70,7 +71,7 @@ void intermediate_step(const Mat_m& A, Mat_m& Q, const Mat_m& Omega, int l, int 
 
 void rSVD(Mat_m& A, Mat_m& U, Vec_v& S, Mat_m& V, int l, SVDMethod method) {
     // Initialize MPI
-    MPI_Init(NULL, NULL);
+   
 
     // Stage A
     // (1) Form an n × (k + p) Gaussian random matrix Omega
@@ -85,15 +86,16 @@ void rSVD(Mat_m& A, Mat_m& U, Vec_v& S, Mat_m& V, int l, SVDMethod method) {
 
     // Stage B
     // (4) Form the (k + p) × n matrix B = Q*A
-    Mat_m B = Q.transpose() * A;
-
+    Mat_m B = (Q.transpose() * A);
+    
     // (5) Form the SVD of the small matrix B
     int min = B.rows() < B.cols() ? B.rows() : B.cols();
-    Mat_m Utilde = Mat_m::Zero(B.rows(), min);
+    Mat_m Utilde =Mat_m::Zero(B.rows(), min);
 
     // Declare the SVD object
     switch (method) {
         case SVDMethod::Jacobi: {
+            
             SVD<SVDMethod::Jacobi> svd(B);
             svd.compute();
             S = svd.getS();
@@ -128,10 +130,12 @@ void rSVD(Mat_m& A, Mat_m& U, Vec_v& S, Mat_m& V, int l, SVDMethod method) {
         default:
             throw std::invalid_argument("Unsupported SVD method");
     }
-
+    
     // (6) Form U = Q*U_hat
+    std::cout<<"U before"<<std::endl;
     U = Q * Utilde;
-
-    // Finalize MPI
-    MPI_Finalize();
+    std::cout<<"U after"<<std::endl;
+    
+    
+    
 }

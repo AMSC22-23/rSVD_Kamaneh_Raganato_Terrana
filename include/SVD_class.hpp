@@ -102,17 +102,25 @@ template<SVDMethod method>
 void SVD<method>::jacobiSVD()  {
     size_t m = data_.rows();
     size_t n = data_.cols();
-
+    size_t min_dim = std::min(m, n);
     // Initialize the working matrices
     Mat_m m_workMatrix = data_;
-    U_ = Mat_m::Identity(m, n);
-    V_ = Mat_m::Identity(n, n);
+    U_ = Mat_m::Identity(m, min_dim);
+    V_ = Mat_m::Identity(n, min_dim);
     
     if (m > n) {
         Mat_m B = m_workMatrix;
         Eigen::HouseholderQR<Mat_m> qr(B);
         m_workMatrix = qr.matrixQR().block(0, 0, n, n).triangularView<Eigen::Upper>();
         U_ = qr.householderQ() * U_;
+        V_.setIdentity(n,n);
+    }else if (n > m) {
+    Mat_m m_adjoint = data_.adjoint();
+    Eigen::HouseholderQR<Mat_m> m_qr(m_adjoint);
+    m_workMatrix = m_qr.matrixQR().block(0, 0, m, m).triangularView<Eigen::Upper>().adjoint();
+    U_.setIdentity(m,m);
+    V_.setIdentity(n,m);
+    V_ =m_qr.householderQ() * V_; 
     }
     
     bool finished = false;
@@ -124,7 +132,7 @@ void SVD<method>::jacobiSVD()  {
     // Main loop for the Jacobi method
     while (!finished) {
         finished = true;
-        for (size_t p = 1; p < n; ++p) {
+        for (size_t p = 1; p < min_dim; ++p) {
             for (size_t q = 0; q < p; ++q) {
                 double threshold = std::max(considerAsZero, precision * maxDiagEntry);
                 
@@ -148,16 +156,16 @@ void SVD<method>::jacobiSVD()  {
     }
 
     // Make the diagonal positive and sort the singular values
-    for (Eigen::Index i = 0; i < m_workMatrix.rows(); ++i) {
+    for (size_t i = 0; i < min_dim; ++i) {
         double a = m_workMatrix(i, i);
         S_(i) = std::abs(a);
         if (a < 0) U_.col(i) = -U_.col(i);
     }
 
-    size_t m_nonzeroSingularValues = S_.size();
-    for(Eigen::Index i = 0; i < S_.size(); i++) {
+    size_t m_nonzeroSingularValues = min_dim;
+    for(size_t i = 0; i < min_dim; i++) {
         size_t pos;
-        double maxRemainingSingularValue = S_.tail(S_.size()-i).maxCoeff(&pos);
+        double maxRemainingSingularValue = S_.tail(min_dim-i).maxCoeff(&pos);
         if(maxRemainingSingularValue == 0) {
             m_nonzeroSingularValues = i;
             break;
@@ -206,7 +214,9 @@ void SVD<method>::powerMethodSVD() {
         U_.col(i) = u;
         V_.row(i) = v;
         S_(i) = sigma;
+        
     }
+    std::cout<<"V rows: "<<V_.rows()<<" V cols: "<<V_.cols()<<std::endl;
 }
 
 // Dynamic Jacobi method implementation for SVD
@@ -214,18 +224,25 @@ template<SVDMethod method>
 void SVD<method>::DynamicJacobiSVD()  {
     size_t m = data_.rows();
     size_t n = data_.cols();
-    
+    size_t min_dim = std::min(m, n);
 
     // Initialize the working matrices
     Mat_m m_workMatrix = data_;
-    U_ = Mat_m::Identity(m, n);
-    V_ = Mat_m::Identity(n, n);
+    U_ = Mat_m::Identity(m, min_dim);
+    V_ = Mat_m::Identity(n, min_dim);
     
     if (m > n) {
         Mat_m B = m_workMatrix;
         Eigen::HouseholderQR<Mat_m> qr(B);
         m_workMatrix = qr.matrixQR().block(0, 0, n, n).triangularView<Eigen::Upper>();
         U_ = qr.householderQ() * U_;
+    }else if (n > m) {
+    Mat_m m_adjoint = data_.adjoint();
+    Eigen::HouseholderQR<Mat_m> m_qr(m_adjoint);
+    m_workMatrix = m_qr.matrixQR().block(0, 0, m, m).triangularView<Eigen::Upper>().adjoint();
+    U_.setIdentity(m,m);
+    V_.setIdentity(n,m);
+    V_ =m_qr.householderQ() * V_; 
     }
     
     bool finished = false;
@@ -243,7 +260,7 @@ void SVD<method>::DynamicJacobiSVD()  {
         finished = true;
         off_diagonal_weights.clear();  // Clear instead of re-allocating
         
-        for (size_t p = 1; p < n; ++p) {
+        for (size_t p = 1; p < min_dim; ++p) {
             for (size_t q = 0; q < p; ++q) {
                 double threshold = std::max(considerAsZero, precision * maxDiagEntry);
 
@@ -279,16 +296,16 @@ void SVD<method>::DynamicJacobiSVD()  {
     }
     
     // Make the diagonal positive and sort the singular values
-    for (Eigen::Index i = 0; i < m_workMatrix.rows(); ++i) {
+    for (size_t i = 0; i < min_dim; ++i) {
         double a = m_workMatrix(i, i);
         S_(i) = std::abs(a);
         if (a < 0) U_.col(i) = -U_.col(i);
     }
 
-    size_t m_nonzeroSingularValues = S_.size();
-    for (Eigen::Index i = 0; i < S_.size(); ++i) {
+    size_t m_nonzeroSingularValues = min_dim;
+    for (size_t i = 0; i < min_dim; ++i) {
         size_t pos;
-        double maxRemainingSingularValue = S_.tail(S_.size() - i).maxCoeff(&pos);
+        double maxRemainingSingularValue = S_.tail(min_dim - i).maxCoeff(&pos);
         if (maxRemainingSingularValue == 0) {
             m_nonzeroSingularValues = i;
             break;
@@ -308,149 +325,101 @@ template<SVDMethod method>
 void SVD<method>::ParallelJacobiSVD()  {
     size_t m = data_.rows();
     size_t n = data_.cols();
-    int niter = 0;
+    size_t min_dim = std::min(m, n);
 
     // Step 1: B = A
     Mat_m m_workMatrix = data_;
 
     // Step 2: U = I_mxn
-    U_ = Mat_m::Identity(m, n);
+    U_ = Mat_m::Identity(m, min_dim);
 
     // Step 3: V = I_nxn
-    V_ = Mat_m::Identity(n, n);
+    V_ = Mat_m::Identity(n, min_dim);
 
     if (m > n) {
         Mat_m B = m_workMatrix;
         Eigen::HouseholderQR<Mat_m> qr(B);
         m_workMatrix = qr.matrixQR().block(0, 0, n, n).triangularView<Eigen::Upper>();
         U_ = qr.householderQ() * U_;
+    }else if (n > m) {
+    Mat_m m_adjoint = data_.adjoint();
+    Eigen::HouseholderQR<Mat_m> m_qr(m_adjoint);
+    m_workMatrix = m_qr.matrixQR().block(0, 0, m, m).triangularView<Eigen::Upper>().adjoint();
+    U_.setIdentity(m,m);
+    V_.setIdentity(n,m);
+    V_ =m_qr.householderQ() * V_; 
     }
 
     bool finished = false;
     const double considerAsZero = 1e-12; // Tolerance for zero
     const double precision = 1e-12;      // Precision tolerance
     double maxDiagEntry = m_workMatrix.cwiseAbs().diagonal().maxCoeff();
-//     double c_left = 0, s_left = 0, c_right = 0, s_right = 0;
+    double c_left = 0, s_left = 0, c_right = 0, s_right = 0;
 
-//     std::vector<std::tuple<double, size_t, size_t>> off_diagonal_weights;
-//     off_diagonal_weights.reserve(n * (n - 1) / 2);  // Pre-allocate space
+    std::vector<std::tuple<double, size_t, size_t>> off_diagonal_weights;
+    off_diagonal_weights.reserve(min_dim * (min_dim - 1) / 2);  // Pre-allocate space
 
-//     while (!finished) {
-    
-//         finished = true;
-//         off_diagonal_weights.clear();  // Clear instead of re-allocating
-        
-//         #pragma omp parallel
-// {
-//     std::vector<std::tuple<double, size_t, size_t>> local_weights;
-//     #pragma omp for nowait 
-//     for (size_t p = 1; p < n; ++p) {
-//         for (size_t q = 0; q < p; ++q) {
-//             double threshold = std::max(considerAsZero, precision * maxDiagEntry);
-//             double weight = m_workMatrix(p, q) * m_workMatrix(p, q) + m_workMatrix(q, p) * m_workMatrix(q, p);
-//             if (weight > threshold) {
-//                 finished=false;
-//                 local_weights.emplace_back(weight, p, q);
-//             }
-//         }
-//     }
-//     #pragma omp critical
-//     off_diagonal_weights.insert(end(off_diagonal_weights), begin(local_weights), end(local_weights));
-// }
-        
-//         if (!off_diagonal_weights.empty()) {
-//             // Ordina i blocchi fuori diagonale per norma di Frobenius decrescente
-//             std::sort(off_diagonal_weights.begin(), off_diagonal_weights.end(), std::greater<>());
-
-//             // Esegui la SVD sui blocchi con maggiore norma di Frobenius
-            
-//             for (const auto &[weight, p, q] : off_diagonal_weights) {
-//                 if (svd_precondition_2x2_block_to_be_real(m_workMatrix, p, q, maxDiagEntry)) {
-                    
-//                     real_2x2_jacobi_svd_par(m_workMatrix, c_left, s_left, c_right, s_right, p, q);
-//                     applyOnTheLeft_par(m_workMatrix, p, q, c_left, s_left);
-//                     applyOnTheRight_par(U_, p, q, c_left, -s_left);
-//                     applyOnTheRight_par(m_workMatrix, p, q, c_right, s_right);
-//                     applyOnTheRight_par(V_, p, q, c_right, s_right);
-                    
-
-//                     // Aggiorna il massimo coefficiente diagonale
-//                     maxDiagEntry = std::max(maxDiagEntry, std::max(std::abs(m_workMatrix(p, p)), std::abs(m_workMatrix(q, q))));
-//                 }
-//             }
-//         }
-//     }
-    
     while (!finished) {
-        niter++;
+    
         finished = true;
-
-        std::vector<std::tuple<double, size_t, size_t>> off_diagonal_weights;
-
-        // Calcolo dei pesi off-diagonali
-        #pragma omp parallel for collapse(2)
-        for (size_t p = 1; p < n; ++p) {
-            for (size_t q = 0; q < p; ++q) {
-                double threshold = std::max(considerAsZero, precision * maxDiagEntry);
-
-                double weight = m_workMatrix(p, q) * m_workMatrix(p, q) +
-                                m_workMatrix(q, p) * m_workMatrix(q, p);
-
-                if (weight > threshold) {
-                    #pragma omp critical
-                    {
-                        off_diagonal_weights.emplace_back(weight, p, q);
+        off_diagonal_weights.clear();  // Clear instead of re-allocating
+        
+        #pragma omp parallel
+        {
+            std::vector<std::tuple<double, size_t, size_t>> local_weights;
+            #pragma omp for nowait 
+            for (size_t p = 1; p < min_dim; ++p) {
+                for (size_t q = 0; q < p; ++q) {
+                    double threshold = std::max(considerAsZero, precision * maxDiagEntry);
+                    double weight = m_workMatrix(p, q) * m_workMatrix(p, q) + m_workMatrix(q, p) * m_workMatrix(q, p);
+                    if (weight > threshold) {
+                        finished=false;
+                        local_weights.emplace_back(weight, p, q);
                     }
-                    finished = false;
                 }
             }
+            #pragma omp critical
+            off_diagonal_weights.insert(end(off_diagonal_weights), begin(local_weights), end(local_weights));
         }
+        
+        if (!off_diagonal_weights.empty()) {
+            // Ordina i blocchi fuori diagonale per norma di Frobenius decrescente
+             std::sort(off_diagonal_weights.begin(), off_diagonal_weights.end(), std::greater<>());
 
-        // Ordina i pesi in ordine decrescente
-        std::sort(off_diagonal_weights.begin(), off_diagonal_weights.end(), std::greater<>());
+             // Esegui la SVD sui blocchi con maggiore norma di Frobenius
+            
+            for (const auto &[weight, p, q] : off_diagonal_weights) {
+                 if (svd_precondition_2x2_block_to_be_real(m_workMatrix, p, q, maxDiagEntry)) {
+                    
+                     real_2x2_jacobi_svd_par(m_workMatrix, c_left, s_left, c_right, s_right, p, q);
+                    applyOnTheLeft_par(m_workMatrix, p, q, c_left, s_left);
+                     applyOnTheRight_par(U_, p, q, c_left, -s_left);
+                     applyOnTheRight_par(m_workMatrix, p, q, c_right, s_right);
+                     applyOnTheRight_par(V_, p, q, c_right, s_right);
+                    
 
-        // Calcola il matching massimo usando l'approccio greedy
-        auto matching = greedy_maximum_weight_matching(off_diagonal_weights);
-
-        // Applica le rotazioni in parallelo basate sul matching calcolato
-        #pragma omp parallel for
-        for (size_t k = 0; k < matching.size(); ++k) {
-            size_t p = matching[k].first;
-            size_t q = matching[k].second;
-
-            if (svd_precondition_2x2_block_to_be_real(m_workMatrix, p, q, maxDiagEntry)) {
-                double c_left, s_left, c_right, s_right;
-                real_2x2_jacobi_svd(m_workMatrix, c_left, s_left, c_right, s_right, p, q);
-                
-                applyOnTheLeft(m_workMatrix, p, q, c_left, s_left);
-                applyOnTheRight(U_, p, q, c_left, -s_left);
-                applyOnTheRight(m_workMatrix, p, q, c_right, s_right);
-                applyOnTheRight(V_, p, q, c_right, s_right);
-
-                #pragma omp critical
-                {
-                    maxDiagEntry = std::max(maxDiagEntry, std::max(std::abs(m_workMatrix(p, p)), std::abs(m_workMatrix(q, q))));
+                     // Aggiorna il massimo coefficiente diagonale
+                     maxDiagEntry = std::max(maxDiagEntry, std::max(std::abs(m_workMatrix(p, p)), std::abs(m_workMatrix(q, q))));
                 }
             }
         }
     }
-
-    std::cout << "niter: " << niter << std::endl;
+    
 
     // Ensure positive diagonal entries
     #pragma omp parallel for
-    for (Eigen::Index i = 0; i < m_workMatrix.rows(); ++i) {
+    for (size_t i = 0; i < min_dim; ++i) {
         double a = m_workMatrix(i, i);
         S_(i) = std::abs(a);
         if (a < 0) U_.col(i) = -U_.col(i);
     }
 
     // Sort singular values in descending order and compute the number of nonzero singular values
-    size_t m_nonzeroSingularValues = S_.size();
+    size_t m_nonzeroSingularValues = min_dim;
     
-    for (Eigen::Index i = 0; i < S_.size(); ++i) {
+    for (size_t i = 0; i < min_dim; ++i) {
         size_t pos;
-        double maxRemainingSingularValue = S_.tail(S_.size() - i).maxCoeff(&pos);
+        double maxRemainingSingularValue = S_.tail(min_dim - i).maxCoeff(&pos);
         if (maxRemainingSingularValue == 0) {
             m_nonzeroSingularValues = i;
             break;

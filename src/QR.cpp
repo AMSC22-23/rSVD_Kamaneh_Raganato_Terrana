@@ -1,5 +1,5 @@
-#include "QR.hpp"
-#include "matrixOperations.hpp"
+#include "../include/QR.hpp"
+//#include "../include/matrixOperations.hpp"
 #include <iostream>
 #include <cmath>
 #include <Eigen/Dense>
