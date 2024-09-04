@@ -337,10 +337,10 @@ void AdvDiffPOD<dim>::assemble_rhs(const double &time)
 
     std::map<types::boundary_id, const Function<dim> *> boundary_functions;
 
-    // boundary_functions[0] = &function_g;
-    // boundary_functions[1] = &function_g;
-    boundary_functions[0] = &exact_solution;
-    boundary_functions[1] = &exact_solution;
+    boundary_functions[0] = &function_g;
+    boundary_functions[1] = &function_g;
+    // boundary_functions[0] = &exact_solution;
+    // boundary_functions[1] = &exact_solution;
 
     VectorTools::interpolate_boundary_values(dof_handler,
                                              boundary_functions,
@@ -646,7 +646,7 @@ void AdvDiffPOD<dim>::expand_solution(PETScWrappers::FullMatrix &transformation_
 template <int dim>
 void AdvDiffPOD<dim>::solve_time_step_reduced()
 {
-  SolverControl solver_control(1000, 1e-4 * reduced_system_rhs.l2_norm());
+  SolverControl solver_control(1000, 1e-6 * reduced_system_rhs.l2_norm());
   SolverGMRES<Vector<double>> solver(solver_control);
 
   solver.solve(reduced_system_lhs, reduced_solution, reduced_system_rhs, PreconditionIdentity());

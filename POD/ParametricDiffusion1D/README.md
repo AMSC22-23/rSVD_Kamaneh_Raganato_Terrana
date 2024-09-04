@@ -6,4 +6,8 @@
 ./Diff1D_convergence ../input/test_pod_convergence.txt ../input/test_advdiff_convergence.prm 
 ../scripts/plot_singular_values.py ../output/sigma.txt
 ./Diff1D ../input/test_pod_00.txt ../input/test_advdiff_00.prm
+
+
+
+./Diff1D ../input/test_pod_01.txt ../input/test_advdiff_01.prm
 ```

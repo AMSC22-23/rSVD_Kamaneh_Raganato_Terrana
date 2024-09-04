@@ -5,29 +5,68 @@ import pandas as pd
 import sys
 
 # Read the csv file containing the parameters and the errors
-data = pd.read_csv(sys.argv[1], sep = ",")
+data = pd.read_csv(sys.argv[1], sep = ",", comment='#')
 df = pd.DataFrame(data, columns=['N', 'beta', 'amplitude', 'rom_size', 'T', 'deltat', 'error1', 'error2', 'error3', 'error4', 'error5'])
 
 # Group by the first three columns
-grouped = df.groupby(['N'])
-# , 'beta', 'amplitude'])
+grouped = df.groupby(['N', 'beta', 'amplitude'])
+
+# Compute the mean of the errors
+# error_mean = df.iloc[:, 6:].mean(axis=0)
+error mean = df[6:].mean(axis=0)
+
+
+for name, group in grouped:
+    plt.figure(figsize=(15, 10))
+    for i in range(group.shape[0]):
+        errors = group.iloc[i, 6]
+        x = np.arange(len(errors))
+        group_name_str = str(name)
+        plt.plot(x, errors, label=f'Group {group_name_str}')
+    plt.plot(x, error_mean, label='Mean')
+    plt.legend()
+    plt.savefig(f"errors_n1.pdf", bbox_inches='tight')
+    plt.close()
+
+
+
+# error = df[:, 6:]
+# x = np.arange(len(error))
+# plt.plot(x, error)
+
+
+# for name, group in groupedN:
+#     plt.figure(figsize=(15, 10))
+#     for i in range(group.shape[0]):
+#         errors = group.iloc[i, 6:]
+#         x = np.arange(len(errors))
+#         # group_name_str = str(name)
+#         plt.plot(x, errors)
+#         plt.legend()
+#         plt.savefig(f"errors_n1.pdf", bbox_inches='tight')
+    # errors = group.iloc[:, 6:].values.flatten()
+    # x = np.arange(len(errors))
+    # group_name_str = str(name)
+    # # Plot each group with a unique label
+    # plt.semilogy(x, errors, label=f'Group {name}')
+    # plt.savefig(f"errors_n1.pdf", bbox_inches='tight')
 
 # Plot the errors
-for i in range(1, 5):
-    plt.figure(figsize=(15, 10))
-    for name, group in grouped:
-        errors = group.iloc[:, 6 + i].values.flatten()
-        x = np.arange(len(errors))
+# for i in range(1, 5):
+#     plt.figure(figsize=(15, 10))
+#     for name, group in grouped:
+#         errors = group.iloc[:, 6+i].values.flatten()
+#         x = np.arange(len(errors))
         
-        # Plot each group with a unique label
-        plt.plot(x, errors, label=f'Group {name}')
+#         # Plot each group with a unique label
+#         plt.semilogy(x, errors, label=f'Group {name}')
     
-    plt.xlabel('Error Index')
-    plt.ylabel('Error Value')
-    plt.title(f'Error Plot Grouped by N, beta, amplitude for error{i}')
-    plt.legend()
-    plt.savefig(f"errors_n1_{i}.pdf", bbox_inches='tight')
-    plt.show()
+#     plt.xlabel('Error Index')
+#     plt.ylabel('Error Value')
+#     plt.title(f'Error Plot Grouped by N, beta, amplitude for error{i}')
+#     plt.legend()
+#     plt.savefig(f"errors_n1_{i}.pdf", bbox_inches='tight')
+#     plt.show()
 
 # # convert in numpy array
 # df = df.to_numpy()

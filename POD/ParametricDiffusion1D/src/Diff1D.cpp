@@ -216,6 +216,24 @@ main(int argc, char * argv[])
     }
   }
 
+
+      // Mat_m Xh = Mat_m::Zero(snapshot_length, snapshot_length);
+      // for (Eigen::Index i=0; i<snapshot_length; i++)
+      // {
+      //   Xh.coeffRef(i, i) = 2.0;
+      //   if(i>0) Xh.coeffRef(i, i-1) = -1.0;
+      //     if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
+      // }
+
+  //       Mat_m Xh = Mat_m::Zero(snapshot_length, snapshot_length);
+  // for (Eigen::Index i=0; i<snapshot_length; i++) {
+  //     Xh.coeffRef(i, i) = 2.0;
+  //   if(i>0) Xh.coeffRef(i, i-1) = -1.0;
+  //     if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
+  // }
+  // POD compute_modes(snapshots, Xh, rank, tol, svd_type);
+
+
   // Store the singular values
   Vec_v sigma = compute_modes.sigma; // commento su esportare per fare plot
   // = Vec_v::Zero(rank);
