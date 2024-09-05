@@ -21,9 +21,9 @@ bool svd_precondition_2x2_block_to_be_real(Mat_m& m_workMatrix, int p, int q, do
 // for the parallel version
 std::vector<std::pair<size_t, size_t>> greedy_maximum_weight_matching(const std::vector<std::tuple<double, size_t, size_t>>& weights) ;
 
-// void applyOnTheLeft_par(Mat_m &matrix, size_t p, size_t q, double c, double s);
-// void applyOnTheRight_par(Mat_m &matrix, size_t p, size_t q, double c, double s);
-// void real_2x2_jacobi_svd_par(Mat_m &matrix, double &c_left,double &s_left,double &c_right,double &s_right,size_t  p, size_t  q);
+void applyOnTheLeft_par(Mat_m &matrix, size_t p, size_t q, double c, double s);
+void applyOnTheRight_par(Mat_m &matrix, size_t p, size_t q, double c, double s);
+void real_2x2_jacobi_svd_par(Mat_m &matrix, double &c_left,double &s_left,double &c_right,double &s_right,size_t  p, size_t  q);
 
 
 #endif // JACOBISVD_H

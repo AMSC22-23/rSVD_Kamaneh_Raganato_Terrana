@@ -8,11 +8,11 @@ POD::POD()
 }
 
 // Constructor for naive POD
-POD::POD(Mat_m &S, const int svd_type)
+POD::POD(Mat_m &S, const int r, const int svd_type)
 {   
     // std::cout << "===================================================================" << std::endl;
     // std::cout << "Constructor for naive POD" << std::endl << std::endl;
-    std::tie(W, sigma) = naive_POD(S, svd_type);
+    std::tie(W, sigma) = naive_POD(S, r, svd_type);
 }
 
 // Constructor for standard POD
@@ -94,9 +94,16 @@ void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, c
             mySVD(A, sigma, U, V, r);
             break;
         }
+        case 5:
+        {
+            std::cout << "  SVD" << std::endl;
+            // mySVD(A, sigma, U, V, r);
+            rSVD(A, U, sigma, V, r, SVDMethod::Jacobi); // non credo che abbia bisogno di chiamare nessun compute
+            break;
+        }
         default:
         {
-            std::cerr << "The svd_type should be among 0, 1, 2, 3, 4. Check 'svd_type' in the parameter file." << std::endl;
+            std::cerr << "The svd_type should be among 0, 1, 2, 3, 4, 5. Check 'svd_type' in the parameter file." << std::endl;
             std::exit(EXIT_FAILURE);
         }
     }
@@ -191,7 +198,7 @@ void POD::mySVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim)
     V = VT.transpose(); // V is the transpose of VT
 }
 
-std::tuple<Mat_m, Vec_v> POD::naive_POD(Mat_m &S, const int svd_type)
+std::tuple<Mat_m, Vec_v> POD::naive_POD(Mat_m &S, const int r, const int svd_type)
 {
     std::cout << "===================================================================" << std::endl;
     std::cout << "Naive POD" << std::endl;
@@ -206,7 +213,7 @@ std::tuple<Mat_m, Vec_v> POD::naive_POD(Mat_m &S, const int svd_type)
 
     Mat_m V = Mat_m::Zero(S.cols(), S.cols());
 
-    perform_SVD(S, W, sigma, V, 0, svd_type);
+    perform_SVD(S, W, sigma, V, r, svd_type);
 
     return std::make_tuple(W, sigma);
 }

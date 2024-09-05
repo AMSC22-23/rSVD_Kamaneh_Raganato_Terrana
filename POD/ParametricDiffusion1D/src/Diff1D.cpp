@@ -117,7 +117,7 @@ main(int argc, char * argv[])
       prm_diffusion_coefficient[i] = (mu_min+i*(mu_max-mu_min)/(n-1));
     pcout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;
   }
-    
+
   auto start_snapshot = high_resolution_clock::now();
   for (unsigned int i=0; i<n; i++)
   {
@@ -172,7 +172,7 @@ main(int argc, char * argv[])
   {
     case 0:
     {
-      naive_pod = std::make_unique<POD>(snapshots, svd_type);
+      naive_pod = std::make_unique<POD>(snapshots, rank, svd_type);
       compute_modes = *naive_pod;
       break;
     }
@@ -216,52 +216,8 @@ main(int argc, char * argv[])
     }
   }
 
-
-      // Mat_m Xh = Mat_m::Zero(snapshot_length, snapshot_length);
-      // for (Eigen::Index i=0; i<snapshot_length; i++)
-      // {
-      //   Xh.coeffRef(i, i) = 2.0;
-      //   if(i>0) Xh.coeffRef(i, i-1) = -1.0;
-      //     if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
-      // }
-
-  //       Mat_m Xh = Mat_m::Zero(snapshot_length, snapshot_length);
-  // for (Eigen::Index i=0; i<snapshot_length; i++) {
-  //     Xh.coeffRef(i, i) = 2.0;
-  //   if(i>0) Xh.coeffRef(i, i-1) = -1.0;
-  //     if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
-  // }
-  // POD compute_modes(snapshots, Xh, rank, tol, svd_type);
-
-
   // Store the singular values
   Vec_v sigma = compute_modes.sigma; // commento su esportare per fare plot
-  // = Vec_v::Zero(rank);
-  // for (Eigen::Index i=0; i<rank; i++) {
-  //   sigma(i) = compute_modes.sigma(i);
-  // }
-
-
-  // PROVA CON WEIGHT ///// versione
-  // Mat_m D = Mat_m::Zero(snapshots.cols(), snapshots.cols());
-  // for (int i=0; i<snapshots.cols(); i++) {
-  //     D.coeffRef(i, i) = 1.0;
-  // }
-  // POD compute_modes(snapshots, Xh, D, rank, tol);
-
-  // SVD(snapshots, sigma, U, V, rank);
-  // pcout << "\nCheck dimensions of U:     " << U.rows() << " * " << U.cols() << endl;
-  // pcout << "Check dimensions of sigma: " << sigma.size() << endl;
-  // pcout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << endl;
-
-
-  // pcout << " Check U" << U << std::endl;
-
-  /// SISTEMARE
-
-
-
-
 
   // Create the modes matrix containing the first rom_sizes columns of U.
   pcout << "===================================================================" << std::endl;
@@ -281,14 +237,6 @@ main(int argc, char * argv[])
     {
       pcout << "-------------------------------------------------------------------" << std::endl;
       pcout << "Creating ROM for " << rom_sizes[h] << " modes\n" << std::endl;
-
-      //VERSIONE PER SVD MI SA
-      // modes.resize(U.rows());
-      // for(auto &row : modes)
-      //   row.resize(rom_sizes[i], 0.0);
-      // for (size_t j=0; j<U.rows(); j++)
-      //   for (size_t k=0; k<rom_sizes[i]; k++)
-      //     modes[j][k] = U(j, k);
 
       modes.resize(compute_modes.W.rows());
       for(auto &row : modes)
