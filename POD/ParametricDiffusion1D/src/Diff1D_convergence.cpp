@@ -282,7 +282,7 @@ main(int argc, char * argv[])
   {
     case 0:
     {
-      naive_pod = std::make_unique<POD>(snapshots, svd_type);
+      naive_pod = std::make_unique<POD>(snapshots, rank, svd_type);
       compute_modes = *naive_pod;
       break;
     }

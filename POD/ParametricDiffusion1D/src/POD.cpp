@@ -97,13 +97,30 @@ void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, c
         case 5:
         {
             std::cout << "  SVD" << std::endl;
-            // mySVD(A, sigma, U, V, r);
-            rSVD(A, U, sigma, V, r, SVDMethod::Jacobi); // non credo che abbia bisogno di chiamare nessun compute
+            rSVD(A, U, sigma, V, r, SVDMethod::Power);
+            break;
+        }
+        case 6:
+        {
+            std::cout << "  SVD" << std::endl;
+            rSVD(A, U, sigma, V, r, SVDMethod::Jacobi);
+            break;
+        }
+        case 7:
+        {
+            std::cout << "  SVD" << std::endl;
+            rSVD(A, U, sigma, V, r, SVDMethod::DynamicJacobi);
+            break;
+        }
+        case 8:
+        {
+            std::cout << "  SVD" << std::endl;
+            rSVD(A, U, sigma, V, r, SVDMethod::ParallelJacobi);
             break;
         }
         default:
         {
-            std::cerr << "The svd_type should be among 0, 1, 2, 3, 4, 5. Check 'svd_type' in the parameter file." << std::endl;
+            std::cerr << "The svd_type should be in [0,8]. Check 'svd_type' in the parameter file." << std::endl;
             std::exit(EXIT_FAILURE);
         }
     }
@@ -305,15 +322,6 @@ std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double t
         N++;
     }
 
-    // CAPIRE SE N GIUSTO O INCREMENTI SBAGLIATI
-
-
-
-
-
-
-
-
     // Build the POD basis
     W.conservativeResize(Eigen::NoChange, N);
     std::cout << "Check dimensions of W:     " << W.rows() << " * " << W.cols() << std::endl;
@@ -429,15 +437,6 @@ std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const
         I = num/den;
         N++;
     }
-
-    // CAPIRE SE N GIUSTO O INCREMENTI SBAGLIATI
-
-
-
-
-
-
-
 
     // Build the POD basis
     W.conservativeResize(Eigen::NoChange, N);
@@ -569,15 +568,6 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
         N++;
     }
 
-    // CAPIRE SE N GIUSTO O INCREMENTI SBAGLIATI
-
-
-
-
-
-
-
-
     // Build the POD basis
     W.conservativeResize(Eigen::NoChange, N);
     std::cout << "Check dimensions of W:      " << W.rows() << " * " << W.cols() << std::endl;
@@ -586,359 +576,340 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
     return std::make_tuple(W, sigma);
 }
 
-// Standard incremental SVD for building POD – Algorithm 1
-void POD::standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const double tol, const double tol_sv)
-{
-    std::cout << "===================================================================" << std::endl;
-    std::cout << "Standard incremental SVD" << std::endl << std::endl;
-    // NOTE: in the paper, U is called V and V is called W
-    // NOTE: in the paper, the starting index is 1, here it is 0
+// // Standard incremental SVD for building POD – Algorithm 1
+// void POD::standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const double tol, const double tol_sv)
+// {
+//     std::cout << "===================================================================" << std::endl;
+//     std::cout << "Standard incremental SVD" << std::endl << std::endl;
+//     // NOTE: in the paper, U is called V and V is called W
+//     // NOTE: in the paper, the starting index is 1, here it is 0
 
-    // Initial dimensions:
-    // U       n*k
-    // Sigma   k*k
-    // V       k*k
-    // c       n*1
+//     // Initial dimensions:
+//     // U       n*k
+//     // Sigma   k*k
+//     // V       k*k
+//     // c       n*1
 
-    int n = U.rows();
-    int k = U.cols();
+//     int n = U.rows();
+//     int k = U.cols();
 
-    // Step 1: projection
-    Vec_v d = U.transpose() * c; // d = U^T*c = (k*n)(n*1) = k*1
-    double p = std::sqrt( ((c-U*d).transpose() * (c-U*d)).norm() ); // p is a scalar
+//     // Step 1: projection
+//     Vec_v d = U.transpose() * c; // d = U^T*c = (k*n)(n*1) = k*1
+//     double p = std::sqrt( ((c-U*d).transpose() * (c-U*d)).norm() ); // p is a scalar
 
-    // Initialize the matrix Q
-    Mat_m Q = Mat_m::Zero(k+1, k+1);
-    Q.block(0, 0, k, k) = Sigma;
-    Q.block(0, k, k, 1) = d;
-    if (p < tol)
-        Q(k, k) = p;
-    std::cout << "Check Sigma:" << std::endl << Sigma << std::endl << std::endl;
-    std::cout << "Check d:" << std::endl << d << std::endl << std::endl;
-    std::cout << "Check p:" << std::endl << p << std::endl << std::endl;
-    std::cout << "Check Q:" << std::endl << Q << std::endl << std::endl;
+//     // Initialize the matrix Q
+//     Mat_m Q = Mat_m::Zero(k+1, k+1);
+//     Q.block(0, 0, k, k) = Sigma;
+//     Q.block(0, k, k, 1) = d;
+//     if (p < tol)
+//         Q(k, k) = p;
+//     std::cout << "Check Sigma:" << std::endl << Sigma << std::endl << std::endl;
+//     std::cout << "Check d:" << std::endl << d << std::endl << std::endl;
+//     std::cout << "Check p:" << std::endl << p << std::endl << std::endl;
+//     std::cout << "Check Q:" << std::endl << Q << std::endl << std::endl;
 
-    // Step 2: SVD solution
-    // – Initialize the inputs required by the SVD method
-    // – Note that the SVD method returns sigmaQ as a vector, then it has to be converted into a diagonal matrix
-    Vec_v sigmaQ = Vec_v::Zero(k+1);
-    Mat_m SigmaQ = Mat_m::Zero(k+1, k+1);
-    Mat_m UQ = Mat_m::Zero(k+1, k+1);
-    Mat_m VQ = Mat_m::Zero(k+1, k+1);
+//     // Step 2: SVD solution
+//     // – Initialize the inputs required by the SVD method
+//     // – Note that the SVD method returns sigmaQ as a vector, then it has to be converted into a diagonal matrix
+//     Vec_v sigmaQ = Vec_v::Zero(k+1);
+//     Mat_m SigmaQ = Mat_m::Zero(k+1, k+1);
+//     Mat_m UQ = Mat_m::Zero(k+1, k+1);
+//     Mat_m VQ = Mat_m::Zero(k+1, k+1);
 
-    // SVD(Q, sigmaQ, UQ, VQ, k+1);
-    // SVD<SVDMethod::Jacobi> svd(Q); // (C, sigma, U, V, dim);
-    perform_SVD(Q, UQ, sigmaQ, VQ, 0, 0); // poi aggiungi svd_type
+//     // SVD(Q, sigmaQ, UQ, VQ, k+1);
+//     // SVD<SVDMethod::Jacobi> svd(Q); // (C, sigma, U, V, dim);
+//     perform_SVD(Q, UQ, sigmaQ, VQ, 0, 0);
  
-    SigmaQ = sigmaQ.asDiagonal();
-    std::cout << "Check UQ:" << std::endl << UQ << std::endl << std::endl;
-    std::cout << "Check SigmaQ:" << std::endl << SigmaQ << std::endl << std::endl;
-    std::cout << "Check VQ:" << std::endl << VQ << std::endl << std::endl;
-
-    std::cout << "Compare intermediate and final dimensions with the initial k = " << k << std::endl << std::endl;
-
-    // Step 3: left singular vectors update
-    // Decision: will the added column increase the rank of the updated matrix?
-    if (p < tol || k >= n) {
-        U = U * UQ.block(0, 0, k, k);
-
-        Sigma = SigmaQ.block(0, 0, k, k);
-
-        // Auxiliary matrix
-        Mat_m Vaux = Mat_m::Zero(k+1, k+1);
-        Vaux.block(0, 0, k, k) = V;
-        Vaux(k, k) = 1;
-
-        V.conservativeResize(k+1, k);
-        V = Vaux * VQ.block(0, 0, k+1, k); // V = (k+1)*(k+1) * (k+1)*k = (k+1)*k
-
-        // Intermediate dimensions:
-        // U       n*k
-        // Sigma   k*k
-        // V       (k+1)*k
-    }
-    else {
-        Vec_v j = (c - U*d) / p; // j = (n*1) - (n*k)*(k*1) = n*1
-        U.conservativeResize(n, k+1);
-        U.col(k) = j;
-        U = U * UQ; // U = n*(k+1) * (k+1)*(k+1) = n*(k+1)
-
-        Sigma.conservativeResize(k+1, k+1);
-        Sigma = SigmaQ;
-
-        // In this case, the auxiliary matrix Vaux is not needed
-        V.conservativeResize(k+1, k+1);
-        V(k, k) = 1;
-        V = V * VQ; // V = (k+1)*(k+1) * (k+1)*(k+1) = (k+1)*(k+1)
-
-        k++;
-
-        // Intermediate dimensions with respect to the initial k=U.cols():
-        // U       n*(k+1)
-        // Sigma   (k+1)*(k+1)
-        // V       (k+1)*(k+1)
-    }
-
-    std::cout << "Intermediate dimensions: ";
-    if ((p < tol || k >= n) == true)
-        std::cout << "in step 3 the 'if' branch is taken" << std::endl;
-    else
-        std::cout << "in step 3 the 'else' branch is taken" << std::endl;
-    std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
-    std::cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << std::endl;
-    std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl << std::endl;
-
-    // Step 4: SEE THE ENHANCED ALGORITHM
-
-    // Step 5: small SV trucation
-    if ((Sigma(k-2, k-2) > tol_sv) && (Sigma(k-1, k-1) < tol_sv)) {
-        int kk = k-1;
-        U.conservativeResize(Eigen::NoChange, kk);
-        Sigma.conservativeResize(kk, kk);
-        V.conservativeResize(Eigen::NoChange, kk);
-
-        // Final dimensions:
-        // U       n*kk
-        // Sigma   kk*kk
-        // V       _*kk
-
-        // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is taken in step 3:
-        // U       n*(k-1)
-        // Sigma   (k-1)*(k-1)
-        // V       (k+1)*(k-1)
-
-        // Final dimensions with respect to the initial k=U.cols(), in case "else" branch is taken in step 3:
-        // U       n*k
-        // Sigma   k*k
-        // V       (k+1)*k
-
-        k = kk; // kk is an auxiliary variable to visualize easily the final dimensions
-    }
-
-    // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is not taken in step 5 and
-    // "if" branch is taken in step 3:
-    // U       n*k
-    // Sigma   k*k
-    // V       (k+1)*k
-
-    // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is not taken in step 5 and
-    // "else" branch is taken in step 3:
-    // U       n*(k+1)
-    // Sigma   (k+1)*(k+1)
-    // V       (k+1)*(k+1)
-
-    std::cout << "Final dimensions: " << std::endl;
-    if (((Sigma(k-2, k-2) > tol_sv) && (Sigma(k-1, k-1) < tol_sv)) == true)
-        std::cout << "in step 5 the 'if' branch is taken" << std::endl;
-    else
-        std::cout << "in step 5 the 'if' branch is not taken" << std::endl;
-    std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
-    std::cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << std::endl;
-    std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl << std::endl;
-
-
-    // FUNZIONA TOGLIENDO DIRETTAMENTE?
-
-
-    // FARE PER ROBUSTEZZA O EVITARE?
-
-    // Step 6: reorthogonalization
-    // Note that epsilon is a double-precision machine epsilon
-    // if ((V.col(k-1).transpose()*V.col(0)).norm() > std::min(tol, n*std::numeric_limits<double>::epsilon())) {
-    //     V = modifiedGramSchmidt(V);
-    // }
-
-
-}
-
-// Enhanced incremental SVD for building POD – Algorithm 2
-void POD::enhanced_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const int M, const double tol, const double tol_sv)
-{
-    std::cout << "===================================================================" << std::endl;
-    std::cout << "Enhanced incremental SVD" << std::endl << std::endl;
-    // NOTE: in the paper, U is called V and V is called W
-    // NOTE: in the paper, the starting index is 1, here it is 0
-
-    // Initial dimensions:
-    // U       n*k
-    // Sigma   k*k
-    // V       k*k
-    // c       n*1
-
-    int n = U.rows();
-    int k = U.cols();
-
-    // Step 1: projection
-    Vec_v d = U.transpose() * c; // d = U^T*c = (k*n)(n*1) = k*1
-    double p = std::sqrt( ((c-U*d).transpose() * (c-U*d)).norm() ); // p is a scalar
-
-    // Initialize the matrix Q
-    Mat_m Q = Mat_m::Zero(k+1, k+1);
-    Q.block(0, 0, k, k) = Sigma;
-    Q.block(0, k, k, 1) = d;
-    if (p < tol)
-        Q(k, k) = p;
-    std::cout << "Check Sigma:" << std::endl << Sigma << std::endl << std::endl;
-    std::cout << "Check d:" << std::endl << d << std::endl << std::endl;
-    std::cout << "Check p:" << std::endl << p << std::endl << std::endl;
-    std::cout << "Check Q:" << std::endl << Q << std::endl << std::endl;
-
-    // Step 2: SVD solution
-    // – Initialize the inputs required by the SVD method
-    // – Note that the SVD method returns sigmaQ as a vector, then it has to be converted into a diagonal matrix
-    Vec_v sigmaQ = Vec_v::Zero(k+1);
-    Mat_m SigmaQ = Mat_m::Zero(k+1, k+1);
-    Mat_m UQ = Mat_m::Zero(k+1, k+1);
-    Mat_m VQ = Mat_m::Zero(k+1, k+1);
-
-    // SVD(Q, sigmaQ, UQ, VQ, k+1);
-    // SVD<SVDMethod::Jacobi> svd(Q); // (C, sigma, U, V, dim);
-    perform_SVD(Q, UQ, sigmaQ, VQ, 0, 0); // poi aggiungi svd_type
-
-    SigmaQ = sigmaQ.asDiagonal();
-    std::cout << "Check UQ:" << std::endl << UQ << std::endl << std::endl;
-    std::cout << "Check SigmaQ:" << std::endl << SigmaQ << std::endl << std::endl;
-    std::cout << "Check VQ:" << std::endl << VQ << std::endl << std::endl;
-
-    std::cout << "Compare intermediate and final dimensions with the initial k = " << k << std::endl << std::endl;
-
-    // Step 3: left singular vectors update
-    // Decision: will the added column increase the rank of the updated matrix?
-    if (p < tol || k >= n) {
-        U = U * UQ.block(0, 0, k, k);
-
-        Sigma = SigmaQ.block(0, 0, k, k);
-
-        // Auxiliary matrix
-        Mat_m Vaux = Mat_m::Zero(k+1, k+1);
-        Vaux.block(0, 0, k, k) = V;
-        Vaux(k, k) = 1;
-
-        V.conservativeResize(k+1, k);
-        V = Vaux * VQ.block(0, 0, k+1, k); // V = (k+1)*(k+1) * (k+1)*k = (k+1)*k
-
-        // Intermediate dimensions:
-        // U       n*k
-        // Sigma   k*k
-        // V       (k+1)*k
-    }
-    else {
-        Vec_v j = (c - U*d) / p; // j = (n*1) - (n*k)*(k*1) = n*1
-        U.conservativeResize(n, k+1);
-        U.col(k) = j;
-        U = U * UQ; // U = n*(k+1) * (k+1)*(k+1) = n*(k+1)
-
-        Sigma.conservativeResize(k+1, k+1);
-        Sigma = SigmaQ;
-
-        // In this case, the auxiliary matrix Vaux is not needed
-        V.conservativeResize(k+1, k+1);
-        V(k, k) = 1;
-        V = V * VQ; // V = (k+1)*(k+1) * (k+1)*(k+1) = (k+1)*(k+1)
-
-        k++;
-
-        // Intermediate dimensions with respect to the initial k=U.cols():
-        // U       n*(k+1)
-        // Sigma   (k+1)*(k+1)
-        // V       (k+1)*(k+1)
-    }
-
-    std::cout << "Intermediate dimensions: " << std::endl;
-    if ((p < tol || k >= n) == true)
-        std::cout << "in step 3 the 'if' branch is taken" << std::endl;
-    else
-        std::cout << "in step 3 the 'else' branch is taken" << std::endl;
-    std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
-    std::cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << std::endl;
-    std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl << std::endl;
-
-    // Step 4
-    if (k > M) {
-        U.conservativeResize(Eigen::NoChange, M);
-        Sigma.conservativeResize(M, M);
-        V.conservativeResize(Eigen::NoChange, M);
-        k = M;
-    }
-
-    // Step 5: small SV trucation
-    if ((Sigma(k-2, k-2) > tol_sv) && (Sigma(k-1, k-1) < tol_sv)) {
-        int kk = k-1;
-        U.conservativeResize(Eigen::NoChange, kk);
-        Sigma.conservativeResize(kk, kk);
-        V.conservativeResize(Eigen::NoChange, kk);
-
-        // Final dimensions:
-        // U       n*kk
-        // Sigma   kk*kk
-        // V       _*kk
-
-        // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is taken in step 3 and
-        // "if" branch is not taken in step 4:
-        // U       n*(k-1)
-        // Sigma   (k-1)*(k-1)
-        // V       (k+1)*(k-1)
-
-        // Final dimensions with respect to the initial k=U.cols(), in case "else" branch is taken in step 3 and
-        // "if" branch is not taken in step 4:
-        // U       n*k
-        // Sigma   k*k
-        // V       (k+1)*k
-
-        // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is taken in step 4 (kk = M-1):
-        // U       n*(M-1)
-        // Sigma   (M-1)*(M-1)
-        // V       (k+1)*(M-1)
-
-        k = kk; // kk is an auxiliary variable to visualize easily the final dimensions
-    }
-
-    // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is not taken in step 5 and
-    // "if" branch is taken in step 3 and "if" branch is not taken in step 4:
-    // U       n*k
-    // Sigma   k*k
-    // V       (k+1)*k
-
-    // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is not taken in step 5 and
-    // "else" branch is taken in step 3 and "if" branch is not taken in step 4:
-    // U       n*(k+1)
-    // Sigma   (k+1)*(k+1)
-    // V       (k+1)*(k+1)
-
-    // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is not taken in step 5 and
-    // and "if" branch is taken in step 4:
-    // U       n*M
-    // Sigma   M*M
-    // V       (k+1)*M
-
-    std::cout << "Final dimensions: " << std::endl;
-    if (k == M)
-        std::cout << "in step 4 the 'if' branch is taken, " << std::endl;
-    else
-        std::cout << "in step 4 the 'if' branch is not taken, " << std::endl;
-    if (((Sigma(k-2, k-2) > tol_sv) && (Sigma(k-1, k-1) < tol_sv)) == true)
-        std::cout << "in step 5 the 'if' branch is taken" << std::endl;
-    else
-        std::cout << "in step 5 the 'if' branch is not taken" << std::endl;
-    std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
-    std::cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << std::endl;
-    std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl << std::endl;
-
-
-
-
-
-
-
-    // FUNZIONA TOGLIENDO DIRETTAMENTE?
-
-
-    // FARE PER ROBUSTEZZA O EVITARE?
-
-    // Step 6: reorthogonalization
-    // Note that epsilon is a double-precision machine epsilon
-    // if ((V.col(k-1).transpose()*V.col(0)).norm() > std::min(tol, n*std::numeric_limits<double>::epsilon())) {
-    //     V = modifiedGramSchmidt(V);
-    // }
-}
+//     SigmaQ = sigmaQ.asDiagonal();
+//     std::cout << "Check UQ:" << std::endl << UQ << std::endl << std::endl;
+//     std::cout << "Check SigmaQ:" << std::endl << SigmaQ << std::endl << std::endl;
+//     std::cout << "Check VQ:" << std::endl << VQ << std::endl << std::endl;
+
+//     std::cout << "Compare intermediate and final dimensions with the initial k = " << k << std::endl << std::endl;
+
+//     // Step 3: left singular vectors update
+//     // Decision: will the added column increase the rank of the updated matrix?
+//     if (p < tol || k >= n) {
+//         U = U * UQ.block(0, 0, k, k);
+
+//         Sigma = SigmaQ.block(0, 0, k, k);
+
+//         // Auxiliary matrix
+//         Mat_m Vaux = Mat_m::Zero(k+1, k+1);
+//         Vaux.block(0, 0, k, k) = V;
+//         Vaux(k, k) = 1;
+
+//         V.conservativeResize(k+1, k);
+//         V = Vaux * VQ.block(0, 0, k+1, k); // V = (k+1)*(k+1) * (k+1)*k = (k+1)*k
+
+//         // Intermediate dimensions:
+//         // U       n*k
+//         // Sigma   k*k
+//         // V       (k+1)*k
+//     }
+//     else {
+//         Vec_v j = (c - U*d) / p; // j = (n*1) - (n*k)*(k*1) = n*1
+//         U.conservativeResize(n, k+1);
+//         U.col(k) = j;
+//         U = U * UQ; // U = n*(k+1) * (k+1)*(k+1) = n*(k+1)
+
+//         Sigma.conservativeResize(k+1, k+1);
+//         Sigma = SigmaQ;
+
+//         // In this case, the auxiliary matrix Vaux is not needed
+//         V.conservativeResize(k+1, k+1);
+//         V(k, k) = 1;
+//         V = V * VQ; // V = (k+1)*(k+1) * (k+1)*(k+1) = (k+1)*(k+1)
+
+//         k++;
+
+//         // Intermediate dimensions with respect to the initial k=U.cols():
+//         // U       n*(k+1)
+//         // Sigma   (k+1)*(k+1)
+//         // V       (k+1)*(k+1)
+//     }
+
+//     std::cout << "Intermediate dimensions: ";
+//     if ((p < tol || k >= n) == true)
+//         std::cout << "in step 3 the 'if' branch is taken" << std::endl;
+//     else
+//         std::cout << "in step 3 the 'else' branch is taken" << std::endl;
+//     std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
+//     std::cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << std::endl;
+//     std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl << std::endl;
+
+//     // Step 4: SEE THE ENHANCED ALGORITHM
+
+//     // Step 5: small SV trucation
+//     if ((Sigma(k-2, k-2) > tol_sv) && (Sigma(k-1, k-1) < tol_sv)) {
+//         int kk = k-1;
+//         U.conservativeResize(Eigen::NoChange, kk);
+//         Sigma.conservativeResize(kk, kk);
+//         V.conservativeResize(Eigen::NoChange, kk);
+
+//         // Final dimensions:
+//         // U       n*kk
+//         // Sigma   kk*kk
+//         // V       _*kk
+
+//         // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is taken in step 3:
+//         // U       n*(k-1)
+//         // Sigma   (k-1)*(k-1)
+//         // V       (k+1)*(k-1)
+
+//         // Final dimensions with respect to the initial k=U.cols(), in case "else" branch is taken in step 3:
+//         // U       n*k
+//         // Sigma   k*k
+//         // V       (k+1)*k
+
+//         k = kk; // kk is an auxiliary variable to visualize easily the final dimensions
+//     }
+
+//     // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is not taken in step 5 and
+//     // "if" branch is taken in step 3:
+//     // U       n*k
+//     // Sigma   k*k
+//     // V       (k+1)*k
+
+//     // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is not taken in step 5 and
+//     // "else" branch is taken in step 3:
+//     // U       n*(k+1)
+//     // Sigma   (k+1)*(k+1)
+//     // V       (k+1)*(k+1)
+
+//     std::cout << "Final dimensions: " << std::endl;
+//     if (((Sigma(k-2, k-2) > tol_sv) && (Sigma(k-1, k-1) < tol_sv)) == true)
+//         std::cout << "in step 5 the 'if' branch is taken" << std::endl;
+//     else
+//         std::cout << "in step 5 the 'if' branch is not taken" << std::endl;
+//     std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
+//     std::cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << std::endl;
+//     std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl << std::endl;
+
+//     // Step 6: reorthogonalization
+//     // Note that epsilon is a double-precision machine epsilon
+//     // if ((V.col(k-1).transpose()*V.col(0)).norm() > std::min(tol, n*std::numeric_limits<double>::epsilon())) {
+//     //     V = modifiedGramSchmidt(V);
+//     // }
+// }
+
+// // Enhanced incremental SVD for building POD – Algorithm 2
+// void POD::enhanced_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const int M, const double tol, const double tol_sv)
+// {
+//     std::cout << "===================================================================" << std::endl;
+//     std::cout << "Enhanced incremental SVD" << std::endl << std::endl;
+//     // NOTE: in the paper, U is called V and V is called W
+//     // NOTE: in the paper, the starting index is 1, here it is 0
+
+//     // Initial dimensions:
+//     // U       n*k
+//     // Sigma   k*k
+//     // V       k*k
+//     // c       n*1
+
+//     int n = U.rows();
+//     int k = U.cols();
+
+//     // Step 1: projection
+//     Vec_v d = U.transpose() * c; // d = U^T*c = (k*n)(n*1) = k*1
+//     double p = std::sqrt( ((c-U*d).transpose() * (c-U*d)).norm() ); // p is a scalar
+
+//     // Initialize the matrix Q
+//     Mat_m Q = Mat_m::Zero(k+1, k+1);
+//     Q.block(0, 0, k, k) = Sigma;
+//     Q.block(0, k, k, 1) = d;
+//     if (p < tol)
+//         Q(k, k) = p;
+//     std::cout << "Check Sigma:" << std::endl << Sigma << std::endl << std::endl;
+//     std::cout << "Check d:" << std::endl << d << std::endl << std::endl;
+//     std::cout << "Check p:" << std::endl << p << std::endl << std::endl;
+//     std::cout << "Check Q:" << std::endl << Q << std::endl << std::endl;
+
+//     // Step 2: SVD solution
+//     // – Initialize the inputs required by the SVD method
+//     // – Note that the SVD method returns sigmaQ as a vector, then it has to be converted into a diagonal matrix
+//     Vec_v sigmaQ = Vec_v::Zero(k+1);
+//     Mat_m SigmaQ = Mat_m::Zero(k+1, k+1);
+//     Mat_m UQ = Mat_m::Zero(k+1, k+1);
+//     Mat_m VQ = Mat_m::Zero(k+1, k+1);
+
+//     // SVD(Q, sigmaQ, UQ, VQ, k+1);
+//     // SVD<SVDMethod::Jacobi> svd(Q); // (C, sigma, U, V, dim);
+//     perform_SVD(Q, UQ, sigmaQ, VQ, 0, 0);
+
+//     SigmaQ = sigmaQ.asDiagonal();
+//     std::cout << "Check UQ:" << std::endl << UQ << std::endl << std::endl;
+//     std::cout << "Check SigmaQ:" << std::endl << SigmaQ << std::endl << std::endl;
+//     std::cout << "Check VQ:" << std::endl << VQ << std::endl << std::endl;
+
+//     std::cout << "Compare intermediate and final dimensions with the initial k = " << k << std::endl << std::endl;
+
+//     // Step 3: left singular vectors update
+//     // Decision: will the added column increase the rank of the updated matrix?
+//     if (p < tol || k >= n) {
+//         U = U * UQ.block(0, 0, k, k);
+
+//         Sigma = SigmaQ.block(0, 0, k, k);
+
+//         // Auxiliary matrix
+//         Mat_m Vaux = Mat_m::Zero(k+1, k+1);
+//         Vaux.block(0, 0, k, k) = V;
+//         Vaux(k, k) = 1;
+
+//         V.conservativeResize(k+1, k);
+//         V = Vaux * VQ.block(0, 0, k+1, k); // V = (k+1)*(k+1) * (k+1)*k = (k+1)*k
+
+//         // Intermediate dimensions:
+//         // U       n*k
+//         // Sigma   k*k
+//         // V       (k+1)*k
+//     }
+//     else {
+//         Vec_v j = (c - U*d) / p; // j = (n*1) - (n*k)*(k*1) = n*1
+//         U.conservativeResize(n, k+1);
+//         U.col(k) = j;
+//         U = U * UQ; // U = n*(k+1) * (k+1)*(k+1) = n*(k+1)
+
+//         Sigma.conservativeResize(k+1, k+1);
+//         Sigma = SigmaQ;
+
+//         // In this case, the auxiliary matrix Vaux is not needed
+//         V.conservativeResize(k+1, k+1);
+//         V(k, k) = 1;
+//         V = V * VQ; // V = (k+1)*(k+1) * (k+1)*(k+1) = (k+1)*(k+1)
+
+//         k++;
+
+//         // Intermediate dimensions with respect to the initial k=U.cols():
+//         // U       n*(k+1)
+//         // Sigma   (k+1)*(k+1)
+//         // V       (k+1)*(k+1)
+//     }
+
+//     std::cout << "Intermediate dimensions: " << std::endl;
+//     if ((p < tol || k >= n) == true)
+//         std::cout << "in step 3 the 'if' branch is taken" << std::endl;
+//     else
+//         std::cout << "in step 3 the 'else' branch is taken" << std::endl;
+//     std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
+//     std::cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << std::endl;
+//     std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl << std::endl;
+
+//     // Step 4
+//     if (k > M) {
+//         U.conservativeResize(Eigen::NoChange, M);
+//         Sigma.conservativeResize(M, M);
+//         V.conservativeResize(Eigen::NoChange, M);
+//         k = M;
+//     }
+
+//     // Step 5: small SV trucation
+//     if ((Sigma(k-2, k-2) > tol_sv) && (Sigma(k-1, k-1) < tol_sv)) {
+//         int kk = k-1;
+//         U.conservativeResize(Eigen::NoChange, kk);
+//         Sigma.conservativeResize(kk, kk);
+//         V.conservativeResize(Eigen::NoChange, kk);
+
+//         // Final dimensions:
+//         // U       n*kk
+//         // Sigma   kk*kk
+//         // V       _*kk
+
+//         // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is taken in step 3 and
+//         // "if" branch is not taken in step 4:
+//         // U       n*(k-1)
+//         // Sigma   (k-1)*(k-1)
+//         // V       (k+1)*(k-1)
+
+//         // Final dimensions with respect to the initial k=U.cols(), in case "else" branch is taken in step 3 and
+//         // "if" branch is not taken in step 4:
+//         // U       n*k
+//         // Sigma   k*k
+//         // V       (k+1)*k
+
+//         // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is taken in step 4 (kk = M-1):
+//         // U       n*(M-1)
+//         // Sigma   (M-1)*(M-1)
+//         // V       (k+1)*(M-1)
+
+//         k = kk; // kk is an auxiliary variable to visualize easily the final dimensions
+//     }
+
+//     // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is not taken in step 5 and
+//     // "if" branch is taken in step 3 and "if" branch is not taken in step 4:
+//     // U       n*k
+//     // Sigma   k*k
+//     // V       (k+1)*k
+
+//     // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is not taken in step 5 and
+//     // "else" branch is taken in step 3 and "if" branch is not taken in step 4:
+//     // U       n*(k+1)
+//     // Sigma   (k+1)*(k+1)
+//     // V       (k+1)*(k+1)
+
+//     // Final dimensions with respect to the initial k=U.cols(), in case "if" branch is not taken in step 5 and
+//     // and "if" branch is taken in step 4:
+//     // U       n*M
+//     // Sigma   M*M
+//     // V       (k+1)*M
+
+//     std::cout << "Final dimensions: " << std::endl;
+//     if (k == M)
+//         std::cout << "in step 4 the 'if' branch is taken, " << std::endl;
+//     else
+//         std::cout << "in step 4 the 'if' branch is not taken, " << std::endl;
+//     if (((Sigma(k-2, k-2) > tol_sv) && (Sigma(k-1, k-1) < tol_sv)) == true)
+//         std::cout << "in step 5 the 'if' branch is taken" << std::endl;
+//     else
+//         std::cout << "in step 5 the 'if' branch is not taken" << std::endl;
+//     std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
+//     std::cout << "Check dimensions of Sigma: " << Sigma.rows() << " * " << Sigma.cols() << std::endl;
+//     std::cout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << std::endl << std::endl;
+
+//     // Step 6: reorthogonalization
+//     // Note that epsilon is a double-precision machine epsilon
+//     // if ((V.col(k-1).transpose()*V.col(0)).norm() > std::min(tol, n*std::numeric_limits<double>::epsilon())) {
+//     //     V = modifiedGramSchmidt(V);
+//     // }
+// }
 

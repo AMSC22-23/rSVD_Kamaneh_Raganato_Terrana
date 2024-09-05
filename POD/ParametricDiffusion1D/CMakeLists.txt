@@ -6,9 +6,9 @@ project(ParametricDiffusion LANGUAGES CXX C)
 
 include(../common/cmake-common.cmake)
 
-# add_executable(Diff1D src/Diff1D.cpp ../../src/PM.cpp ../../src/Jacobi_Class.cpp ../../src/JacobiOperations.cpp
-# ../../src/rSVD.cpp src/POD.cpp src/AdvDiff1D.cpp src/AdvDiff1D_POD.cpp)
-# deal_ii_setup_target(Diff1D)
+add_executable(Diff1D src/Diff1D.cpp ../../src/PM.cpp ../../src/Jacobi_Class.cpp ../../src/JacobiOperations.cpp
+../../src/rSVD.cpp src/POD.cpp src/AdvDiff1D.cpp src/AdvDiff1D_POD.cpp)
+deal_ii_setup_target(Diff1D)
 
 add_executable(Diff1D_new_prm src/Diff1D_new_prm.cpp ../../src/PM.cpp ../../src/Jacobi_Class.cpp ../../src/JacobiOperations.cpp
 ../../src/rSVD.cpp src/POD.cpp src/AdvDiff1D.cpp src/AdvDiff1D_POD.cpp)
