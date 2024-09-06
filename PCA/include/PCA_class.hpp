@@ -75,12 +75,12 @@ public:
     // Variance methods
     Vec explainedVariance() const {
         Vec singular_values = SVD<method>::getS();
-        return singular_values.array().square() / (data_.rows() - 1);
+        return singular_values.array() / std::sqrt(data_.rows() - 1);
     }
 
     Vec explainedVarianceRatio() const {
         Vec variances = explainedVariance();
-        return variances / variances.sum();
+        return (variances.array().square()/(data_.rows() - 1)) / (variances.array().square().sum()/(data_.rows() - 1));
     }
 
     // Access to principal components and scores
@@ -91,7 +91,10 @@ public:
     Mat scores() const {
         return SVD<method>::getU() * SVD<method>::getS().asDiagonal();
     }
-
+    //loadings
+    Mat loadings() const {
+        return SVD<method>::getV();
+    }
     // Projection and reconstruction
     Mat projectToPCA(const Mat& data) {
         return (data.rowwise() - mean_.transpose()) * SVD<method>::getV();
@@ -112,7 +115,7 @@ public:
         }
 
         // Save scores (principal components)
-        Mat scores = this->scores();
+        Mat scores = PCA::scores();
         outFile << "\nScores:\n";
         for (int i = 0; i < scores.rows(); ++i) {
             for (int j = 0; j < scores.cols(); ++j) {
@@ -132,48 +135,46 @@ public:
     }
 
     void summary() const {
-        Vec singular_values = (SVD<method>::getS())/std::sqrt(data_.rows()-1);  // Get singular values from SVD
-        int numComponents = singular_values.size();
-        double total_variance = (singular_values.array().square().sum())/(data_.rows()-1);  // Total variance is the sum of squared singular values
+    Vec exp_var = this->explainedVariance();  
+    int numComponents = exp_var.size(); 
+    Vec proportion_variance = this->explainedVarianceRatio();
+    Vec cumulative_variance = proportion_variance;
 
-        Vec proportion_variance = ((singular_values.array().square() )/(data_.rows()-1))/ total_variance;
-        Vec cumulative_variance = proportion_variance;
-
-        // Calculate cumulative variance
-        for (int i = 1; i < numComponents; ++i) {
-            cumulative_variance[i] += cumulative_variance[i - 1];
-        }
-
-        // Print the results in a formatted manner
-        std::cout << std::fixed << std::setprecision(6);
-        std::cout << "Importance of components:\n";
-        std::cout << "                           ";
-        for (int i = 1; i <= numComponents; ++i) {
-            std::cout << "Comp." << i << "       ";
-        }
-        std::cout << std::endl;
-
-        // Standard deviations
-        std::cout << "Standard deviation     ";
-        for (int i = 0; i < numComponents; ++i) {
-            std::cout << singular_values[i] << " ";
-        }
-        std::cout << std::endl;
-
-        // Proportion of variance
-        std::cout << "Proportion of Variance    ";
-        for (int i = 0; i < numComponents; ++i) {
-            std::cout << proportion_variance[i] << " ";
-        }
-        std::cout << std::endl;
-
-        // Cumulative proportion of variance
-        std::cout << "Cumulative Proportion     ";
-        for (int i = 0; i < numComponents; ++i) {
-            std::cout << cumulative_variance[i] << " ";
-        }
-        std::cout << std::endl;
+    // Calculate cumulative variance
+    for (int i = 1; i < numComponents; ++i) {
+        cumulative_variance[i] += cumulative_variance[i - 1];
     }
+
+    // Print the results in a formatted manner
+    std::cout << std::fixed << std::setprecision(6);
+    std::cout << "Importance of components:\n";
+    std::cout << std::setw(25) << std::left << "Component";
+    for (int i = 1; i <= numComponents; ++i) {
+        std::cout << std::setw(15) << std::left << ("Comp." + std::to_string(i));
+    }
+    std::cout << std::endl;
+
+    // Standard deviations
+    std::cout << std::setw(25) << std::left << "Standard deviation";
+    for (int i = 0; i < numComponents; ++i) {
+        std::cout << std::setw(15) << std::left << exp_var[i];
+    }
+    std::cout << std::endl;
+
+    // Proportion of variance
+    std::cout << std::setw(25) << std::left << "Proportion of Variance";
+    for (int i = 0; i < numComponents; ++i) {
+        std::cout << std::setw(15) << std::left << proportion_variance[i];
+    }
+    std::cout << std::endl;
+
+    // Cumulative proportion of variance
+    std::cout << std::setw(25) << std::left << "Cumulative Proportion";
+    for (int i = 0; i < numComponents; ++i) {
+        std::cout << std::setw(15) << std::left << cumulative_variance[i];
+    }
+    std::cout << std::endl;
+}
 
 private:
     Mat data_;
