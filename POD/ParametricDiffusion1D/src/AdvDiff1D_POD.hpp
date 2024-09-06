@@ -171,21 +171,21 @@ public:
   };
 
   // Dirichlet boundary conditions.
-  // class FunctionG : public Function<dim>
-  // {
-  // public:
-  //   // Constructor.
-  //   FunctionG()
-  //   {}
+  class FunctionG : public Function<dim>
+  {
+  public:
+    // Constructor.
+    FunctionG()
+    {}
 
-  //   // Evaluation.
-  //   virtual double
-  //   value(const Point<dim> &/*p*/,
-  //         const unsigned int /*component*/ = 0) const override
-  //   {
-  //     return 0.0;
-  //   }
-  // };
+    // Evaluation.
+    virtual double
+    value(const Point<dim> &/*p*/,
+          const unsigned int /*component*/ = 0) const override
+    {
+      return 0.0;
+    }
+  };
 
   // Function for the initial condition.
   class FunctionU0 : public Function<dim>
@@ -291,7 +291,7 @@ public:
       const double amplitude = advdiffpod.parameters.get_double("amplitude");
 
       if (dim == 1 && u0_choice == 0) 
-        return std::sin(M_PI*p[0])*std::exp(-this->get_time());
+        return amplitude*std::sin(M_PI*p[0])*std::exp(-this->get_time());
       else if (dim == 1 && u0_choice == 1)
         return (2.0*std::sin(9.0*M_PI*p[0])-std::sin(4.0*M_PI*p[0]))*std::exp(-this->get_time());
       else if (dim == 1 && u0_choice == 2)
@@ -311,7 +311,7 @@ public:
       const double amplitude = advdiffpod.parameters.get_double("amplitude");
 
       if (dim == 1 && u0_choice == 0)
-        result[0] = M_PI*std::cos(M_PI*p[0])*std::exp(-this->get_time());
+        result[0] = amplitude*M_PI*std::cos(M_PI*p[0])*std::exp(-this->get_time());
       else if (dim == 1 && u0_choice == 1)
         result[0] = (18.0*M_PI*std::cos(9.0*M_PI*p[0])-4.0*M_PI*std::sin(4.0*M_PI*p[0]))*std::exp(-this->get_time());
       else if (dim == 1 && u0_choice == 2)
@@ -450,7 +450,7 @@ protected:
   ForcingTerm forcing_term;
 
   // g(x).
-  // FunctionG function_g;
+  FunctionG function_g;
 
   // Initial condition.
   FunctionU0 u_0;

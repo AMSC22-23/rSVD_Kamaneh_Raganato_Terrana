@@ -1,0 +1,13 @@
+# Advection diffusion problem in 1D
+# Parameters employed by the main file
+
+dim 1           # Dimension of the problem
+n 5 # 1         # Number of parameters
+mu_min 0.01   # Minimum diffusion coefficient
+mu_max 0.05   # Maximum diffusion coefficient
+mu_new 0.015
+rank 15 # 15         # Rank --- in POD riguarda per cosa, attenta che con 10 non funziona ti dava troppi zeri, ma anche 50 non bello, 15 okay
+pod_type 2 # 0 # 2
+svd_type 0                 # 4 # 0 # 4 # 0 pod e 4 svd ha problemi
+tol 1e-12       # sempre per POD...
+rom_sizes 2 4 6 8 # 10 12 # Sizes for the reduced order models

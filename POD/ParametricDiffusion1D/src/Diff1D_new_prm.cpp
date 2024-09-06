@@ -100,6 +100,13 @@ main(int argc, char * argv[])
   }
   constexpr unsigned int d = 1;
 
+  // Check the existence of the new parameter in the pod_parameter_file.
+  if (mu_new == 0.0)
+  {
+    std::cerr << "The new parameter should be defined. Check 'mu_new' in the parameter file." << std::endl;
+    return 1;
+  }
+
   // Solve the advection diffusion problem on the full order model and collect snapshots in the snapshot matrix.
   pcout << "===================================================================" << std::endl;
   pcout << "Run FOM and collect snapshots" << std::endl;
@@ -175,7 +182,7 @@ main(int argc, char * argv[])
   {
     case 0:
     {
-      naive_pod = std::make_unique<POD>(snapshots, svd_type);
+      naive_pod = std::make_unique<POD>(snapshots, rank, svd_type);
       compute_modes = *naive_pod;
       break;
     }
@@ -221,32 +228,6 @@ main(int argc, char * argv[])
 
   // Store the singular values
   Vec_v sigma = compute_modes.sigma; // commento su esportare per fare plot
-  // = Vec_v::Zero(rank);
-  // for (Eigen::Index i=0; i<rank; i++) {
-  //   sigma(i) = compute_modes.sigma(i);
-  // }
-
-
-  // PROVA CON WEIGHT ///// versione
-  // Mat_m D = Mat_m::Zero(snapshots.cols(), snapshots.cols());
-  // for (int i=0; i<snapshots.cols(); i++) {
-  //     D.coeffRef(i, i) = 1.0;
-  // }
-  // POD compute_modes(snapshots, Xh, D, rank, tol);
-
-  // SVD(snapshots, sigma, U, V, rank);
-  // pcout << "\nCheck dimensions of U:     " << U.rows() << " * " << U.cols() << endl;
-  // pcout << "Check dimensions of sigma: " << sigma.size() << endl;
-  // pcout << "Check dimensions of V:     " << V.rows() << " * " << V.cols() << endl;
-
-
-  // pcout << " Check U" << U << std::endl;
-
-  /// SISTEMARE
-
-
-
-
 
   // Create the modes matrix containing the first rom_sizes columns of U.
   pcout << "===================================================================" << std::endl;
@@ -286,14 +267,6 @@ main(int argc, char * argv[])
   {
     pcout << "-------------------------------------------------------------------" << std::endl;
     pcout << "Creating ROM for " << rom_sizes[h] << " modes\n" << std::endl;
-
-    //VERSIONE PER SVD MI SA
-    // modes.resize(U.rows());
-    // for(auto &row : modes)
-    //   row.resize(rom_sizes[i], 0.0);
-    // for (size_t j=0; j<U.rows(); j++)
-    //   for (size_t k=0; k<rom_sizes[i]; k++)
-    //     modes[j][k] = U(j, k);
 
     modes.resize(compute_modes.W.rows());
     for(auto &row : modes)
