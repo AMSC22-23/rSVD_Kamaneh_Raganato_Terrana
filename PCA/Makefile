@@ -1,4 +1,4 @@
-CXX := mpic++
+CXX := mpicxx #only for some computation in PM and rSVD
 CXXFLAGS := -Wall -Wextra -Iinclude -I ${mkEigenInc}
 
 SRC_DIR := src
@@ -53,9 +53,9 @@ clean:
 	rm -rf data/output/*
 
 # Target to create output directories
-create_directories:
-	mkdir -p ./data/output/QR
-	mkdir -p ./data/output/rSVD
-	mkdir -p ./data/output/SVD
+#create_directories:
+#	mkdir -p ./data/output/QR
+#	mkdir -p ./data/output/rSVD
+#	mkdir -p ./data/output/SVD
 
 .PHONY: all test profile clean create_directories
