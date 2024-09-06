@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
     std::filesystem::path root = exeDir.parent_path();
 
     // Input and output directories
-    std::filesystem::path inputDir = root / "data" / "input";
+    std::filesystem::path inputDir = root / "input";
     std::filesystem::path outputDir = root / "data" / "output" / "rSVD" / "my";
 
     // Create output directory if it doesn't exist
@@ -65,22 +65,22 @@ int main(int argc, char** argv) {
         int k = 0; // numerical rank (we need an algorithm to find it) or target rank
         int p = 16; // oversampling parameter, usually it is set to 5 or 10
         int l = k + p;
-        Mat A_copy = A;
-        Mat U = Mat::Zero(m, l);
-        Vec S = Vec::Zero(l);
-        Mat V = Mat::Zero(l, n);
-        rSVD(A, U, S, V, l);
+        Mat_m A_copy = A;
+        Mat_m U = Mat_m::Zero(m, l);
+        Vec_v S = Vec_v::Zero(l);
+        Mat_m V = Mat_m::Zero(l, n);
+        rSVD(A, U, S, V, l, SVDMethod::Jacobi);
 
         // Record the end time
         auto end = std::chrono::high_resolution_clock::now();
 
-        Mat diagonalMatrix = S.asDiagonal();
-        Mat A_2(m, n);
-        Mat mid(m, l);
+        Mat_m diagonalMatrix = S.asDiagonal();
+        Mat_m A_2(m, n);
+        Mat_m mid(m, l);
         mid = U * diagonalMatrix;
         A_2 = mid * V.transpose();
 
-        Mat diff = A_copy - A_2;
+        Mat_m diff = A_copy - A_2;
         double norm_of_difference = (diff).norm();
 
         // Calculate the duration

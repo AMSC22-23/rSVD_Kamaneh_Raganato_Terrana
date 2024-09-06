@@ -23,12 +23,12 @@
 #include <vector>
 #include <tuple>
 #include <algorithm>
-#include "../include/Jacobi_Class.hpp"
-#include "../include/JacobiOperations.hpp"
-#include "../include/SVD_class.hpp"
-#include "../include/QR.hpp"
-#include "../include/rSVD.hpp"
-#include "../include/PM.hpp"
+#include "Jacobi_Class.hpp"
+#include "JacobiOperations.hpp"
+#include "SVD_class.hpp"
+#include "QR.hpp"
+#include "rSVD.hpp"
+#include "PM.hpp"
 
 using Mat=Eigen::MatrixXd;
 using Vec=Eigen::VectorXd;
@@ -39,6 +39,15 @@ double calculatePrecision(const Mat &A, const Mat &U, const Vec &Sigma, const Ma
     // Ricostruzione della matrice originale da U, Sigma, V
     Mat SigmaMat = Sigma.asDiagonal();
     Mat A_reconstructed = U * SigmaMat * V.transpose();
+    
+    // Calcolo dell'errore relativo
+    double norm_diff = (A - A_reconstructed).norm();
+    double norm_A = A.norm();
+    return norm_diff / norm_A;
+}
+double calculatePrecisionPM(const Mat &A, const Mat &U, Mat &Sigma, const Mat &V) {
+    // Ricostruzione della matrice originale da U, Sigma, V
+    Mat A_reconstructed = U * Sigma * V.transpose();
     
     // Calcolo dell'errore relativo
     double norm_diff = (A - A_reconstructed).norm();
@@ -102,7 +111,13 @@ int main(int argc, char *argv[]) {
         std::cout<<"U1 dim: "<<U1.rows()<<" x "<<U1.cols()<<std::endl;
         std::cout<<"Sigma1 dim: "<<Sigma1.size()<<std::endl;
         std::cout<<"V1 dim: "<<V1.rows()<<" x "<<V1.cols()<<std::endl;
-        double precisionPower =0;// calculatePrecision(A, U1, Sigma1, V1);
+        // Trasforma Sigma1 in una matrice diagonale
+        Mat Sigma1_mat = Mat::Zero(rank, A.cols());
+        for (int i = 0; i < rank; ++i) {
+            Sigma1_mat(i, i) = Sigma1[i];
+        }
+
+        double precisionPower = calculatePrecisionPM(A, U1, Sigma1_mat, V1);
         std::cout<<"check3"<<std::endl;
         // Measure time for rSVD with DynamicJacobi method
         auto start_dynamic = std::chrono::high_resolution_clock::now();
@@ -118,7 +133,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Export results to a CSV file
-    exportTimingAndPrecisionData("rsvd_timing_and_precision_results.csv", data);
+    exportTimingAndPrecisionData("rsvd_timing_and_precision_results2.csv", data);
 
    MPI_Finalize(); // Finalizza MPI
     return 0;
