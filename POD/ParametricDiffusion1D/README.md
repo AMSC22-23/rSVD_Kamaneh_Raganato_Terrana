@@ -1,4 +1,4 @@
-# Avection Diffusion Problem with POD
+# Advection Diffusion Problem with POD
 
 ### Folder Structure
 
