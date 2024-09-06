@@ -40,7 +40,7 @@ public:
     POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int svd_type);
 
     // Constructor for online POD through incremental SVD: starting from A it computes U, Sigma, V
-    POD(Mat_m &A, Mat_m &U, Mat_m &Sigma, Mat_m &V, const int dim, Vec_v c, const int M, const int r, const double tol, const double tol_sv);
+    // POD(Mat_m &A, Mat_m &U, Mat_m &Sigma, Mat_m &V, const int dim, Vec_v c, const int M, const int r, const double tol, const double tol_sv);
 
     // Matrix containing the POD modes
     Mat_m W;
