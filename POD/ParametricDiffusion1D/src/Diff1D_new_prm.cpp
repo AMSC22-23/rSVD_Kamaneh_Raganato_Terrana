@@ -42,10 +42,10 @@ main(int argc, char * argv[])
   double mu_min         = 0.0; // Minimum diffusion coefficient
   double mu_max         = 0.0; // Maximum diffusion coefficient
   double mu_new         = 0.0; // New parameter
-  unsigned int rank     = 0;   // Rank --- in POD riguarda per cosa
-  double tol            = 0.0; // sempre per POD...
-  unsigned int pod_type = 0;   // POD types: naive, standard, energy, weight, ...
-  unsigned int svd_type = 0;   // SVD types: Power, Jacobi, Dynamic Jacobi, Parallel Jacobi
+  unsigned int rank     = 0;   // Target rank
+  double tol            = 0.0; // Tolerance for POD algorithm
+  unsigned int pod_type = 0;   // POD types: naive, standard, energy, weight
+  unsigned int svd_type = 0;   // SVD types: Power, Jacobi, Parallel Jacobi
   std::vector<Eigen::Index> rom_sizes; // Sizes for the reduced order models
 
   std::string key;
@@ -153,7 +153,6 @@ main(int argc, char * argv[])
     solutions.col(i) = snapshots.col((i*time_steps)+time_steps-1);
 
     pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
-    // This print is commented to save time and space in the output.
     pcout << "  Check snapshots and problem solution values:" << std::endl;
     pcout << "    snapshots(0, time_steps-1)  = " << snapshots(0, (i*time_steps)+time_steps-1) << std::endl;
     pcout << "    problem.solution(0)         = " << problem.solution(0) << std::endl;
@@ -171,7 +170,7 @@ main(int argc, char * argv[])
   pcout << "Compute POD modes" << std::endl;
   pcout << "  Check rank = " << rank << std::endl;
 
-  // Commentare
+  // Select the type of POD algorithm.
   std::unique_ptr<POD> naive_pod;
   std::unique_ptr<POD> standard_pod;
   std::unique_ptr<POD> energy_pod;
@@ -228,8 +227,8 @@ main(int argc, char * argv[])
     }
   }
 
-  // Store the singular values
-  Vec_v sigma = compute_modes.sigma; // commento su esportare per fare plot
+  // Store the singular values so that they can be exported.
+  Vec_v sigma = compute_modes.sigma;
 
   // Create the modes matrix containing the first rom_sizes columns of U.
   pcout << "===================================================================" << std::endl;
@@ -240,7 +239,7 @@ main(int argc, char * argv[])
   // The approximations matrix stores the final fom_state for each rom size. 
   Mat_m approximations = Mat_m::Zero(snapshot_length, rom_sizes.size()*n);
 
-  // The vector errors stores the relative errors in L2 norm between the full and reconstructed solution for each rom size and each parameter.
+  // The vector errors stores the relative errors in L2 norm between the full and reconstructed solution for each rom size and the new parameter.
   Mat_m errors = Mat_m::Zero(1, rom_sizes.size());
 
   /**
