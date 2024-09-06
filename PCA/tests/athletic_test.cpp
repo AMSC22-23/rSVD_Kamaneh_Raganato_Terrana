@@ -3,7 +3,8 @@
 #include <Eigen/Dense>
 #include <iostream>
 
-
+using Mat=Eigen::MatrixXd;
+using Vec=Eigen::VectorXd;
 
 Mat loadTouristsData(const std::string& filename) {
     std::ifstream file(filename);
@@ -133,7 +134,7 @@ int main() {
         pca.summary();
 
         std::cout << "Orthogonality Check: " << pca.checkOrthogonality() << std::endl;
-    //pca.saveResults("../data/output/pca_tourists_results.txt");
+    pca.saveResults("../data/output/pca_athletic_results.txt");
 
     return 0;
 }
