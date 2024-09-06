@@ -28,7 +28,6 @@ using Vec_v = Eigen::VectorXd;
 enum class SVDMethod {
     Jacobi,
     Power,
-    DynamicJacobi,
     ParallelJacobi
 };
 
@@ -67,12 +66,12 @@ private:
 
     // Parallel Jacobi method implementation for SVD
     void ParallelJacobiSVD() ;
-};
 
-// Constructor implementation
-// template<SVDMethod method>
-// SVD<method>::SVD(const Mat_m& data)
-//     : data_(data), r_(0) {}
+protected:
+    void setData(const Mat_m& data) {
+        data_ = data;
+    }
+};
 
 template<SVDMethod method>
 SVD<method>::SVD(const Mat_m& data, const int &r)
@@ -81,18 +80,21 @@ SVD<method>::SVD(const Mat_m& data, const int &r)
 // Main method to compute the SVD
 template<SVDMethod method>
 void SVD<method>::compute() {
+    std::cout << "Entering compute() method" << std::endl;
+    
     U_=Mat_m::Identity(data_.rows(), data_.rows());
     V_=Mat_m::Identity(data_.cols(), data_.cols());
     S_=Vec_v::Zero(std::min(data_.rows(), data_.cols()));
 
     if constexpr (method == SVDMethod::Jacobi) {
+        std::cout << "Using Jacobi method" << std::endl;
         jacobiSVD();
     } else if constexpr (method == SVDMethod::Power) {
+        std::cout << "Using Power method" << std::endl;
         powerMethodSVD();
-    } else if constexpr (method == SVDMethod::DynamicJacobi) {
-        DynamicJacobiSVD();
-    }
+    } 
     else if constexpr (method == SVDMethod::ParallelJacobi) {
+        std::cout << "Using Parallel Jacobi method" << std::endl;
         ParallelJacobiSVD();
     }
 }
@@ -219,106 +221,6 @@ void SVD<method>::powerMethodSVD() {
     std::cout<<"V rows: "<<V_.rows()<<" V cols: "<<V_.cols()<<std::endl;
 }
 
-// Dynamic Jacobi method implementation for SVD
-template<SVDMethod method>
-void SVD<method>::DynamicJacobiSVD()  {
-    size_t m = data_.rows();
-    size_t n = data_.cols();
-    size_t min_dim = std::min(m, n);
-
-    // Initialize the working matrices
-    Mat_m m_workMatrix = data_;
-    U_ = Mat_m::Identity(m, min_dim);
-    V_ = Mat_m::Identity(n, min_dim);
-    
-    if (m > n) {
-        Mat_m B = m_workMatrix;
-        Eigen::HouseholderQR<Mat_m> qr(B);
-        m_workMatrix = qr.matrixQR().block(0, 0, n, n).triangularView<Eigen::Upper>();
-        U_ = qr.householderQ() * U_;
-    }else if (n > m) {
-    Mat_m m_adjoint = data_.adjoint();
-    Eigen::HouseholderQR<Mat_m> m_qr(m_adjoint);
-    m_workMatrix = m_qr.matrixQR().block(0, 0, m, m).triangularView<Eigen::Upper>().adjoint();
-    U_.setIdentity(m,m);
-    V_.setIdentity(n,m);
-    V_ =m_qr.householderQ() * V_; 
-    }
-    
-    bool finished = false;
-    const double considerAsZero = (std::numeric_limits<double>::min)();
-    const double precision = 2.0 *  std::numeric_limits<double>::epsilon();
-    double maxDiagEntry = m_workMatrix.cwiseAbs().diagonal().maxCoeff();
-    double c_left = 0, s_left = 0, c_right = 0, s_right = 0;
-
-    std::vector<std::tuple<double, size_t, size_t>> off_diagonal_weights;
-    off_diagonal_weights.reserve(n * (n - 1) / 2);  // Pre-allocate space
-
-    // Main loop for the Dynamic Jacobi method
-    while (!finished) {
-        
-        finished = true;
-        off_diagonal_weights.clear();  // Clear instead of re-allocating
-        
-        for (size_t p = 1; p < min_dim; ++p) {
-            for (size_t q = 0; q < p; ++q) {
-                double threshold = std::max(considerAsZero, precision * maxDiagEntry);
-
-                // Calculate the Frobenius norm of the off-diagonal 2x2 block
-                double weight = m_workMatrix(p, q) * m_workMatrix(p, q) +
-                                m_workMatrix(q, p) * m_workMatrix(q, p);
-
-                if (weight > threshold) {
-                    off_diagonal_weights.emplace_back(weight, p, q);
-                    finished = false; // Not finished yet, since there are elements above the threshold
-                }
-            }
-        }
-        
-        if (!off_diagonal_weights.empty()) {
-            // Sort the off-diagonal blocks by decreasing Frobenius norm
-            std::sort(off_diagonal_weights.begin(), off_diagonal_weights.end(), std::greater<>());
-
-            // Perform SVD on the blocks with the largest Frobenius norm
-            for (const auto &[weight, p, q] : off_diagonal_weights) {
-                if (svd_precondition_2x2_block_to_be_real(m_workMatrix, p, q, maxDiagEntry)) {
-                    real_2x2_jacobi_svd(m_workMatrix, c_left, s_left, c_right, s_right, p, q);
-                    applyOnTheLeft(m_workMatrix, p, q, c_left, s_left);
-                    applyOnTheRight(U_, p, q, c_left, -s_left);
-                    applyOnTheRight(m_workMatrix, p, q, c_right, s_right);
-                    applyOnTheRight(V_, p, q, c_right, s_right);
-
-                    // Update the maximum diagonal coefficient
-                    maxDiagEntry = std::max(maxDiagEntry, std::max(std::abs(m_workMatrix(p, p)), std::abs(m_workMatrix(q, q))));
-                }
-            }
-        }
-    }
-    
-    // Make the diagonal positive and sort the singular values
-    for (size_t i = 0; i < min_dim; ++i) {
-        double a = m_workMatrix(i, i);
-        S_(i) = std::abs(a);
-        if (a < 0) U_.col(i) = -U_.col(i);
-    }
-
-    size_t m_nonzeroSingularValues = min_dim;
-    for (size_t i = 0; i < min_dim; ++i) {
-        size_t pos;
-        double maxRemainingSingularValue = S_.tail(min_dim - i).maxCoeff(&pos);
-        if (maxRemainingSingularValue == 0) {
-            m_nonzeroSingularValues = i;
-            break;
-        }
-        if (pos) {
-            pos += i;
-            std::swap(S_.coeffRef(i), S_.coeffRef(pos));
-            U_.col(pos).swap(U_.col(i));
-            V_.col(pos).swap(V_.col(i));
-        }
-    }
-    
-}
 
 // Parallel Jacobi method implementation for SVD
 template<SVDMethod method>

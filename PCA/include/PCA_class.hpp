@@ -1,7 +1,7 @@
 #ifndef CLASS_PCA_HPP
 #define CLASS_PCA_HPP
 
-#include "SVD_class.hpp"
+#include "../../include/SVD_class.hpp"
 #include <Eigen/Dense>
 #include <iostream>
 #include <fstream>
@@ -22,12 +22,29 @@ public:
     }
 
     void initialize() {
+        std::cout << "Initializing PCA..." << std::endl;
         assertDataValid();
-        centerData();
+        std::cout << "Data is valid." << std::endl;
+
+        // Create a copy of the original data
+        Mat centeredData = data_;
+
+        // Center the data
+        mean_ = centeredData.colwise().mean();
+        centeredData.rowwise() -= mean_.transpose();
+        std::cout << "Data centered." << std::endl;
+
+        // Normalize the data if required
         if (normalize_) {
-            normalizeData();
+            stddev_ = (centeredData.array().square().colwise().sum() / (centeredData.rows() - 1)).sqrt();
+            centeredData.array().rowwise() /= stddev_.transpose().array();
+            std::cout << "Data normalized." << std::endl;
         }
-        this->compute();
+
+        // Perform SVD on the centered (and normalized) data
+        SVD<method>::setData(centeredData);
+        SVD<method>::compute();
+        std::cout << "SVD computation done." << std::endl;
     }
 
     // Method to ensure data is valid
@@ -44,12 +61,6 @@ public:
         initialize();
     }
 
-    // Normalization and centering
-    void centerData() {
-        mean_ = data_.colwise().mean();
-        data_.rowwise() -= mean_.transpose();
-    }
-
     void normalizeData() {
         stddev_ = (data_.array().square().colwise().sum() / (data_.rows() - 1)).sqrt();
         data_.array().rowwise() /= stddev_.transpose().array();
@@ -61,19 +72,9 @@ public:
         initialize();
     }
 
-    void setSolver(SVDMethod newMethod) {
-        // Assuming your SVD class can handle this
-        this->method = newMethod;  // Adjust SVD class design as necessary
-        initialize();
-    }
-
-    void bootstrap(int numSamples) {
-        // Placeholder for bootstrapping functionality
-    }
-
     // Variance methods
     Vec explainedVariance() const {
-        Vec singular_values = this->getS();
+        Vec singular_values = SVD<method>::getS();
         return singular_values.array().square() / (data_.rows() - 1);
     }
 
@@ -84,96 +85,95 @@ public:
 
     // Access to principal components and scores
     Mat principalDirections() const {
-        return this->getV();
+        return SVD<method>::getV();
     }
 
     Mat scores() const {
-        return this->getU() * this->getS().asDiagonal();
+        return SVD<method>::getU() * SVD<method>::getS().asDiagonal();
     }
 
     // Projection and reconstruction
     Mat projectToPCA(const Mat& data) {
-        return (data.rowwise() - mean_.transpose()) * this->getV();
+        return (data.rowwise() - mean_.transpose()) * SVD<method>::getV();
     }
 
     Mat reconstructFromPCA(const Mat& pcData) {
-        return (pcData * this->getV().transpose()).rowwise() + mean_.transpose();
+        return (pcData * SVD<method>::getV().transpose()).rowwise() + mean_.transpose();
     }
 
     void saveResults(const std::string& filename) {
-    std::ofstream outFile(filename);
+        std::ofstream outFile(filename);
 
-    // Save explained variance ratio
-    Vec variance_ratio = explainedVarianceRatio();
-    outFile << "Explained Variance Ratio:\n";
-    for (int i = 0; i < variance_ratio.size(); ++i) {
-        outFile << variance_ratio[i] << std::endl;
-    }
-
-    // Save scores (principal components)
-    Mat scores = this->scores();
-    outFile << "\nScores:\n";
-    for (int i = 0; i < scores.rows(); ++i) {
-        for (int j = 0; j < scores.cols(); ++j) {
-            outFile << scores(i, j);
-            if (j < scores.cols() - 1) outFile << ", ";
+        // Save explained variance ratio
+        Vec variance_ratio = explainedVarianceRatio();
+        outFile << "Explained Variance Ratio:\n";
+        for (int i = 0; i < variance_ratio.size(); ++i) {
+            outFile << variance_ratio[i] << std::endl;
         }
-        outFile << std::endl;
+
+        // Save scores (principal components)
+        Mat scores = this->scores();
+        outFile << "\nScores:\n";
+        for (int i = 0; i < scores.rows(); ++i) {
+            for (int j = 0; j < scores.cols(); ++j) {
+                outFile << scores(i, j);
+                if (j < scores.cols() - 1) outFile << ", ";
+            }
+            outFile << std::endl;
+        }
+        outFile.close();
     }
-    outFile.close();
-}
 
     // Check orthogonality of eigenvectors
     double checkOrthogonality() const {
-        auto V = this->getV();
+        auto V = SVD<method>::getV();
         auto VtV = V.transpose() * V;
         return (VtV - Mat::Identity(V.cols(), V.cols())).norm();
     }
 
-void summary() const {
-    Vec singular_values = this->getS();  // Get singular values from SVD
-    int numComponents = singular_values.size();
-    double total_variance = singular_values.array().square().sum();  // Total variance is the sum of squared singular values
+    void summary() const {
+        Vec singular_values = (SVD<method>::getS())/std::sqrt(data_.rows()-1);  // Get singular values from SVD
+        int numComponents = singular_values.size();
+        double total_variance = (singular_values.array().square().sum())/(data_.rows()-1);  // Total variance is the sum of squared singular values
 
-    Vec proportion_variance = singular_values.array().square() / total_variance;
-    Vec cumulative_variance = proportion_variance;
+        Vec proportion_variance = ((singular_values.array().square() )/(data_.rows()-1))/ total_variance;
+        Vec cumulative_variance = proportion_variance;
 
-    // Calculate cumulative variance
-    for (int i = 1; i < numComponents; ++i) {
-        cumulative_variance[i] += cumulative_variance[i - 1];
+        // Calculate cumulative variance
+        for (int i = 1; i < numComponents; ++i) {
+            cumulative_variance[i] += cumulative_variance[i - 1];
+        }
+
+        // Print the results in a formatted manner
+        std::cout << std::fixed << std::setprecision(6);
+        std::cout << "Importance of components:\n";
+        std::cout << "                           ";
+        for (int i = 1; i <= numComponents; ++i) {
+            std::cout << "Comp." << i << "       ";
+        }
+        std::cout << std::endl;
+
+        // Standard deviations
+        std::cout << "Standard deviation     ";
+        for (int i = 0; i < numComponents; ++i) {
+            std::cout << singular_values[i] << " ";
+        }
+        std::cout << std::endl;
+
+        // Proportion of variance
+        std::cout << "Proportion of Variance    ";
+        for (int i = 0; i < numComponents; ++i) {
+            std::cout << proportion_variance[i] << " ";
+        }
+        std::cout << std::endl;
+
+        // Cumulative proportion of variance
+        std::cout << "Cumulative Proportion     ";
+        for (int i = 0; i < numComponents; ++i) {
+            std::cout << cumulative_variance[i] << " ";
+        }
+        std::cout << std::endl;
     }
-
-    // Print the results in a formatted manner
-    std::cout << std::fixed << std::setprecision(6);
-    std::cout << "Importance of components:\n";
-    std::cout << "                           ";
-    for (int i = 1; i <= numComponents; ++i) {
-        std::cout << "Comp." << i << "       ";
-    }
-    std::cout << std::endl;
-
-    // Standard deviations
-    std::cout << "Standard deviation     ";
-    for (int i = 0; i < numComponents; ++i) {
-        std::cout << singular_values[i] << " ";
-    }
-    std::cout << std::endl;
-
-    // Proportion of variance
-    std::cout << "Proportion of Variance    ";
-    for (int i = 0; i < numComponents; ++i) {
-        std::cout << proportion_variance[i] << " ";
-    }
-    std::cout << std::endl;
-
-    // Cumulative proportion of variance
-    std::cout << "Cumulative Proportion     ";
-    for (int i = 0; i < numComponents; ++i) {
-        std::cout << cumulative_variance[i] << " ";
-    }
-    std::cout << std::endl;
-}
-
 
 private:
     Mat data_;
@@ -183,4 +183,3 @@ private:
 };
 
 #endif // CLASS_PCA_HPP
-

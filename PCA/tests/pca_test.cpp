@@ -3,7 +3,8 @@
 #include <Eigen/Dense>
 #include <iostream>
 
-
+using Mat = Eigen::MatrixXd;
+using Vec = Eigen::VectorXd;
 
 Mat loadTouristsData(const std::string& filename) {
     std::ifstream file(filename);
@@ -123,15 +124,16 @@ return A;
 
 int main() {
     // Esempio di dati
+    MPI_Init(NULL, NULL);
     std::string path = "ovariancancer_obs.csv";
     std::string path2 = "../data/input/dataset_athletic.txt";
     std::string path3 ="../data/input/tourists.txt";
     Mat data = loadTouristsData(path3);
 
-    
+        
         // Creazione dell'oggetto PCA
         PCA<SVDMethod::ParallelJacobi> pca(data, false);
-
+//std::cout<<"S :"<<pca.getS()<<std::endl;   
         // Test dei metodi principali
         //std::cout << "Mean: " << pca.mean().transpose() << std::endl;
         /*std::cout << "Principal directions: " << std::endl << pca.principalDirections() << std::endl;
@@ -149,7 +151,7 @@ int main() {
 
         std::cout << "Orthogonality Check: " << pca.checkOrthogonality() << std::endl;
     //pca.saveResults("../data/output/pca_tourists_results.txt");
-
+    MPI_Finalize();
     return 0;
 }
 
