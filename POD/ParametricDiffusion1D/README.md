@@ -12,8 +12,8 @@
 * `src`: in the main files `Diff1D_<name>.cpp` we create `AdvDiff`, `POD` and `AdvDiffPOD` objects.
 
 ### POD Class
-* Public members
-  * Constructors
+* **Public members**
+  * **Constructors**
     * `POD()` default constructor for POD;
     * `POD(Mat_m &S, const int r, const int svd_type)` constructor for naive POD;
     * `POD(Mat_m &S, const int r, const double tol, const int svd_type)` constructor for standard POD;
@@ -21,7 +21,7 @@
     * `POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int svd_type)` constructor for weight POD;
   * `Mat_m W` matrix containing the POD modes;
   * `Vec_v sigma` vector containing the singular values.
-* Private members  
+* **Private members**
   * `void perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, const int svd_type)` performs the singular value decomposition given the svd_type: Power, Jacobi, Parallel Jacobi;
   * `std::tuple<Mat_m, Vec_v> naive_POD(Mat_m &S, const int r, const int svd_type)` naive POD Algorithm, it only performs the SVD on the snapshot matrix S;
   * `std::tuple<Mat_m, Vec_v> standard_POD(Mat_m &S, const int r, double const tol, const int svd_type)` Algorithm 6.1 page 126 – POD Algorithm
@@ -29,36 +29,20 @@
   * `std::tuple<Mat_m, Vec_v> weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int svd_type)` Algorithm 6.3 page 134 – POD Algorithm with energy norm and quadrature weights.
 
 ### AdvDiff Class
-* Relevant public members
+* **Relevant public members**
   * `class DiffusionCoefficient : public Function<dim>`: it assumes as value the argument `prm_diffusion_coefficient`;
   * `class TransportCoefficient : public Function<dim>`: it assumes as value the parameter `beta`;
   * `class ForcingTerm : public Function<dim>`: it is derived accordingly to the exact solution for the parameter `u0_choice`, it can use `beta` and `amplitude` parameters;
   * `class FunctionG : public Function<dim>`: homogeneous Dirichlet boundary conditions;
   * `class FunctionU0 : public Function<dim>`: it is selected with `u0_choice` and can use `amplitude` parameter;
   * `class ExactSolution : public Function<dim>`: it is selected with `u0_choice` and can use `amplitude` parameter;
-  * `AdvDiff(const double &prm_diffusion_coefficient_, const std::string  &prm_file_, const double &convergence_deltat_ = 0.0)` constructor;
+  * `AdvDiff(const double &prm_diffusion_coefficient_, const std::string  &prm_file_, const double &convergence_deltat_ = 0.0)`: constructor;
   * `std::vector<std::vector<double>> snapshot_matrix`: it collects the solution at each time step. It contains the snapshots computed for a single parameter, in other words, the time evolution for a single parameter;
   * `TrilinosWrappers::MPI::Vector solution`: system solution, including ghost elements;
   * `std::chrono::duration<long, std::micro> duration_full_avg`: average duration of solving a single time step.
-* Relevant protected members
-
-
-protected:
-  // Assemble the mass and stiffness matrices.
-  void
-  assemble_matrices();
-
-  // Assemble the right-hand side of the problem.
-  void
-  assemble_rhs(const double &time);
-
-  // Solve the problem for one time step.
-  void
-  solve_time_step();
-
-  // Assemble the snapshot matrix.
-  void
-  assemble_snapshot_matrix(const unsigned int &time_step);
+* **Relevant protected members**
+  * `void assemble_snapshot_matrix(const unsigned int &time_step)`: it assembles the snapshot matrix;
+  * `std::vector<std::chrono::duration<double>> duration_full_vec`: vector collecting the durations of solving a single time step.
 
 
 
