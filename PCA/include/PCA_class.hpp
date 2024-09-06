@@ -1,7 +1,7 @@
 #ifndef CLASS_PCA_HPP
 #define CLASS_PCA_HPP
 
-#include "../../include/SVD_class.hpp"
+#include "SVD_class.hpp"
 #include <Eigen/Dense>
 #include <iostream>
 #include <fstream>
@@ -83,11 +83,6 @@ public:
         return (variances.array().square()/(data_.rows() - 1)) / (variances.array().square().sum()/(data_.rows() - 1));
     }
 
-    // Access to principal components and scores
-    Mat principalDirections() const {
-        return SVD<method>::getV();
-    }
-
     Mat scores() const {
         return SVD<method>::getU() * SVD<method>::getS().asDiagonal();
     }
@@ -105,27 +100,45 @@ public:
     }
 
     void saveResults(const std::string& filename) {
-        std::ofstream outFile(filename);
+    std::ofstream outFile(filename);
 
-        // Save explained variance ratio
-        Vec variance_ratio = explainedVarianceRatio();
-        outFile << "Explained Variance Ratio:\n";
-        for (int i = 0; i < variance_ratio.size(); ++i) {
-            outFile << variance_ratio[i] << std::endl;
-        }
+    // Save explained variance ratio
+    Vec variance_ratio = explainedVarianceRatio();
 
-        // Save scores (principal components)
-        Mat scores = PCA::scores();
-        outFile << "\nScores:\n";
-        for (int i = 0; i < scores.rows(); ++i) {
-            for (int j = 0; j < scores.cols(); ++j) {
-                outFile << scores(i, j);
-                if (j < scores.cols() - 1) outFile << ", ";
-            }
-            outFile << std::endl;
-        }
-        outFile.close();
+    // Calculate and save cumulative explained variance
+    Vec cumulative_variance = variance_ratio;
+    for (int i = 1; i < cumulative_variance.size(); ++i) {
+        cumulative_variance[i] += cumulative_variance[i - 1];
     }
+    outFile << "\nCumulative Explained Variance:\n";
+    for (int i = 0; i < cumulative_variance.size(); ++i) {
+        outFile << cumulative_variance[i] << std::endl;
+    }
+
+    // Save scores (principal components)
+    Mat scores = PCA::scores();
+    outFile << "\nScores:\n";
+    for (int i = 0; i < scores.rows(); ++i) {
+        for (int j = 0; j < scores.cols(); ++j) {
+            outFile << scores(i, j);
+            if (j < scores.cols() - 1) outFile << ", ";
+        }
+        outFile << std::endl;
+    }
+
+    // Save loadings (principal directions)
+    Mat loadings = PCA::loadings();
+    outFile << "\nLoadings:\n";
+    for (int i = 0; i < loadings.rows(); ++i) {
+        for (int j = 0; j < loadings.cols(); ++j) {
+            outFile << loadings(i, j);
+            if (j < loadings.cols() - 1) outFile << ", ";
+        }
+        outFile << std::endl;
+    }
+
+    outFile.close();
+}
 
     // Check orthogonality of eigenvectors
     double checkOrthogonality() const {

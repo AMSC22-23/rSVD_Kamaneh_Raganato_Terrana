@@ -124,16 +124,14 @@ return A;
 
 int main() {
     // Esempio di dati
-    std::string path2 = "../data/input/dataset_athletic.txt";
-    Mat data = loadDataset(path2);
 
-    
-        // Creazione dell'oggetto PCA
-        PCA<SVDMethod::ParallelJacobi> pca(data, false);
+    std::string path1 = "../data/input/dataset_athletic.txt";
+    Mat data = loadDataset(path1);
 
-        pca.summary();
+    // Creazione dell'oggetto PCA
+    PCA<SVDMethod::ParallelJacobi> pca(data, false);
 
-        std::cout << "Orthogonality Check: " << pca.checkOrthogonality() << std::endl;
+    pca.summary();
     pca.saveResults("../data/output/pca_athletic_results.txt");
 
     return 0;
