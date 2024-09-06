@@ -580,7 +580,8 @@ void AdvDiffPOD<dim>::project_rhs(PETScWrappers::FullMatrix &transformation_matr
   // pcout << "    system_rhs_copy(41) = " << system_rhs_copy(41) << std::endl;
 
   reduced_system_rhs = 0.0;
-  
+
+  // Projection: reduced_system_rhs = T^T * system_rhs_copy
   assert(transformation_matrix.m() == system_rhs_copy.size());
   transformation_matrix.Tvmult(dst, system_rhs_copy);
   dst.compress(VectorOperation::insert);
