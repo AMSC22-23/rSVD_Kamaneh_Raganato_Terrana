@@ -81,8 +81,6 @@ public:
     value(const Point<dim> & /*p*/,
           const unsigned int /*component*/ = 0) const override
     {
-      // return std::pow(p[0], 4);
-      // return p[0];
       return prm;
     }
    
@@ -94,10 +92,7 @@ public:
   class TransportCoefficient : public Function<dim>
   {
   public:
-  //   // Constructor.
-  //   TransportCoefficient()
-  //   {}
-      
+    // Constructor.
     TransportCoefficient(const AdvDiffPOD<dim> &advdiffpod) : advdiffpod(advdiffpod)
     {}
 
@@ -106,7 +101,6 @@ public:
     vector_value(const Point<dim> & /*p*/,
                  Vector<double> &values) const override
     {
-      // values[0] = 2.0;
       const double transport_coefficient = advdiffpod.parameters.get_double("beta");
       values[0] = transport_coefficient;
     }
@@ -117,7 +111,6 @@ public:
     {
       if (component == 0)
       {
-        // return 2.0;
         const double transport_coefficient = advdiffpod.parameters.get_double("beta");
         return transport_coefficient;
       }
@@ -134,9 +127,6 @@ public:
   {
   public:
     // Constructor.
-    // ForcingTerm()
-    // {}
-
     ForcingTerm(const double prm_diffusion_coefficient, const AdvDiffPOD<dim> &advdiffpod) : prm(prm_diffusion_coefficient), advdiffpod(advdiffpod)
     {}
 
@@ -192,15 +182,8 @@ public:
   {
   public:
     // Constructor.
-    // FunctionU0()
-    // {}
-
     FunctionU0(const AdvDiffPOD<dim> &advdiffpod) : advdiffpod(advdiffpod)
     {}
-
-    // CAPIRE SE UTILE  CON PARAMETER HANDLER
-    // FunctionU0(const std::vector<double> initial_state) : u0(initial_state)
-    // {}
 
     // Evaluation.
     virtual double
@@ -224,56 +207,7 @@ public:
 
     private:
       const AdvDiffPOD<dim> &advdiffpod;
-
-    // CAPIRE SE UTILE  CON PARAMETER HANDLER
-    // private:
-    //   std::vector<double> u0;
-
-    // // Evaluation.
-    // virtual double
-    // value(const Point<dim> &p,
-    //       const unsigned int /*component*/ = 0) const override
-    // {
-    //   if (initial_state.empty())
-    //     return std::sin(M_PI*p[0]);
-    //   else
-    //     return initial_state;
-    // }
   };
-
-  // CAPIRE SE UTILE PER CONVERGENZA
-  // Exact solution.
-  // class ExactSolution : public Function<dim>
-  // {
-  // public:
-  //   // Constructor.
-  //   ExactSolution()
-  //   {}
-
-  //   // Evaluation.
-  //   virtual double
-  //   value(const Point<dim> &p,
-  //         const unsigned int /*component*/ = 0) const override
-  //   {
-  //     return std::cos(M_PI*p[0]) * std::exp(-this->get_time());
-  //   }
-
-  //   // Gradient evaluation.
-  //   virtual Tensor<1, dim>
-  //   gradient(const Point<dim> &p,
-  //            const unsigned int /*component*/ = 0) const override
-  //   {
-  //     Tensor<1, dim> result;
-
-  //     // duex / dx
-  //     result[0] = -M_PI * std::sin(M_PI * p[0]) * std::exp(-this->get_time());
-  //     result[0] =
-  //       std::exp(p[0]) * (std::exp(p[1])-1);
-  //     result[1] =
-  //       std::exp(p[1]) * (std::exp(p[0])-1);
-  //     return result;
-  //   }
-  // };
 
     // Exact solution
   class ExactSolution : public Function<dim>
@@ -356,7 +290,6 @@ public:
     , prm_file(prm_file_)
     , mesh(MPI_COMM_WORLD)
   {
-      // parameters.declare_entry("mu", "1.0", Patterns::Double(), "dummy");
       parameters.declare_entry("beta", "1.0", Patterns::Double(), "dummy");
       parameters.declare_entry("u0_choice", "0", Patterns::Integer(), "dummy");
       parameters.declare_entry("amplitude", "1.0", Patterns::Double(), "dummy");
@@ -495,8 +428,7 @@ protected:
   parallel::fullydistributed::Triangulation<dim> mesh;
 
   // Reduced mesh.
-  // parallel::fullydistributed::Triangulation<dim> mesh_r;
-  Triangulation<dim> mesh_r; // REDUCED MESH NO MORE DISTIBUTED, altre modifiche su sistema non più sparso e vettori normali
+  Triangulation<dim> mesh_r;
 
   // Finite element space.
   std::unique_ptr<FiniteElement<dim>> fe;
@@ -521,11 +453,9 @@ protected:
 
   // DoFs owned by current process.
   IndexSet locally_owned_dofs;
-  // IndexSet locally_owned_dofs_r;
 
   // DoFs relevant to the current process (including ghost DoFs).
   IndexSet locally_relevant_dofs;
-  // IndexSet locally_relevant_dofs_r;
 
   // Sparsity pattern.
   SparsityPattern sparsity_pattern_r;

@@ -35,10 +35,6 @@ if parameters['mu_new']:
 
 rom_sizes = list(map(int, parameters['rom_sizes'].split()))
 
-
-# n = int(sys.argv[4])
-# rom_sizes = list(map(int, sys.argv[5:]))
-
 # Plot the solution
 plt.rcParams.update({"font.size": 8})
 colors = plt.cm.tab10(np.linspace(0, 1, len(rom_sizes)))

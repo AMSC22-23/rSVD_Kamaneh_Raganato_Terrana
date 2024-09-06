@@ -64,6 +64,7 @@ private:
     // Algorithm 6.3 page 134 – POD Algorithm with energy norm and quadrature weights
     std::tuple<Mat_m, Vec_v> weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int svd_type);
 
+    // These algorithms are implemented but never used
     // Standard incremental SVD for building POD – Algorithm 1
     // void standard_iSVD(Mat_m &U, Mat_m &Sigma, Mat_m &V, const Vec_v c, const double tol, const double tol_sv);
 

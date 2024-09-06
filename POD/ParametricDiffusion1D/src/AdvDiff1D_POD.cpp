@@ -1,8 +1,7 @@
 #include "AdvDiff1D_POD.hpp"
 
 template class AdvDiffPOD<1>;
-// template class AdvDiff<2>; per questo ti servono altri elementi finiti
-// template class AdvDiff<3>;
+
 template <int dim>
 void AdvDiffPOD<dim>::setup()
 {

@@ -39,21 +39,6 @@ POD::POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int
     std::tie(W, sigma) = weight_POD(S, Xh, D, r, tol, svd_type);
 }
 
-// NON SO, questo ha molti argomenti ma non ti sembra collegato a quelli sotto, magari dovresti sostituire chiamata a SVD con chiamata a uno di quei due
-// Constructor for online POD through incremental SVD: starting from A it computes U, Sigma, V
-// POD::POD(Mat_m &A, Mat_m &U, Mat_m &Sigma, Mat_m &V, const int dim, const Vec_v c, const int M, const int r, const double tol, const double tol_sv)
-// {   
-//     std::cout << "===================================================================" << std::endl;
-//     std::cout << "Constructor for online POD" << std::endl << std::endl;
-//     Vec_v sigma = Vec_v::Zero(dim);
-//     SVD<SVDMethod::Jacobi> svd(A); // (A, sigma, U, V, dim);
-//     svd.compute();
-//     U = svd.getU();
-//     sigma = svd.getS();
-//     Sigma = sigma.asDiagonal();
-//     V = svd.getV();
-// }
-
 void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, const int svd_type)
 {
     std::unique_ptr<SVD<SVDMethod::Power>> svd_power;
@@ -133,11 +118,10 @@ std::tuple<Mat_m, Vec_v> POD::naive_POD(Mat_m &S, const int r, const int svd_typ
     std::cout << "===================================================================" << std::endl;
     std::cout << "Naive POD" << std::endl;
 
-    // SISTEMA TUTTI COMMENTI; qui in realtà hai già inizializzato, stai solo ridefinendo dimensioni
-    // Initialize the matrix W to store all the POD modes, then it will be resized in order to form the POD basis
+    // Resize the matrix W to store all the POD modes, then it will be truncated in order to form the POD basis
     W = Mat_m::Zero(S.rows(), S.rows());
 
-    // Initialize the vector sigma to store the singular values
+    // Resize the vector sigma to store the singular values
     int min= S.rows() < S.cols() ? S.rows() : S.cols();
     sigma = Vec_v::Zero(min);
 
@@ -159,11 +143,11 @@ std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double t
     int Nh = S.rows();
     int ns = S.cols();
 
-    // Initialize the matrix W to store all the POD modes, then it will be resized in order to form the POD basis
+    // Resize the matrix W to store all the POD modes, then it will be truncated in order to form the POD basis
     // Mat_m W = Mat_m::Zero(Nh, r);
     W = Mat_m::Zero(Nh, r);
 
-    // Initialize the vector sigma to store the singular values
+    // Resize the vector sigma to store the singular values
     sigma = Vec_v::Zero(r);
 
     if (ns <= Nh) {
@@ -178,8 +162,6 @@ std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double t
         Mat_m U = Mat_m::Zero(ns, r);
         Mat_m V = Mat_m::Zero(ns, r);
 
-        // SVD(C, sigma, U, V, r); // i = 1, ..., r
-        // SVD<SVDMethod::Jacobi> svd(C);
         perform_SVD(C, U, sigma, V, r, svd_type);
         
         std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
@@ -203,8 +185,6 @@ std::tuple<Mat_m, Vec_v> POD::standard_POD(Mat_m &S, const int r, const double t
         Mat_m U = Mat_m::Zero(Nh, r);
         Mat_m V = Mat_m::Zero(Nh, r);
 
-        // SVD(K, sigma, U, V, r); // i = 1, ..., r
-        // SVD<SVDMethod::Jacobi> svd(K);
         perform_SVD(K, U, sigma, V, r, svd_type);
         
         std::cout << "Check dimensions of U:     " << U.rows() << " * " << U.cols() << std::endl;
@@ -254,11 +234,11 @@ std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const
     int Nh = S.rows();
     int ns = S.cols();
 
-    // Initialize the matrix W to store all the POD modes, then it will be resized in order to form the POD basis
+    // Resize the matrix W to store all the POD modes, then it will be truncated in order to form the POD basis
     // Mat_m W = Mat_m::Zero(Nh, r);
     W = Mat_m::Zero(Nh, r);
 
-    // Initialize the vector sigma to store the singular values
+    // Resize the vector sigma to store the singular values
     sigma = Vec_v::Zero(r);
 
     if (ns <= Nh) {
@@ -273,8 +253,6 @@ std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const
         Mat_m Utilde = Mat_m::Zero(ns, r);
         Mat_m Vtilde = Mat_m::Zero(ns, r);
 
-        // SVD(Ctilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
-        // SVD<SVDMethod::Jacobi> svd(Ctilde);
         perform_SVD(Ctilde, Utilde, sigma, Vtilde, r, svd_type);
     
         std::cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << std::endl;
@@ -308,8 +286,6 @@ std::tuple<Mat_m, Vec_v> POD::energy_POD(Mat_m &S, Mat_m &Xh, const int r, const
         Mat_m Utilde = Mat_m::Zero(Nh, r);
         Mat_m Vtilde = Mat_m::Zero(Nh, r);
 
-        // SVD(Ktilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
-        // SVD<SVDMethod::Jacobi> svd(Ktilde);
         perform_SVD(Ktilde, Utilde, sigma, Vtilde, r, svd_type);
      
         std::cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << std::endl;
@@ -370,11 +346,11 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
     int Nh = S.rows();
     int ns = S.cols();
 
-    // Initialize the matrix W to store all the POD modes, then it will be resized in order to form the POD basis
+    // Resize the matrix W to store all the POD modes, then it will be truncated in order to form the POD basis
     // Mat_m W = Mat_m::Zero(Nh, r);
     W = Mat_m::Zero(Nh, r);
 
-    // Initialize the vector sigma to store the singular values
+    // Resize the vector sigma to store the singular values
     sigma = Vec_v::Zero(r);
 
     if (ns <= Nh) {
@@ -402,8 +378,6 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
         Mat_m Utilde = Mat_m::Zero(ns, r);
         Mat_m Vtilde = Mat_m::Zero(ns, r);
 
-        // SVD(Ctilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
-        // SVD<SVDMethod::Jacobi> svd(Ctilde);
         perform_SVD(Ctilde, Utilde, sigma, Vtilde, r, svd_type);
     
         std::cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << std::endl;
@@ -438,8 +412,6 @@ std::tuple<Mat_m, Vec_v> POD::weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const in
         Mat_m Utilde = Mat_m::Zero(Nh, r);
         Mat_m Vtilde = Mat_m::Zero(Nh, r);
 
-        // SVD(Ktilde, sigma, Utilde, Vtilde, r); // i = 1, ..., r
-        // SVD<SVDMethod::Jacobi> svd(Ktilde);
         perform_SVD(Ktilde, Utilde, sigma, Vtilde, r, svd_type);
 
         std::cout << "Check dimensions of Utilde: " << Utilde.rows() << " * " << Utilde.cols() << std::endl;

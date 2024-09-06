@@ -43,10 +43,10 @@ main(int argc, char * argv[])
   double mu_max         = 0.0; // Maximum diffusion coefficient
   double mu_new         = 0.0; // New parameter
   unsigned int nthreads = 1;   // Default number of open mp threads
-  unsigned int rank     = 0;   // Rank --- in POD riguarda per cosa
-  double tol            = 0.0; // sempre per POD...
-  unsigned int pod_type = 0;   // POD types: naive, standard, energy, weight, ...
-  unsigned int svd_type = 0;   // SVD types: Power, Jacobi, Dynamic Jacobi, Parallel Jacobi
+  unsigned int rank     = 0;   // Target rank
+  double tol            = 0.0; // Tolerance for POD algorithm
+  unsigned int pod_type = 0;   // POD types: naive, standard, energy, weight
+  unsigned int svd_type = 0;   // SVD types: Power, Jacobi, Parallel Jacobi
   std::vector<Eigen::Index> rom_sizes; // Sizes for the reduced order models
 
   std::string key;
@@ -124,19 +124,12 @@ main(int argc, char * argv[])
 
   omp_set_num_threads(nthreads); // Number of parameters
 
-  // #pragma omp parallel for ordered
-  // #pragma omp parallel for
   for (unsigned int i=0; i<n; i++)
   {
     if (n == 1) // The snapshot matrix is composed by solving the problem only once.
       prm_diffusion_coefficient[i] = mu_min;
     else
       prm_diffusion_coefficient[i] = (mu_min+i*(mu_max-mu_min)/(n-1));
-    
-    // #pragma omp ordered
-    // {
-    //   pcout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;
-    // }
   }
 
   auto start_snapshot = high_resolution_clock::now();
@@ -190,7 +183,7 @@ main(int argc, char * argv[])
   pcout << "Compute POD modes" << std::endl;
   pcout << "  Check rank = " << rank << std::endl;
 
-  // Commentare
+  // Select the type of POD algorithm.
   std::unique_ptr<POD> naive_pod;
   std::unique_ptr<POD> standard_pod;
   std::unique_ptr<POD> energy_pod;
@@ -247,8 +240,8 @@ main(int argc, char * argv[])
     }
   }
 
-  // Store the singular values
-  Vec_v sigma = compute_modes.sigma; // commento su esportare per fare plot
+  // Store the singular values so that they can be exported.
+  Vec_v sigma = compute_modes.sigma;
 
   // Create the modes matrix containing the first rom_sizes columns of U.
   pcout << "===================================================================" << std::endl;
@@ -259,7 +252,7 @@ main(int argc, char * argv[])
   // The approximations matrix stores the final fom_state for each rom size. 
   Mat_m approximations = Mat_m::Zero(snapshot_length, rom_sizes.size()*n);
 
-  // The vector errors stores the relative errors in L2 norm between the full and reconstructed solution for each rom size and each parameter.
+  // The vector errors stores the relative errors in L2 norm between the full and reconstructed solution for each rom size and the new parameter.
   Mat_m errors = Mat_m::Zero(1, rom_sizes.size());
 
   /**
@@ -339,15 +332,15 @@ main(int argc, char * argv[])
     modes[0].resize(0, 0.0);
   }
 
-  // Export the matrix containing the full order model solutions for all parameters.
+  // Export the vector containing the full order model solutions for the new parameter.
   std::string matrixFileOut1("../output/full.mtx");
-  Eigen::saveMarket(solutions, matrixFileOut1);  
+  Eigen::saveMarket(solution_new_parameter, matrixFileOut1);  
 
-  // Export the matrix containing the approximated solutions for all rom_sizes and all parameters.
+  // Export the matrix containing the approximated solutions for all rom_sizes and the new parameter.
   std::string matrixFileOut2("../output/reconstruction.mtx");
   Eigen::saveMarket(approximations, matrixFileOut2); 
 
-  // Export the vector containing the relative errors for all rom_sizes and all parameters.
+  // Export the vector containing the relative errors for all rom_sizes and the new parameter.
   std::string matrixFileOut3("../output/errors.mtx");
   Eigen::saveMarket(errors, matrixFileOut3); 
 
