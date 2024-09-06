@@ -42,6 +42,7 @@ main(int argc, char * argv[])
   double mu_min         = 0.0; // Minimum diffusion coefficient
   double mu_max         = 0.0; // Maximum diffusion coefficient
   double mu_new         = 0.0; // New parameter
+  unsigned int nthreads = 1;   // Default number of open mp threads
   unsigned int rank     = 0;   // Rank --- in POD riguarda per cosa
   double tol            = 0.0; // sempre per POD...
   unsigned int pod_type = 0;   // POD types: naive, standard, energy, weight, ...
@@ -66,6 +67,8 @@ main(int argc, char * argv[])
       pod_prm >> mu_max;
     else if (key == "mu_new")
       pod_prm >> mu_new;
+    else if (key == "nthreads")
+      pod_prm >> nthreads;
     else if (key == "rank")
       pod_prm >> rank;
     else if (key == "tol")
@@ -100,6 +103,13 @@ main(int argc, char * argv[])
   }
   constexpr unsigned int d = 1;
 
+  // Check the existence of the new parameter in the pod_parameter_file.
+  if (mu_new == 0.0)
+  {
+    std::cerr << "The new parameter should be defined. Check 'mu_new' in the parameter file." << std::endl;
+    return 1;
+  }
+
   // Solve the advection diffusion problem on the full order model and collect snapshots in the snapshot matrix.
   pcout << "===================================================================" << std::endl;
   pcout << "Run FOM and collect snapshots" << std::endl;
@@ -112,9 +122,10 @@ main(int argc, char * argv[])
   Mat_m snapshots;
   Mat_m solutions; // The solutions matrix stores the full order model solutions for all parameters. It is then exported.
 
-  omp_set_num_threads(n); // Number of parameters
+  omp_set_num_threads(nthreads); // Number of parameters
 
-  #pragma omp parallel for ordered
+  // #pragma omp parallel for ordered
+  // #pragma omp parallel for
   for (unsigned int i=0; i<n; i++)
   {
     if (n == 1) // The snapshot matrix is composed by solving the problem only once.
@@ -122,20 +133,21 @@ main(int argc, char * argv[])
     else
       prm_diffusion_coefficient[i] = (mu_min+i*(mu_max-mu_min)/(n-1));
     
-    #pragma omp ordered
-    {
-      pcout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;
-    }
+    // #pragma omp ordered
+    // {
+    //   pcout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;
+    // }
   }
 
   auto start_snapshot = high_resolution_clock::now();
-  #pragma omp parallel for ordered
+  // #pragma omp parallel for ordered
+  #pragma omp parallel for
   for (unsigned int i=0; i<n; i++)
   {
-    #pragma omp ordered
-    {
-      pcout << "  Computing snapshot matrix stripe " << i+1 << " out of " << n << std::endl;
-    }
+    // #pragma omp ordered
+    // {
+    //   pcout << "  Computing snapshot matrix stripe " << i+1 << " out of " << n << std::endl;
+    // }
 
     AdvDiff<d> problem(prm_diffusion_coefficient[i], advdiff_parameter_file);    
 
@@ -156,22 +168,22 @@ main(int argc, char * argv[])
 
     solutions.col(i) = snapshots.col((i*time_steps)+time_steps-1);
 
-    #pragma omp ordered
-    {
-      pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
-      // This print is commented to save time and space in the output.
-      pcout << "  Check snapshots and problem solution values:" << std::endl;
-      pcout << "    snapshots(0, time_steps-1)  = " << snapshots(0, (i*time_steps)+time_steps-1) << std::endl;
-      pcout << "    problem.solution(0)         = " << problem.solution(0) << std::endl;
-      pcout << "    snapshots(1, time_steps-1)  = " << snapshots(1, (i*time_steps)+time_steps-1) << std::endl;
-      pcout << "    problem.solution(1)         = " << problem.solution(1) << std::endl;
-      pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, (i*time_steps)+time_steps-1) << std::endl;
-      pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl;
-    }
+    // #pragma omp ordered
+    // {
+    //   pcout << "\n  Check snapshots size:\t\t" << snapshots.rows() << " * " << snapshots.cols() << std::endl << std::endl;
+    //   // This print is commented to save time and space in the output.
+    //   pcout << "  Check snapshots and problem solution values:" << std::endl;
+    //   pcout << "    snapshots(0, time_steps-1)  = " << snapshots(0, (i*time_steps)+time_steps-1) << std::endl;
+    //   pcout << "    problem.solution(0)         = " << problem.solution(0) << std::endl;
+    //   pcout << "    snapshots(1, time_steps-1)  = " << snapshots(1, (i*time_steps)+time_steps-1) << std::endl;
+    //   pcout << "    problem.solution(1)         = " << problem.solution(1) << std::endl;
+    //   pcout << "    snapshots(17, time_steps-1) = " << snapshots(17, (i*time_steps)+time_steps-1) << std::endl;
+    //   pcout << "    problem.solution(17)        = " << problem.solution(17) << std::endl;
+    // }
   }
   auto stop_snapshot = high_resolution_clock::now();
   auto duration_snapshot = duration_cast<milliseconds>(stop_snapshot - start_snapshot);
-  pcout << "\n  Time for building the snapshot matrix with 5 threads: " << duration_snapshot.count() << " ms" << std::endl;
+  pcout << "\n  Time for building the snapshot matrix with " << nthreads << " threads: " << duration_snapshot.count() << " ms" << std::endl;
 
   // Compute U by applying SVD or one POD algorithm to snapshots.
   pcout << "===================================================================" << std::endl;
@@ -221,7 +233,9 @@ main(int argc, char * argv[])
         if(i>0) Xh.coeffRef(i, i-1) = -1.0;
           if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
       }
-      Mat_m D = Mat_m::Zero(snapshot_length, snapshot_length); // CAMBIARE
+      Mat_m D = Mat_m::Zero(snapshot_length, snapshot_length);
+      for (Eigen::Index i=0; i<snapshot_length; i++)
+        D.coeffRef(i, i) = 0.1;
       weight_pod = std::make_unique<POD>(snapshots, Xh, D, rank, tol, svd_type);
       compute_modes = *weight_pod;
       break;
@@ -246,65 +260,83 @@ main(int argc, char * argv[])
   Mat_m approximations = Mat_m::Zero(snapshot_length, rom_sizes.size()*n);
 
   // The vector errors stores the relative errors in L2 norm between the full and reconstructed solution for each rom size and each parameter.
-  Mat_m errors = Mat_m::Zero(n, rom_sizes.size());
+  Mat_m errors = Mat_m::Zero(1, rom_sizes.size());
 
-  // for (size_t i=0; i<rom_sizes.size(); i++) {
-  // for (size_t i=0; i<1; i++) {
-  #pragma omp parallel for ordered
+  /**
+  // Now we want to use the class AdvDiffPOD to solve a reduced problem in which the diffusion parameter wasn't used for the
+  // construction of the snapshot matrix. The aim is to save time and space thanks to this prediction.
+  // At first, we solve the full order problem with the new parameter through the AdvDiff class, its solution will be used for 
+  // computing the relative error. Then we solve the reduced order problem changing the number of reduced order size.
+  */
+
+  AdvDiff<d> problem_new_parameter(mu_new, advdiff_parameter_file);    
+
+  auto start_full = high_resolution_clock::now();
+
+  problem_new_parameter.setup();
+  problem_new_parameter.solve();
+
+  auto stop_full = high_resolution_clock::now();
+  auto duration_full = duration_cast<milliseconds>(stop_full - start_full);
+  auto duration_full_step = problem_new_parameter.duration_full_avg.count();
+
+  Vec_v solution_new_parameter = Vec_v::Zero(problem_new_parameter.solution.size());
+  for (size_t i=0; i<problem_new_parameter.solution.size(); i++)
+    solution_new_parameter(i) = problem_new_parameter.solution(i);
+  
   for (size_t h=0; h<rom_sizes.size(); h++)
   {
-    for (unsigned int i=0; i<n; i++)
-    {
-      
-      #pragma omp ordered
-      {
-        pcout << "-------------------------------------------------------------------" << std::endl;
-        pcout << "Creating ROM for " << rom_sizes[h] << " modes\n" << std::endl;
-      }
-      modes.resize(compute_modes.W.rows());
-      for(auto &row : modes)
-        row.resize(rom_sizes[h], 0.0);
-      for (Eigen::Index j=0; j<compute_modes.W.rows(); j++)
-        for (Eigen::Index k=0; k<rom_sizes[h]; k++)
-          modes[j][k] = compute_modes.W(j, k);
+    pcout << "-------------------------------------------------------------------" << std::endl;
+    pcout << "Creating ROM for " << rom_sizes[h] << " modes\n" << std::endl;
 
-      AdvDiffPOD<d> problemPOD(modes, prm_diffusion_coefficient[i], advdiff_parameter_file);
-      
-      problemPOD.setup();
-      problemPOD.solve_reduced();
+    modes.resize(compute_modes.W.rows());
+    for(auto &row : modes)
+      row.resize(rom_sizes[h], 0.0);
+    for (Eigen::Index j=0; j<compute_modes.W.rows(); j++)
+      for (Eigen::Index k=0; k<rom_sizes[h]; k++)
+        modes[j][k] = compute_modes.W(j, k);
 
-      // The final fom_solution is copied in an Eigen vector fom_state in order to easily compare it with snapshots and compute 
-      // the relative error. For the same reason, we can initialize the fom_state with the snapshot_length.
-      Vec_v fom_state = Vec_v::Zero(snapshot_length);
-      for (Eigen::Index j=0; j<snapshot_length; j++)
-        fom_state(j) = problemPOD.fom_solution[j];
-      
-      // The current fom_state is stored in approximations matrix.
-      approximations.col(h*n+i) = fom_state;
+    AdvDiffPOD<d> problemPOD(modes, mu_new, advdiff_parameter_file);
 
-      // Compute the relative l2 error.
-      double fom_solution_norm = (snapshots.col((i*time_steps)+time_steps-1)).norm();
-      double err = (snapshots.col((i*time_steps)+time_steps-1) - fom_state).norm();
-      errors(i, h) = err/fom_solution_norm;
+    auto start_reduced = high_resolution_clock::now();
+    
+    problemPOD.setup();
+    problemPOD.solve_reduced();
 
-      // POI EVENTUALMENTE COMMENTARE
-      #pragma omp ordered
-      {
-        pcout << "  Check fom_state values:" << std::endl;
-        pcout << "    fom solution(0)              = " << snapshots(0, (i*time_steps)+time_steps-1) << std::endl;
-        pcout << "    fom approximated solution(0) = " << fom_state(0) << std::endl;
-        pcout << "    fom solution(1)              = " << snapshots(1, (i*time_steps)+time_steps-1) << std::endl;
-        pcout << "    fom approximated solution(1) = " << fom_state(1) << std::endl;
-        pcout << "    fom solution(2)              = " << snapshots(2, (i*time_steps)+time_steps-1) << std::endl;
-        pcout << "    fom approximated solution(2) = " << fom_state(2) << std::endl;
+    auto stop_reduced = high_resolution_clock::now();
+    auto duration_reduced = duration_cast<milliseconds>(stop_reduced - start_reduced);
 
-        pcout << "\n  With " << rom_sizes[h] << " modes, final relative l2 error: " << errors(i, h) << std::endl;
-      }
+    // The final fom_solution is copied in an Eigen vector fom_state in order to easily compare it with snapshots and compute 
+    // the relative error. For the same reason, we can initialize the fom_state with the snapshot_length.
+    Vec_v fom_state = Vec_v::Zero(snapshot_length);
+    for (Eigen::Index j=0; j<snapshot_length; j++)
+      fom_state(j) = problemPOD.fom_solution[j];
+    
+    // The current fom_state is stored in approximations matrix.
+    approximations.col(h) = fom_state;
 
-      // Clear the modes matrix for the next iteration.
-      modes.resize(0);
-      modes[0].resize(0, 0.0);
-    }
+    // Compute the relative l2 error.
+    double fom_solution_norm = solution_new_parameter.norm();
+    double err = (solution_new_parameter - fom_state).norm();
+    errors(0, h) = err/fom_solution_norm;
+
+    pcout << "  Check fom_state values:" << std::endl;
+    pcout << "    fom solution(0)              = " << solution_new_parameter(0) << std::endl;
+    pcout << "    fom approximated solution(0) = " << fom_state(0) << std::endl;
+    pcout << "    fom solution(1)              = " << solution_new_parameter(1) << std::endl;
+    pcout << "    fom approximated solution(1) = " << fom_state(1) << std::endl;
+    pcout << "    fom solution(2)              = " << solution_new_parameter(2) << std::endl;
+    pcout << "    fom approximated solution(2) = " << fom_state(2) << std::endl;
+
+    pcout << "\n  With " << rom_sizes[h] << " modes, final relative l2 error: " << err/fom_solution_norm << std::endl;
+    pcout << "  Time for solving the full order problem:          " << duration_full.count() << " ms" << std::endl;
+    pcout << "  Time for solving the reduced order problem:       " << duration_reduced.count() << " ms" << std::endl;
+    pcout << "  Average time for solving one step of fom problem: " << duration_full_step << " \u03BCs" << std::endl;
+    pcout << "  Average time for solving one step of rom problem: " << problemPOD.duration_reduced_avg.count() << " \u03BCs" << std::endl;
+
+    // Clear the modes matrix for the next iteration.
+    modes.resize(0);
+    modes[0].resize(0, 0.0);
   }
 
   // Export the matrix containing the full order model solutions for all parameters.

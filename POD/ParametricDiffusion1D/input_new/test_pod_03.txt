@@ -1,0 +1,14 @@
+# Advection diffusion problem in 1D
+# Parameters employed by the main file
+
+dim 1             # Dimension of the problem
+n 10 # 5               # Number of parameters
+mu_min 0.01       # Minimum diffusion coefficient
+mu_max 0.05       # Maximum diffusion coefficient
+mu_new 0.0025
+nthreads 10
+rank 15           # Rank
+pod_type 1
+svd_type 1 # 2
+tol 1e-12         # Tolerance for POD algorithm
+rom_sizes 2 4 6 8 # Sizes for the reduced order models

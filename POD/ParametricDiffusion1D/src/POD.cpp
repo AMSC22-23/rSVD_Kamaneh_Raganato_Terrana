@@ -58,7 +58,6 @@ void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, c
 {
     std::unique_ptr<SVD<SVDMethod::Power>> svd_power;
     std::unique_ptr<SVD<SVDMethod::Jacobi>> svd_jacobi;
-    std::unique_ptr<SVD<SVDMethod::DynamicJacobi>> svd_dynamic_jacobi;
     std::unique_ptr<SVD<SVDMethod::ParallelJacobi>> svd_parallel_jacobi;
 
     // Note that blocks {} are needed inside each case to allow the declaration of svd.
@@ -78,41 +77,23 @@ void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, c
         }
         case 2:
         {
-            std::cout << "  SVD with Dynamic Jacobi Method" << std::endl;
-            svd_dynamic_jacobi = std::make_unique<SVD<SVDMethod::DynamicJacobi>>(A);
-            break;
-        }
-        case 3:
-        {
             std::cout << "  SVD with Parallel Jacobi Method" << std::endl;
             svd_parallel_jacobi = std::make_unique<SVD<SVDMethod::ParallelJacobi>>(A);
             break;
         }
-        case 4:
-        {
-            std::cout << "  SVD" << std::endl;
-            mySVD(A, sigma, U, V, r);
-            break;
-        }
-        case 5:
+        case 3:
         {
             std::cout << "  SVD" << std::endl;
             rSVD(A, U, sigma, V, r, SVDMethod::Power);
             break;
         }
-        case 6:
+        case 4:
         {
             std::cout << "  SVD" << std::endl;
             rSVD(A, U, sigma, V, r, SVDMethod::Jacobi);
             break;
         }
-        case 7:
-        {
-            std::cout << "  SVD" << std::endl;
-            rSVD(A, U, sigma, V, r, SVDMethod::DynamicJacobi);
-            break;
-        }
-        case 8:
+        case 5:
         {
             std::cout << "  SVD" << std::endl;
             rSVD(A, U, sigma, V, r, SVDMethod::ParallelJacobi);
@@ -120,7 +101,7 @@ void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, c
         }
         default:
         {
-            std::cerr << "The svd_type should be in [0,8]. Check 'svd_type' in the parameter file." << std::endl;
+            std::cerr << "The svd_type should be in [0,5]. Check 'svd_type' in the parameter file." << std::endl;
             std::exit(EXIT_FAILURE);
         }
     }
@@ -138,13 +119,6 @@ void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, c
         sigma = svd_jacobi->getS();
         V = svd_jacobi->getV();
     }
-    else if (svd_dynamic_jacobi)
-    {
-        svd_dynamic_jacobi->compute();
-        U = svd_dynamic_jacobi->getU();
-        sigma = svd_dynamic_jacobi->getS();
-        V = svd_dynamic_jacobi->getV();
-    }
     else if (svd_parallel_jacobi)
     {
         svd_parallel_jacobi->compute();
@@ -152,67 +126,6 @@ void POD::perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, c
         sigma = svd_parallel_jacobi->getS();
         V = svd_parallel_jacobi->getV();
     }
-}
-
-// Power Method
-void POD::myPM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v)
-{
-    // Generate a random initial guess x0
-    Vec_v x0 = Vec_v::Zero(A.cols());
-
-    random_device rd;
-    mt19937 gen(rd());
-    normal_distribution<double> distribution(0.0, 1.0);
-
-    for (unsigned int i=0; i<x0.size(); i++) {
-        x0(i) = distribution(gen);
-    }
-    x0.normalize();
-
-    // Define the number of iterations
-    double epsilon = 1.e-10;
-    double delta = 0.05;
-    double lambda = 0.1;
-    unsigned int s = static_cast<int>(ceil(log(4*log(2*A.cols()/delta)/(epsilon*delta))/(2*lambda)));
-    // cout << "Check the number of iterations: " << s << endl;
-
-    for (unsigned int i=1; i<=s; i++) {
-        x0 = B*x0; // B = A^T*A
-        x0.normalize();
-    }
-
-    // Compute the left singlular vector
-    v = x0;
-    v.normalize();
-
-    // Compute the singular value
-    sigma = (A*v).norm();
-
-    // Compute the right singular vector
-    u = A*v/sigma;
-}
-
-// Singular Value Decomposition through Power Method
-void POD::mySVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim)
-{
-    Mat_m VT = Mat_m::Zero(dim, A.cols()); // VT is the transpose of V
-
-    // Define the matrix B = A^T*A
-    Mat_m B = A.transpose()*A; // n*n
-
-    // Define auxiliary vectors u and v
-    Vec_v u = Vec_v::Zero(A.rows());
-    Vec_v v = Vec_v::Zero(A.cols());
-    
-    for (int i=0; i<dim; i++) {
-        myPM(A, B, sigma(i), u, v);
-        A -= sigma(i)*u*v.transpose();
-        B = A.transpose()*A;
-        U.col(i) = u;
-        VT.row(i) = v;
-    }
-
-    V = VT.transpose(); // V is the transpose of VT
 }
 
 std::tuple<Mat_m, Vec_v> POD::naive_POD(Mat_m &S, const int r, const int svd_type)

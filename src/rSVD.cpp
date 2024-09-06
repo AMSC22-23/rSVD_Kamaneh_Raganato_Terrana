@@ -111,14 +111,6 @@ void rSVD(Mat_m& A, Mat_m& U, Vec_v& S, Mat_m& V, int l, SVDMethod method) {
             V = svd.getV();
             break;
         }
-        case SVDMethod::DynamicJacobi: {
-            SVD<SVDMethod::DynamicJacobi> svd(B);
-            svd.compute();
-            S = svd.getS();
-            Utilde = svd.getU();
-            V = svd.getV();
-            break;
-        }
         case SVDMethod::ParallelJacobi: {
             SVD<SVDMethod::ParallelJacobi> svd(B);
             svd.compute();

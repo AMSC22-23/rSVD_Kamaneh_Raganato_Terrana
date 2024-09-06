@@ -61,9 +61,6 @@ private:
     // Power method implementation for SVD
     void powerMethodSVD() ;
 
-    // Dynamic Jacobi method implementation for SVD
-    void DynamicJacobiSVD() ;
-
     // Parallel Jacobi method implementation for SVD
     void ParallelJacobiSVD() ;
 

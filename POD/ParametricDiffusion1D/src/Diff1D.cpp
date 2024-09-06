@@ -204,7 +204,9 @@ main(int argc, char * argv[])
         if(i>0) Xh.coeffRef(i, i-1) = -1.0;
           if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
       }
-      Mat_m D = Mat_m::Zero(snapshot_length, snapshot_length); // CAMBIARE
+      Mat_m D = Mat_m::Zero(snapshot_length, snapshot_length);
+      for (Eigen::Index i=0; i<snapshot_length; i++)
+        D.coeffRef(i, i) = 0.1;
       weight_pod = std::make_unique<POD>(snapshots, Xh, D, rank, tol, svd_type);
       compute_modes = *weight_pod;
       break;

@@ -396,7 +396,7 @@ void AdvDiff<dim>::solve()
       auto start_full = high_resolution_clock::now();
       solve_time_step();
       auto stop_full = high_resolution_clock::now();
-      auto duration_full = duration_cast<milliseconds>(stop_full - start_full);
+      auto duration_full = duration_cast<microseconds>(stop_full - start_full);
       duration_full_vec.push_back(duration_full);
 
       if (time_step % sample_every == 0)
@@ -406,7 +406,8 @@ void AdvDiff<dim>::solve()
     }
 
   // Compute the average duration of solving a single time step.
-  duration_full_avg = std::reduce(duration_full_vec.begin(), duration_full_vec.end())/static_cast<double>(duration_full_vec.size());
+  auto aux = std::reduce(duration_full_vec.begin(), duration_full_vec.end())/static_cast<double>(duration_full_vec.size());
+  duration_full_avg = std::chrono::duration_cast<std::chrono::microseconds>(aux);
 }
 
 template <int dim>
