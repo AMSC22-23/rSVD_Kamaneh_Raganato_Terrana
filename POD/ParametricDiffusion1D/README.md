@@ -9,9 +9,30 @@
   * `plot_solution.py` to plot both the FOM solution with its approximations for different `rom_sizes` and the relative error in $L^2$ norm;
   * `plot_singular_values.py` to plot the singular values and visualize their decay in semilogarithmic scale;
   * `plot_convergence.py` to plot the convergence order in case of performance analysis.
-* `src`: 
+* `src`: in the main files `Diff1D_<name>.cpp` we create `AdvDiff`, `POD` and `AdvDiffPOD` objects.
+
+PIU DETTAGLI
 
 ### POD Class
+* Public members
+  * Constructors
+    * `POD()` default constructor for POD;
+    * `POD(Mat_m &S, const int r, const int svd_type)` constructor for naive POD;
+    * `POD(Mat_m &S, const int r, const double tol, const int svd_type)` constructor for standard POD;
+    * `POD(Mat_m &S, Mat_m &Xh, const int r, const double tol, const int svd_type)` constructor for energy POD;
+    * `POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int svd_type)` constructor for weight POD;
+  * `Mat_m W` matrix containing the POD modes;
+  * `Vec_v sigma` vector containing the singular values.
+* Private members  
+  * `void perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, const int svd_type)` performs the singular value decomposition given the svd_type: Power, Jacobi, Parallel Jacobi;
+  * `std::tuple<Mat_m, Vec_v> naive_POD(Mat_m &S, const int r, const int svd_type)` naive POD Algorithm, it only performs the SVD on the snapshot matrix S;
+  * `std::tuple<Mat_m, Vec_v> standard_POD(Mat_m &S, const int r, double const tol, const int svd_type)` Algorithm 6.1 page 126 – POD Algorithm
+  * `std::tuple<Mat_m, Vec_v> energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol, const int svd_type)` Algorithm 6.2 page 128 – POD Algorithm with energy norm
+  * `std::tuple<Mat_m, Vec_v> weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int svd_type)` Algorithm 6.3 page 134 – POD Algorithm with energy norm and quadrature weights.
+
+
+    
+
 
 ### AdvDiff Class
 
