@@ -1,4 +1,4 @@
-# amplitude 9.0, mu_min 0.01, mu_max 0.05, mu_new 0.0025
+# amplitude 3.0, mu_min 0.01, mu_max 0.05, mu_new 0.0025
 
 rom_size,seq_snapshots[milli],total_fom[milli],total_rom[milli],step_avg_fom[micro],step_avg_rom[micro], err
 2, 41320, 6121, 4608, 1511, 557, 0.106319

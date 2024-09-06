@@ -2,7 +2,7 @@
 # Parameters employed by the main file
 
 dim 1             # Dimension of the problem
-n 10 # 5               # Number of parameters
+n 10 # 5          # Number of parameters
 mu_min 0.01       # Minimum diffusion coefficient
 mu_max 0.05       # Maximum diffusion coefficient
 mu_new 0.0025

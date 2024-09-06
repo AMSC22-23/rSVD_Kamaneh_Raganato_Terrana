@@ -2,10 +2,10 @@
 # Parameters employed by the main file
 
 dim 1             # Dimension of the problem
-n 5 # 10               # Number of parameters                        POI CAMBIA 
+n 5 # 10          # Number of parameters 
 mu_min 0.001 # 0.01       # Minimum diffusion coefficient
 mu_max 0.005 # 0.05       # Maximum diffusion coefficient
-mu_new 0.0025 # 0.0025                                             #    POI CAMBIA
+mu_new 0.0025 # 0.0025
 rank 15           # Rank
 pod_type 2
 svd_type 1 # 0
