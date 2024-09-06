@@ -1,4 +1,4 @@
-#include "../include/Jacobi_Class.hpp"
+#include "Jacobi_Class.hpp"
 #include <cmath>
 #include <limits>
 

@@ -1,6 +1,6 @@
 
-#include "../include/JacobiOperations.hpp"
-#include "../include/Jacobi_Class.hpp"
+#include "JacobiOperations.hpp"
+#include "Jacobi_Class.hpp"
 
 
 void applyOnTheLeft(Mat_m &matrix, int p, int q, double c, double s) {

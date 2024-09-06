@@ -3,9 +3,9 @@
 #include <mpi.h>
 #include <vector>
 
-#include "../include/rSVD.hpp"
-#include "../include/SVD_class.hpp"
-#include "../include/QR.hpp"
+#include "rSVD.hpp"
+#include "SVD_class.hpp"
+#include "QR.hpp"
 
 
 // Function to generate the Omega matrix using MPI
@@ -124,9 +124,9 @@ void rSVD(Mat_m& A, Mat_m& U, Vec_v& S, Mat_m& V, int l, SVDMethod method) {
     }
     
     // (6) Form U = Q*U_hat
-    std::cout<<"U before"<<std::endl;
+    
     U = Q * Utilde;
-    std::cout<<"U after"<<std::endl;
+    
     
     
     

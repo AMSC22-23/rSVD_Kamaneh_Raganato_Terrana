@@ -1,4 +1,4 @@
-#include "../include/PM.hpp"
+#include "PM.hpp"
 #include <mpi.h>
 
 void PM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v) {

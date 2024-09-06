@@ -1,4 +1,4 @@
-#include "../include/matrixOperations.hpp"
+#include "matrixOperations.hpp"
 #include <Eigen/Dense>
 
 using namespace Eigen;

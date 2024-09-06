@@ -1,4 +1,4 @@
-#include "../include/QR.hpp"
+#include "QR.hpp"
 //#include "../include/matrixOperations.hpp"
 #include <iostream>
 #include <cmath>
