@@ -2,7 +2,7 @@
 
 * `input`: each test needs a pair of parameter files:
   * `test_pod_0#.txt` is used in the main file, it contains parameters for both the advection-diffusion problem and the POD;
-  * `test_advdiff_0#.txt` is used in the classes `AdvDiff` and `AdvDiffPOD`, it contains parameters only for the advection-diffusion problem.
+  * `test_advdiff_0#.prm` is used in the classes `AdvDiff` and `AdvDiffPOD`, it contains parameters only for the advection-diffusion problem.
 * `output`: once the main file is executed, three matrices in MatrixMarket format and one vector are exported in this folder. The matrices `full.mtx`, `reconstruction.mtx`, `errors.mtx` are used in `plot_solution.py`, the vector `sigma.txt` is used in `plot_singular_values.py`.
 * `results`: this folder is organized in subfolders, one for each test. Its aim is to collect the outputs of the python scripts.
 * `scripts`: three python scripts for plotting some results:
@@ -10,8 +10,6 @@
   * `plot_singular_values.py` to plot the singular values and visualize their decay in semilogarithmic scale;
   * `plot_convergence.py` to plot the convergence order in case of performance analysis.
 * `src`: in the main files `Diff1D_<name>.cpp` we create `AdvDiff`, `POD` and `AdvDiffPOD` objects.
-
-PIU DETTAGLI
 
 ### POD Class
 * Public members
@@ -30,11 +28,43 @@ PIU DETTAGLI
   * `std::tuple<Mat_m, Vec_v> energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol, const int svd_type)` Algorithm 6.2 page 128 – POD Algorithm with energy norm
   * `std::tuple<Mat_m, Vec_v> weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int svd_type)` Algorithm 6.3 page 134 – POD Algorithm with energy norm and quadrature weights.
 
-
-    
-
-
 ### AdvDiff Class
+* Relevant public members
+  * `class DiffusionCoefficient : public Function<dim>`: it assumes as value the argument `prm_diffusion_coefficient`;
+  * `class TransportCoefficient : public Function<dim>`: it assumes as value the parameter `beta`;
+  * `class ForcingTerm : public Function<dim>`: it is derived accordingly to the exact solution for the parameter `u0_choice`, it can use `beta` and `amplitude` parameters;
+  * `class FunctionG : public Function<dim>`: homogeneous Dirichlet boundary conditions;
+  * `class FunctionU0 : public Function<dim>`: it is selected with `u0_choice` and can use `amplitude` parameter;
+  * `class ExactSolution : public Function<dim>`: it is selected with `u0_choice` and can use `amplitude` parameter;
+  * `AdvDiff(const double &prm_diffusion_coefficient_, const std::string  &prm_file_, const double &convergence_deltat_ = 0.0)` constructor;
+  * `std::vector<std::vector<double>> snapshot_matrix`: it collects the solution at each time step. It contains the snapshots computed for a single parameter, in other words, the time evolution for a single parameter;
+  * `TrilinosWrappers::MPI::Vector solution`: system solution, including ghost elements;
+  * `std::chrono::duration<long, std::micro> duration_full_avg`: average duration of solving a single time step.
+* Relevant protected members
+
+
+protected:
+  // Assemble the mass and stiffness matrices.
+  void
+  assemble_matrices();
+
+  // Assemble the right-hand side of the problem.
+  void
+  assemble_rhs(const double &time);
+
+  // Solve the problem for one time step.
+  void
+  solve_time_step();
+
+  // Assemble the snapshot matrix.
+  void
+  assemble_snapshot_matrix(const unsigned int &time_step);
+
+
+
+
+
+
 
 ### AdvDiffPOD Class
 
