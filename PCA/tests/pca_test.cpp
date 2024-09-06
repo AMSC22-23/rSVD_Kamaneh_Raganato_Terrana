@@ -133,23 +133,9 @@ int main() {
         
         // Creazione dell'oggetto PCA
         PCA<SVDMethod::ParallelJacobi> pca(data, false);
-//std::cout<<"S :"<<pca.getS()<<std::endl;   
-        // Test dei metodi principali
-        //std::cout << "Mean: " << pca.mean().transpose() << std::endl;
-        /*std::cout << "Principal directions: " << std::endl << pca.principalDirections() << std::endl;
-        std::cout << "Scores: " << std::endl << pca.scores() << std::endl;
-        std::cout << "Explained Variance: " << pca.explainedVariance().transpose() << std::endl;
-        std::cout << "Explained Variance Ratio: " << pca.explainedVarianceRatio().transpose() << std::endl;
-*/
-        // Test di salvataggio e caricamento
-        /*pca.save("pca_state.txt");
-        PCA<SVDMethod::SomeMethod> pca_loaded(data, true);
-        pca_loaded.load("pca_state.txt");*/
 
-        // Verifica dell'ortogonalità
         pca.summary();
-
-        std::cout << "Orthogonality Check: " << pca.checkOrthogonality() << std::endl;
+        std::cout<<"loadings "<<pca.loadings()<<std::endl;
     //pca.saveResults("../data/output/pca_tourists_results.txt");
     MPI_Finalize();
     return 0;
