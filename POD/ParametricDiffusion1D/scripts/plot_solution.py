@@ -30,6 +30,8 @@ n = int(parameters['n'])
 mu_min = float(parameters['mu_min'])
 mu_max = float(parameters['mu_max'])
 mu = np.linspace(mu_min, mu_max, n)
+if parameters['mu_new']:
+    mu_new = float(parameters['mu_new'])
 
 rom_sizes = list(map(int, parameters['rom_sizes'].split()))
 
@@ -41,29 +43,48 @@ rom_sizes = list(map(int, parameters['rom_sizes'].split()))
 plt.rcParams.update({"font.size": 8})
 colors = plt.cm.tab10(np.linspace(0, 1, len(rom_sizes)))
 
-for i in range(n):
+for i in range(full_data.shape[1]):
     plt.plot(full_data[:,i], label = "FOM", color='gray')
     for j in range(len(rom_sizes)):
-        plt.plot(reconstructed_data[:,j*n+i], 'o', markerfacecolor='None', markersize=4, label = f"{rom_sizes[j]} POD modes", color=colors[j])
+        plt.plot(reconstructed_data[:,j*full_data.shape[1]+i], 'o', markerfacecolor='None', markersize=4, label = f"{rom_sizes[j]} POD modes", color=colors[j])
         plt.xlabel("x")
         plt.ylabel("u")
-        mu_print = f"{mu[i]:.4f}"
+        if mu_new:
+            mu_print = mu_new
+        else:
+            mu_print = f"{mu[i]:.4f}"
         plt.title(f"Solution for mu = {mu_print}")
         plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
         plt.subplots_adjust(right=0.8)
-    plt.savefig(f"plot_{mu_print}mu_n{n}.pdf", bbox_inches='tight')
+    plt.savefig(f"plot_{mu_print}mu_n{full_data.shape[1]}.pdf", bbox_inches='tight')
     plt.close()
 
+tick_lab = np.linspace(mu_min, mu_max, 5)
+
 # Plot the error
-for j in range(len(rom_sizes)):
-    plt.plot(mu, errors_data[:,j], marker='o', markersize=2, label = f"{rom_sizes[j]} POD modes", color=colors[j])
-    plt.xlabel("mu")
-    plt.xticks(mu)
-    plt.ylabel("error")
-    plt.yscale("log")
-    plt.title(f"Relative errors for different numbers of POD modes")
-    plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
-    plt.subplots_adjust(right=0.8)
-plt.savefig(f"error.pdf", bbox_inches='tight')
-plt.close()
+if not mu_new:
+    for j in range(len(rom_sizes)):
+        plt.plot(mu, errors_data[:,j], marker='o', markersize=2, label = f"{rom_sizes[j]} POD modes", color=colors[j])
+        plt.xlabel("mu")
+        plt.xticks(tick_lab)
+        plt.ylabel("error")
+        plt.yscale("log")
+        plt.title(f"Relative errors for different numbers of POD modes")
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        plt.subplots_adjust(right=0.8)
+    plt.savefig(f"error.pdf", bbox_inches='tight')
+    plt.close()
+
+if mu_new:
+    for j in range(len(rom_sizes)):
+        plt.plot(mu_new, errors_data[:,j], marker='o', markersize=2, label = f"{rom_sizes[j]} POD modes", color=colors[j])
+        plt.xlabel("mu_new")
+        plt.xticks(tick_lab)
+        plt.ylabel("error")
+        plt.yscale("log")
+        plt.title(f"Relative errors for different numbers of POD modes")
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        plt.subplots_adjust(right=0.8)
+    plt.savefig(f"error.pdf", bbox_inches='tight')
+    plt.close()
 

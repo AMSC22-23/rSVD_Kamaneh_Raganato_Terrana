@@ -381,7 +381,7 @@ public:
   TrilinosWrappers::MPI::Vector solution;
 
   // Average duration of solving a single time step.
-  std::chrono::duration<double> duration_full_avg;
+  std::chrono::duration<long, std::micro> duration_full_avg;
 
 protected:
   // Assemble the mass and stiffness matrices.

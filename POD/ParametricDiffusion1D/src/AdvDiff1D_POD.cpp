@@ -754,7 +754,7 @@ void AdvDiffPOD<dim>::solve_reduced()
       auto start_reduced = high_resolution_clock::now();
       solve_time_step_reduced();
       auto stop_reduced = high_resolution_clock::now();
-      auto duration_reduced = duration_cast<milliseconds>(stop_reduced - start_reduced);
+      auto duration_reduced = duration_cast<microseconds>(stop_reduced - start_reduced);
       duration_reduced_vec.push_back(duration_reduced);
 
       expand_solution(transformation_matrix);
@@ -765,8 +765,9 @@ void AdvDiffPOD<dim>::solve_reduced()
     }
   pcout << "===================================================================" << std::endl;
 
-  // Compute the average duration of solving a single time step.
-  duration_reduced_avg = std::reduce(duration_reduced_vec.begin(), duration_reduced_vec.end())/static_cast<double>(duration_reduced_vec.size());
+  // Compute the average duration of solving a single time step. 
+  auto aux = std::reduce(duration_reduced_vec.begin(), duration_reduced_vec.end())/static_cast<double>(duration_reduced_vec.size());
+  duration_reduced_avg = std::chrono::duration_cast<std::chrono::microseconds>(aux);
 }
 
 template <int dim>

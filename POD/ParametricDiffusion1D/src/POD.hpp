@@ -49,14 +49,8 @@ public:
     Vec_v sigma;
 
 private:
-    // Perform the singular value decomposition given the svd_type: Power, Jacobi, Dynamic Jacobi, Parallel Jacobi
+    // Perform the singular value decomposition given the svd_type: Power, Jacobi, Parallel Jacobi
     void perform_SVD(Mat_m &A, Mat_m &U, Vec_v &sigma, Mat_m &V, const int r, const int svd_type);
-
-    // Power Method
-    void myPM(Mat_m &A, Mat_m &B, double &sigma, Vec_v &u, Vec_v &v);
-
-    // Singular Value Decomposition through Power Method
-    void mySVD(Mat_m &A, Vec_v &sigma, Mat_m &U, Mat_m &V, const int dim);
 
     // Naive POD Algorithm, it only performs the SVD on the snapshot matrix S
     std::tuple<Mat_m, Vec_v> naive_POD(Mat_m &S, const int r, const int svd_type);

@@ -388,7 +388,7 @@ public:
   TrilinosWrappers::MPI::Vector fom_solution;
 
   // Average duration of solving a single time step.
-  std::chrono::duration<double> duration_reduced_avg;
+  std::chrono::duration<long, std::micro> duration_reduced_avg;
 
 protected:
   // Setup the reduced system.

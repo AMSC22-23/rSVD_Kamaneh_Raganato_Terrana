@@ -14,6 +14,7 @@ plt.rcParams.update({"font.size": 8})
 
 # fig, axs = plt.subplots(1, 3, figsize=(18, 6))
 plt.semilogy(s, 'o-')
+# plt.loglog(s, 'o-')
 plt.title('Singular values')
 
 # axs[1].semilogx(np.cumsum(s)/np.sum(s), 'o-')

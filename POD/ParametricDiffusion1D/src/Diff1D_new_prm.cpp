@@ -127,7 +127,7 @@ main(int argc, char * argv[])
       prm_diffusion_coefficient[i] = (mu_min+i*(mu_max-mu_min)/(n-1));
     pcout << "  Check prm_diffusion_coefficient = " << prm_diffusion_coefficient[i] << std::endl;
   }
-    
+
   auto start_snapshot = high_resolution_clock::now();
   for (unsigned int i=0; i<n; i++)
   {
@@ -214,7 +214,9 @@ main(int argc, char * argv[])
         if(i>0) Xh.coeffRef(i, i-1) = -1.0;
           if(i<snapshot_length-1) Xh.coeffRef(i, i+1) = -1.0;	
       }
-      Mat_m D = Mat_m::Zero(snapshot_length, snapshot_length); // CAMBIARE
+      Mat_m D = Mat_m::Zero(snapshot_length, snapshot_length);
+      for (Eigen::Index i=0; i<snapshot_length; i++)
+        D.coeffRef(i, i) = 0.1;
       weight_pod = std::make_unique<POD>(snapshots, Xh, D, rank, tol, svd_type);
       compute_modes = *weight_pod;
       break;
@@ -239,7 +241,7 @@ main(int argc, char * argv[])
   Mat_m approximations = Mat_m::Zero(snapshot_length, rom_sizes.size()*n);
 
   // The vector errors stores the relative errors in L2 norm between the full and reconstructed solution for each rom size and each parameter.
-  Mat_m errors = Mat_m::Zero(n, rom_sizes.size());
+  Mat_m errors = Mat_m::Zero(1, rom_sizes.size());
 
   /**
   // Now we want to use the class AdvDiffPOD to solve a reduced problem in which the diffusion parameter wasn't used for the
@@ -310,8 +312,8 @@ main(int argc, char * argv[])
     pcout << "\n  With " << rom_sizes[h] << " modes, final relative l2 error: " << err/fom_solution_norm << std::endl;
     pcout << "  Time for solving the full order problem:          " << duration_full.count() << " ms" << std::endl;
     pcout << "  Time for solving the reduced order problem:       " << duration_reduced.count() << " ms" << std::endl;
-    pcout << "  Average time for solving one step of fom problem: " << duration_full_step << " ms" << std::endl;
-    pcout << "  Average time for solving one step of rom problem: " << problemPOD.duration_reduced_avg.count() << " ms" << std::endl;
+    pcout << "  Average time for solving one step of fom problem: " << duration_full_step << " \u03BCs" << std::endl;
+    pcout << "  Average time for solving one step of rom problem: " << problemPOD.duration_reduced_avg.count() << " \u03BCs" << std::endl;
 
     // Clear the modes matrix for the next iteration.
     modes.resize(0);
