@@ -44,13 +44,22 @@
   * `void assemble_snapshot_matrix(const unsigned int &time_step)`: it assembles the snapshot matrix;
   * `std::vector<std::chrono::duration<double>> duration_full_vec`: vector collecting the durations of solving a single time step.
 
-
-
-
-
-
-
 ### AdvDiffPOD Class
+* **Relevant public members**
+  * `AdvDiffPOD(const std::vector<std::vector<double>> &modes_, const double &prm_diffusion_coefficient_, const std::string  &prm_file_, const double &convergence_deltat_ = 0.0)`: constructor;
+  * `void solve_reduced()`: it setups and solves the reduced order problem;
+  * `TrilinosWrappers::MPI::Vector fom_solution`: system solution, including ghost elements. It collects the full order approximated solution that is obtained by projecting (expanding) the reduced order solution;
+  * `std::chrono::duration<long, std::micro> duration_reduced_avg`: average duration of solving a single time step.
+* **Relevant protected members**
+  * `void setup_reduced()`: it setups the reduced mesh, the reduced left-hand side matrix, the reduced right-hand side vector and the reduced solution vector;
+  * `void convert_modes(PETScWrappers::FullMatrix &transformation_matrix)`: it copies the standard matrix of modes in a PETScWrappers::FullMatrix. The transformation matrix is then used for projecting the full order space into the reduced order space;
+  * `void project_u0(PETScWrappers::FullMatrix &transformation_matrix)`: it projects the initial condition: `reduced_solution = T^T * solution_owned`;
+  * `void project_lhs(PETScWrappers::FullMatrix &transformation_matrix)`: it projects the left-hand side matrix: `reduced_system_lhs = aux * T = T^T * lhs_matrix * T`;
+  * `void project_rhs(PETScWrappers::FullMatrix &transformation_matrix)`: it projects the right-hand side vector: `reduced_system_rhs = T^T * system_rhs_copy`;
+  * `void expand_solution(PETScWrappers::FullMatrix &transformation_matrix)`: it projects the rom solution: `fom_solution = T * reduced_solution`;
+  * `void solve_time_step_reduced()`: solution of the reduced system for the GMRES solver;
+  * `const std::vector<std::vector<double>> modes`: it is the matrix that contains the POD modes, which will be the columns of the transformation matrix used as projector from full order to reduced order model;
+  * `std::vector<std::chrono::duration<double>> duration_reduced_vec`: vector collecting the durations of solving a single time step.
 
 ### Compiling
 To build the executable, make sure you have loaded the needed modules with
