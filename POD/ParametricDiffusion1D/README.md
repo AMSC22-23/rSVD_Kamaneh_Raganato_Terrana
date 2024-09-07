@@ -1,6 +1,6 @@
 # Advection Diffusion Problem with POD
 
-### Folder Structure
+## Folder Structure
 
 * `input`: each test needs a pair of parameter files:
   * `test_pod_0#.txt` is used in the main file, it contains parameters for both the advection-diffusion problem and the POD;
@@ -13,7 +13,7 @@
   * `plot_convergence.py` to plot the convergence order in case of performance analysis.
 * `src`: in the main files `Diff1D_<name>.cpp` we create `AdvDiff`, `POD` and `AdvDiffPOD` objects.
 
-### POD Class
+## POD Class
 * **Public members**
   * **Constructors**
     * `POD()` default constructor for POD;
@@ -30,7 +30,7 @@
   * `std::tuple<Mat_m, Vec_v> energy_POD(Mat_m &S, Mat_m &Xh, const int r, const double tol, const int svd_type)` Algorithm 6.2 page 128 – POD Algorithm with energy norm
   * `std::tuple<Mat_m, Vec_v> weight_POD(Mat_m &S, Mat_m &Xh, Mat_m &D, const int r, const double tol, const int svd_type)` Algorithm 6.3 page 134 – POD Algorithm with energy norm and quadrature weights.
 
-### AdvDiff Class
+## AdvDiff Class
 * **Relevant public members**
   * `class DiffusionCoefficient : public Function<dim>`: it assumes as value the argument `prm_diffusion_coefficient`;
   * `class TransportCoefficient : public Function<dim>`: it assumes as value the parameter `beta`;
@@ -46,7 +46,7 @@
   * `void assemble_snapshot_matrix(const unsigned int &time_step)`: it assembles the snapshot matrix;
   * `std::vector<std::chrono::duration<double>> duration_full_vec`: vector collecting the durations of solving a single time step.
 
-### AdvDiffPOD Class
+## AdvDiffPOD Class
 * **Relevant public members**
   * `AdvDiffPOD(const std::vector<std::vector<double>> &modes_, const double &prm_diffusion_coefficient_, const std::string  &prm_file_, const double &convergence_deltat_ = 0.0)`: constructor;
   * `void solve_reduced()`: it setups and solves the reduced order problem;
@@ -63,7 +63,7 @@
   * `const std::vector<std::vector<double>> modes`: it is the matrix that contains the POD modes, which will be the columns of the transformation matrix used as projector from full order to reduced order model;
   * `std::vector<std::chrono::duration<double>> duration_reduced_vec`: vector collecting the durations of solving a single time step.
 
-### Compiling
+## Compiling
 To build the executable, make sure you have loaded the needed modules with
 ```bash
 $ module load gcc-glibc dealii
@@ -78,7 +78,7 @@ $ make
 
 This will create the executable in the `build` directory.
 
-### Execution
+## Execution
 To run the executable, navigate to the `build` directory and use the following command, replacing # with the test number:
 
 ```bash
